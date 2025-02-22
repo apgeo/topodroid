@@ -1641,7 +1641,7 @@ Refer to the web pages for details.\n
 	<string name="pref_checkExtend_title">Verificare extensii viză</string>
 	<string name="pref_checkExtend_summary">Verificare dacă extensiile vizei sunt definite</string>
 	<string name="pref_toolbarSize_title">Dimensiune bară de instrumente</string>
-	<	string name="pref_toolbarSize_summary">Dimensiunea bării elementelor de desen</string>
+	<string name="pref_toolbarSize_summary">Dimensiunea bării elementelor de desen</string>
 	<string name="pref_backup_number_title">Număr copii de rezervă</string>
 	<string name="pref_backup_number_summary">Numărul de copii de rezervă pentru schițe</string>
 	<string name="pref_backup_interval_title">Interval de efectuare copii de rezervă(backup)</string>
