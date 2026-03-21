@@ -17,6 +17,8 @@ import com.topodroid.utils.TDLog;
 import com.topodroid.utils.TDLocale;
 import com.topodroid.utils.TDsafUri;
 import com.topodroid.prefs.TDSetting;
+import com.topodroid.ui.MyColorPicker;
+import com.topodroid.ui.MyColorPicker.IColorChanged;
 import com.topodroid.TDX.TDLevel;
 
 import com.topodroid.ui.MyButton;
@@ -77,6 +79,7 @@ public class TdmConfigActivity extends Activity
   private static final int[] izons = {
     R.drawable.iz_add,
     R.drawable.iz_drop,
+    R.drawable.iz_palette,
     R.drawable.iz_view,
     R.drawable.iz_location,
     R.drawable.iz_equates,
@@ -85,6 +88,7 @@ public class TdmConfigActivity extends Activity
   private static final int[] help_icons = {
     R.string.help_add_surveys,
     R.string.help_drop_surveys,
+    R.string.help_color_surveys,
     R.string.help_view_surveys,
     R.string.help_gps_surveys,
     R.string.help_view_equates,
@@ -243,7 +247,7 @@ public class TdmConfigActivity extends Activity
       // exclude 3D on Android-R and beyond
       // if ( Build.VERSION.SDK_INT >= Build.VERSION_CODES.R ) mNrButton1 --;
 
-      mNrButton1 = ( TDLevel.overNormal)? 6 : 5; // not necessary because TDM is at Tester Level
+      mNrButton1 = ( TDLevel.overNormal)? 7 : 6; // not necessary because TDM is at Tester Level
       mButton1 = new Button[mNrButton1];
 
       for (int k=0; k<mNrButton1; ++k ) {
@@ -293,7 +297,7 @@ public class TdmConfigActivity extends Activity
     } else if ( p++ == pos ) { // DELETE
       askDelete();
     } else if ( p++ == pos ) { // HELP
-      new HelpDialog(this, izons, menus, help_icons, help_menus, mNrButton1, help_menus.length, getResources().getString( HELP_PAGE ) ).show();
+      new HelpDialog(this, this, izons, menus, help_icons, help_menus, mNrButton1, help_menus.length, getResources().getString( HELP_PAGE ) ).show();
     }
   }
 
@@ -417,6 +421,44 @@ public class TdmConfigActivity extends Activity
     } );
   }
 
+  // ---------------------- SURVEYS COLOR ----------------------
+  class SurveysColorListener implements IColorChanged
+  {
+    TdmConfigActivity mParent;
+    ArrayList< TdmInput > mInputs;
+
+    SurveysColorListener( TdmConfigActivity parent, ArrayList< TdmInput > inputs )
+    { 
+      mParent = parent;
+      mInputs = inputs;
+    }
+    
+    public void colorChanged( int color )
+    {
+      for ( TdmInput input : mInputs ) {
+        input.setColor( color );
+      }
+      mParent.updateList();
+    }
+  }
+
+  void colorSurveys()
+  {
+    ArrayList< TdmInput > inputs = new ArrayList<>();
+    final Iterator it = mTdmConfig.getInputsIterator();
+    while ( it.hasNext() ) {
+      TdmInput input = (TdmInput) it.next();
+      if ( input.isChecked() ) inputs.add( input );
+    }
+    if ( inputs.size() == 0 ) {
+      TDToast.make( R.string.no_survey );
+    } else {
+      // TODO get the new color
+      SurveysColorListener listener = new SurveysColorListener( this, inputs );
+      (new MyColorPicker( this, listener, 0xffffff )).show();
+    }
+  }
+
   // ---------------------- SAVE -------------------------------------
 
   /** react to a BACK press
@@ -468,12 +510,18 @@ public class TdmConfigActivity extends Activity
       } else {
         TDToast.make( R.string.no_survey );
       }
+    } else if ( k1 < mNrButton1 && b0 == mButton1[k1++] ) {  // COLOR
+      colorSurveys();
     } else if ( k1 < mNrButton1 && b0 == mButton1[k1++] ) {  // VIEW
       startTdmSurveysActivity();
     } else if ( k1 < mNrButton1 && b0 == mButton1[k1++] ) {  // INFO
       (new TdmInfoDialog( this, (TopoDroidApp)getApplication(), mTdmConfig)).show();
     } else if ( k1 < mNrButton1 && b0 == mButton1[k1++] ) {  // EQUATES
-      (new TdmEquatesDialog( this, mTdmConfig, null )).show();
+      if ( mTdmConfig.hasEquates() ) {
+        (new TdmEquatesDialog( this, mTdmConfig, null )).show();
+      } else {
+        TDToast.make( R.string.no_equate );
+      }
     } else if ( TDLevel.overNormal && k1 < mNrButton1 && b0 == mButton1[k1++] ) {  // 3D VIEWER
       if ( mTdmConfig.writeTdmConfig( true ) ) {
         try {

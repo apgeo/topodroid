@@ -12,11 +12,12 @@
 package com.topodroid.TDX;
 
 // import com.topodroid.utils.TDLog;
+import com.topodroid.utils.TDUtil;
 // import com.topodroid.utils.TDString;
 import com.topodroid.ui.MyOrientationWidget;
 import com.topodroid.ui.MyDialog;
 import com.topodroid.prefs.TDSetting;
-import com.topodroid.common.PointScale;
+import com.topodroid.types.PointScale;
 
 import android.os.Bundle;
 import android.content.Context;
@@ -84,8 +85,7 @@ class DrawingPointDialog extends MyDialog
   {
     super.onCreate(savedInstanceState);
     
-    initLayout(R.layout.drawing_point_dialog,
-            mContext.getResources().getString(R.string.POINT) + " " + BrushManager.getPointName( mPoint.mPointType ) );
+    initLayout(R.layout.drawing_point_dialog, resString(R.string.POINT) + " " + BrushManager.getPointName( mPoint.mPointType ) );
 
     // mTVtype = (TextView) findViewById( R.id.point_type );
     mEToptions = (EditText) findViewById( R.id.point_options );
@@ -195,15 +195,9 @@ class DrawingPointDialog extends MyDialog
   public void onClick(View v) 
   {
     Button b = (Button)v;
-    // TDLog.Log( TDLog.LOG_INPUT, "DrawingPointDialog onClick() " + b.getText().toString() );
-
     if ( b == mBtnOk ) {
       if ( mDoOptions ) {
-        if ( mEToptions.getText() == null ) {
-          mPoint.setOptions( "" );
-        } else {
-          mPoint.setOptions( mEToptions.getText().toString().trim() );
-        }
+        mPoint.setOptions( TDUtil.getTextOrEmpty( mEToptions ) );
       }
       if ( mBtnScaleXS.isChecked() )      mPoint.setScale( PointScale.SCALE_XS );
       else if ( mBtnScaleS.isChecked() )  mPoint.setScale( PointScale.SCALE_S  );
@@ -213,7 +207,7 @@ class DrawingPointDialog extends MyDialog
 
       // if ( mXSectionName != null ) {
       //   if ( TDLevel.overAdvanced && mHasXSectionOutline != mCBxsection.isChecked() ) {
-      //     mParent.setXSectionOutline( mXSectionName, mCBxsection.isChecked(), mPoint.cx, mPoint.cy );
+      //     mParent.setXSectionOutline( mXSectionName, mPoint.mScrap, mCBxsection.isChecked(), mPoint.cx, mPoint.cy );
       //   }
       // }
 
@@ -222,7 +216,7 @@ class DrawingPointDialog extends MyDialog
         // TDLog.v( "Point type " + mPoint.mPointType + " orientation " + mPoint.mOrientation );
       }
       if ( BrushManager.pointHasTextOrValue( mPoint.mPointType ) ) {
-        mPoint.setPointText( mETtext.getText().toString().trim() );
+        mPoint.setPointText( mETtext.getText().toString().trim() ); // TRIM
       }
 
       if ( TDSetting.mWithLevels > 1 ) setLevel();

@@ -11,7 +11,7 @@ TopoDroid makes the time you spend surveying in the cave more effective.
 The purpose of TopoDroid is to help a surveyor to collect the data with more accuracy as well as to make the surveying
 task more pleasant, not to produce the final map of the cave. For that purpose good PC programs already exist.<br><p>
 
-TopoDroid has five different "activity levels". The lowest levels already have
+TopoDroid has five different "usage profiles". The lowest levels already have
 enough functionalities to download data, manage station names, and draw simple sketches.
 The higher levels can be used to prepare data and sketches for an easier work on the PC.<br><p>
 
@@ -19,7 +19,7 @@ TopoDroid is designed to handle a survey at a time, not to manage complex cave s
 Nevertheless it includes a <i>Cave Project Manager</i>, that can be used to compose surveys into a cave/karst project,
 and a <i>3D Viewer</i>, with which you can see the 3D of surveys and cave projects.<br><p>
 
-TopoDroid works with DistoX (v. 1, 2 and BLE), SAP 5 and 6, and BRIC 4 and 5.
+TopoDroid works with <i>DistoX</i> (v. 1, 2 and BLE), <i>SAP</i> 5 and 6, <i>BRIC</i> 4 and 5, <i>Cavway</i> X1, and <i>DiscoX</i>.
 Survey data can also be entered manually.<br>
 Beware that Android devices (and active stylus) can influence the measurements taken with an electronic device, if they are too close.<br><p>
 
@@ -34,22 +34,22 @@ described in the Creative Commons 3.0 Attribution Licence.
 
 <b>DISCLAIMER</b><br>
 <i>TopoDroid is an open-source free app and it is ad-free. It comes with no warranty: by using it you agree that the
-authors are not responsible for any loss of data you might incur or damage whatsoever, in particular to any 
+authors are not responsible for any loss of data you might incur or damage whatsoever, in particular to any
 surveying device used with TopoDroid.
 While the authors do their best to provide a bug-free app, this is not guaranteed.</i>
 <hr><br><p>
 
 <h4>TopoDroid private folder</h4>
 The TopoDroid private folder, "Android/data/com.topodroid.TDX/files",
-contains the folders of the drawing tools, "point", "line", and "area", and the 
+contains the folders of the drawing tools, "point", "line", and "area", and the
 device database "device10.sqlite" with the calibration data,
 the exported calibration files (folder "ccsv"), the DistoX2 and DistoXBLE firmware files (folder "bin"),
-and the DistoX memory dumps (folder "dump").
+and the DistoX/Cavway memory dumps (folder "dump").
 The private folder contains also a subfolder for the man-pages translation.
 <br><p>
 
 This folder, and its content, is deleted when the app is uninstalled, unless you check the box to keep
-the app data. 
+the app data.
 <br><p>
 
 <h4>TopoDroid survey folders</h4>
@@ -74,7 +74,8 @@ and the folder of the cave projects, "thconfig",<br><p>
 TopoDroid uses the following hardware features: "bluetooth", "camera", "microphone", "GNSS", "multitouch".
 Functions of TopoDroid that require a feature not present in your Android device, are automatically turned off.
 <br>
-Internet connection is used only to install translations of the user manual, and to check if a new version is available.<br><p>
+Internet connection is required for the AI help-assistant.<br>
+It is also used to install translations of the user manual, and to check if a new version is available.<br><p>
 
 <a href="page_perms.htm">Android permissions</a>
 <br><p>
@@ -104,17 +105,6 @@ In this case you can grant permissions using "adb" (Android Debug Bridge).<br>
 </ol>
 <br><p>
 
-<h4>Importing old surveys</h4>
-TopoDroidX (v.6) can be installed together with the old v. 5.1.40 because they use different base folders.<br>
-Old v.5.1.40 surveys can be imported in v.6 from their zip archives created with the old TopoDroid.<br>
-They can also be created with the zip script found at
-<!-- a href="http://marcocorvi.altervista.org/caving/speleoapps/speleoapks/TopoDroidZipScript.html" -->
-http://marcocorvi.altervista.org/caving/speleoapps/speleoapks/TopoDroidZipScript.html
-<!-- /a -->
-<br><p>
-
-<b>N.B.</b> TopoDroid v.5.1.40 cannot import v.6 zip archives, because of changes in the database.<br><p>
-
 <h4>Native libraries</h4>
 TopoDroid contains a few libraries compiled native only for selected architectures (arm64_v8a, armeabi-v7a, and x86_64).
 These libraries are: <i>station-naming</i>, <i>powercrust</i>, and a <i>tiff</i> wrapper for <i>libtiff</i>.
@@ -126,29 +116,28 @@ Due to limited resources, the app cannot be fully tested. Make a backup of the a
 
 <ul style="margin-top=0">
 <li>Crashes after a selection choice can be due to incomplete translations.
-Run the app with English language; if the crash disappears contact the translation maintainer.</li> 
+Run the app with English language; if the crash disappears contact the translation maintainer.</li>
 <li>If you find an error or the app does not behave as you expect, send me an email.
-<b>Include the app version and Android version</b>.</li>
+<b>Include the app version and the Android version</b>.</li>
 <li>For general questions and feature requests, send an email to TopoDroid mailing list: <i>&lt;topodroid@googlegroups.com&gt;</i>.</li>
 </ul><br><p>
 
 <hr>
 <h4>App translations:</h4>
 <ul>
-<li>H.J. Luo - S. Tian (Chinese)</li>
-<!-- li>G. Chardin - D. Ros (French)</li -->
-<li>D. Ros (French)</li>
-<li>B. Holl (Hungarian)</li>
-<li>F. Toso (Italian)</li>
-<li>R. Severo (Portuguese)</li>
-<li>A. Kozhenkov (Russian)</li>
-<li>A. Hazday (Bulgarian)</li>
-<!-- li>V. Georgiev (Bulgarian)</li -->
-<li>M. Keller (German)</li>
+<li>Bulgarian: A. Hazday</li> <!-- li>V. Georgiev</li -->
+<li>Chinese: S. Tian</li> <!-- H.J. Luo -->
+<li>French: D. Ros</li> <!-- li>G. Chardin</li -->
+<li>German: M. Keller</li>
+<li>Hungarian: B. Holl</li>
+<li>Italian: F. Toso</li>
+<li>Portuguese: R. Severo</li>
+<li>Russian: A. Kozhenkov</li>
+<li>Spanish: M. Guerrero</li>
 <!-- li>K. Borgiel (Polish)</li -->
+<!-- li>S. Farid (Persian)</li -->
 <!-- li>A. Pologea (Romanian)</li -->
-<li>J. Hetesi (Slovak)</li>
-<li>M. Guerrero - J. Pardo (Spanish)</li>
+<!-- li>J. Hetesi (Slovak)</li -->
 <!-- li>V. Kozly (Ukrainian)</li -->
 </ul>
 <br><p>
@@ -176,9 +165,23 @@ If you have installed a manual translation, and there is an update you are promp
 when you update the app.
 <br><p>
 
-<h4>TopoDroid website</h4>
+In case of installation failure the message contains a numerical error code:
+<ul>
+<li>1: failure to create the folder</li>
+<li>2: failure to retrieve the manual zip (bad URL)</li>
+<li>3: failure to unpack the zip</li>
+<li>other: HTTP error</li>
+</ul><br><p>
 
-https://sites.google.com/site/speleoapps
+<h4>TopoDroid websites</h4>
+<b>Website</b>: <a href="sites.google.com/site/speleoapps">sites.google.com/site/speleoapps.</a>
+<br><p>
+
+<b>Download</b>: <a href="marcocorvi.altervista.org/caving/speleoapps/speleoapks/TopoDroidApks.html">marcocorvi.altervista.org/caving/speleoapps/speleoapks/TopoDroidApks.html</a>
+<br><p>
+
+<b>Source code</b>: <a href="github.com/marcocorvi/topodroid">github.com/marcocorvi/topodroid</a>
+<br><p>
 
 
 <a href="manual01.htm">Introduction &gt;</a>

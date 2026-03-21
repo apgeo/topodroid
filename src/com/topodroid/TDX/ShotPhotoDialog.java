@@ -15,6 +15,7 @@
 package com.topodroid.TDX;
 
 // import com.topodroid.utils.TDLog;
+import com.topodroid.utils.TDUtil;
 import com.topodroid.ui.MyDialog;
 
 // import android.app.Dialog;
@@ -42,24 +43,24 @@ class ShotPhotoDialog extends MyDialog
   private EditText mETcomment;     // photo comment
   private Button   mButtonOK;
   private Button   mBtnGeoCode;    // geomorphology coding
-  private CheckBox mCamera;        // whether to use camera or camera2
-  private long     mSid;           // shot id
+  // private CheckBox mCamera;        // whether to use camera or camera2
+  private long     mShotId;           // shot id
   private String   mName;          // shot name
   private String   mGeoCode;       // geomorphology code
   // private Button   mButtonCancel;
-  private boolean  cameraAPI;
+  // private boolean  cameraAPIbelow21;
 
   /**
    * @param context   context
    * @param parent    parent shot list activity
-   * @param sid       shot id
+   * @param shot_id   shot id
    * @param name      shot name
    */
-  ShotPhotoDialog( Context context, ShotWindow parent, long sid, String name )
+  ShotPhotoDialog( Context context, ShotWindow parent, long shot_id, String name )
   {
     super( context, null, R.string.ShotPhotoDialog ); // null app
     mParent = parent;
-    mSid    = sid;
+    mShotId = shot_id;
     mName   = name;
     mGeoCode   = "";
     // TDLog.Log( TDLog.LOG_PHOTO, "PhotoComment");
@@ -75,22 +76,23 @@ class ShotPhotoDialog extends MyDialog
       TDToast.makeWarn( R.string.warning_nogrant_camera );
       dismiss();
     } else {
-      cameraAPI = TDandroid.BELOW_API_21;
+      // cameraAPIbelow21 = TDandroid.BELOW_API_21;
       // TDLog.Log(  TDLog.LOG_PHOTO, "PhotoComment onCreate" );
       initLayout(R.layout.photo_comment_dialog, R.string.title_photo_comment );
       
       TextView tv = (TextView) findViewById(R.id.photo_shot_name );
-      tv.setText( String.format( mContext.getResources().getString( R.string.shot_name ), mName ) );
+      tv.setText( String.format( resString( R.string.shot_name ), mName ) );
       mETcomment = (EditText) findViewById(R.id.photo_comment_comment);
       mButtonOK  = (Button) findViewById(R.id.photo_comment_ok );
       mButtonOK.setOnClickListener( this );
 
-      mCamera    = (CheckBox) findViewById(R.id.photo_camera );
-      if ( cameraAPI ) { // use old Camera API
-        mCamera.setVisibility( View.GONE );
-      } else {
-        mCamera.setChecked( true );  // checked = use old Camera API
-      }
+      // mCamera    = (CheckBox) findViewById(R.id.photo_camera );
+      // if ( cameraAPIibelow21 ) { // use old Camera API
+      //   mCamera.setVisibility( View.GONE );
+      //   mCamera.setChecked( true );  // checked = use old Camera API
+      // } else {
+      //   mCamera.setChecked( false );  // false = use new Camera API
+      // }
 
       mBtnGeoCode = (Button) findViewById(R.id.photo_code );
       if ( TDLevel.overExpert ) {
@@ -114,17 +116,17 @@ class ShotPhotoDialog extends MyDialog
   {
     Button b = (Button) v;
     if ( b == mButtonOK ) {
-      String comment = "";
-      if ( mETcomment.getText() != null ) comment = mETcomment.getText().toString().trim();
+      String comment = TDUtil.getTextOrEmpty( mETcomment );
       // if ( comment.length() == 0 ) { // this was annoying
-      //   mETcomment.setError(  mContext.getResources().getString( R.string.error_text_required ) );
+      //   mETcomment.setError(  resString( R.string.error_text_required ) );
       //   return;
       // }
       // TDLog.v( "PHOTO comment " + comment );
-      int camera = ( cameraAPI || mCamera.isChecked() )? PhotoInfo.CAMERA_TOPODROID : PhotoInfo.CAMERA_TOPODROID_2;
-      // TDLog.v("camera " + camera + " old-API " + cameraAPI + ", checked " + mCamera.isChecked() );
+      int camera = TDandroid.AT_LEAST_API_21 ? PhotoInfo.CAMERA_TOPODROID_2 : PhotoInfo.CAMERA_TOPODROID;
+      // int camera = // ( cameraAPIibelow21 || mCamera.isChecked() )? PhotoInfo.CAMERA_TOPODROID : PhotoInfo.CAMERA_TOPODROID_2;
+      // TDLog.v("camera " + camera + " old-API " + cameraAPIibelow21 + ", checked " + mCamera.isChecked() );
       // int camera = PhotoInfo.CAMERA_TOPODROID;
-      mParent.doTakePhoto( mSid, comment, camera, mGeoCode );
+      mParent.doTakePhoto( mContext, mShotId, "", comment, camera, mGeoCode, MediaInfo.TYPE_SHOT ); // title=""
     } else if ( TDLevel.overExpert && b == mBtnGeoCode ) {
       (new GeoCodeDialog( mContext, this, mGeoCode )).show();
       return;

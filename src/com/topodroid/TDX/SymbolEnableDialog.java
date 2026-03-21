@@ -14,7 +14,7 @@ package com.topodroid.TDX;
 import com.topodroid.utils.TDLog;
 import com.topodroid.utils.TDColor;
 import com.topodroid.ui.MyDialog;
-import com.topodroid.common.SymbolType;
+import com.topodroid.types.SymbolType;
 
 import java.util.ArrayList;
 
@@ -72,7 +72,6 @@ class SymbolEnableDialog extends MyDialog
   {
     super.onCreate( savedInstanceState );
 
-    // requestWindowFeature(Window.FEATURE_NO_TITLE);
     initLayout(R.layout.symbol_enable_dialog, null );
     // getWindow().setLayout( LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT );
 
@@ -213,14 +212,13 @@ class SymbolEnableDialog extends MyDialog
     // } else if ( vid == R.id.symbol_reload ) {
     //   String old_version = mApp.mDData.getValue( "symbol_version" );
     //   if ( old_version == null ) old_version = "-";
-    //   String message = String.format( mContext.getResources().getString( R.string.symbols_ask ), 
-    //     mApp.SYMBOL_VERSION, old_version );
+    //   String message = String.format( resString( R.string.symbols_ask ), mApp.SYMBOL_VERSION, old_version );
     //   TopoDroidAlertDialog.makeAlert( mContext, mContext.getResources(), message, // R.string.symbols_ask,
     //     new DialogInterface.OnClickListener() {
     //       @Override
     //       public void onClick( DialogInterface dialog, int btn ) {
     //         mApp.installSymbols( true );
-    //         BrushManager.loadAllLibraries( mContext.getResources() );
+    //         BrushManager.loadAllSymbolLibraries( mContext.getResources() );
     //         createAdapters();
     //         updateList();
     //       }

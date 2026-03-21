@@ -12,7 +12,7 @@
 package com.topodroid.dev.cavway;
 
 import com.topodroid.math.TDVector;
-import com.topodroid.math.TDMatrix;;
+import com.topodroid.math.TDMatrix;
 import com.topodroid.utils.TDUtil;
 
 
@@ -20,9 +20,11 @@ public class CavwayDetails
 {
   static final int MAX_INDEX_XBLE = 1064;
 
-  public final static int COEFF_ADDRESS    = 0x9080;
-  public final static int FIRMWARE_ADDRESS = 0xe000;
-  public final static int HARDWARE_ADDRESS = 0xe004;
+  public final static int TIMESTAMP_ADDRESS = 0x8000;
+  public final static int COEFF_ADDRESS     = 0x9080;
+  public final static int FIRMWARE_ADDRESS  = 0xe000;
+  public final static int HARDWARE_ADDRESS  = 0xe004;
+  public final static int CALIINFO_ADDRESS  = 0x9000+64;
   //public final static int STATUS_ADDRESS   = 0xC044;
 
   /** the coeffs are stored in 128 bytes stating at position 0x9080

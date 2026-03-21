@@ -13,9 +13,10 @@ package com.topodroid.TDX;
 
 import com.topodroid.prefs.TDSetting;
 import com.topodroid.dev.Device;
-import com.topodroid.common.PlotType;
-// import com.topodroid.utils.TDLog;
+import com.topodroid.types.PlotType;
+import com.topodroid.utils.TDLog;
 import com.topodroid.utils.TDString;
+import com.topodroid.utils.TDUtil;
 
 import android.os.Bundle;
 import android.preference.PreferenceManager;
@@ -43,6 +44,7 @@ public class TDInstance
   public static String cbd;  // current base directory
 
   public static long sid   = -1;   // id of the current survey
+  public static boolean isSurveyMutable = true;
   public static long cid   = -1;   // id of the current calib
   public static String survey;   // current survey name
   static String calib;    // current calib name
@@ -89,7 +91,7 @@ public class TDInstance
 
   /** @return true if the primary device is set and is of type SAP (SAP5 or SAP6)
    */
-  public static boolean isDeviceSap()    { return deviceA != null && deviceA.isSap(); } // FIXME_SAP6
+  // public static boolean isDeviceSap()    { return deviceA != null && deviceA.isSap(); } // FIXME_SAP6
 
   /** @return true if the primary device is set and is of type SAP5
    */
@@ -98,6 +100,10 @@ public class TDInstance
   /** @return true if the primary device is set and is of type SAP6
    */
   public static boolean isDeviceSap6()   { return deviceA != null && deviceA.isSap6(); }
+
+  /** @return true if the primary device is set and is of type SAP6
+   */
+  public static boolean isDeviceDiscoX() { return deviceA != null && deviceA.isDiscoX(); }
 
   /** @return true if the primary device is set and is of type BRIC (BRIC4 or BRIC5)
    */
@@ -341,6 +347,7 @@ public class TDInstance
   {
     return String.format( Locale.US, context.getResources().getString( r ), arg );
   }
+
   /** @return the application shared preferences
    */
   public static SharedPreferences getPrefs() { return PreferenceManager.getDefaultSharedPreferences( context ); }
@@ -421,4 +428,24 @@ public class TDInstance
   //   return ret;
   // }
 
+  /** @return the time of the current calibration [seconds afterthe epoch]
+   */
+  static long getCalibTime()
+  {
+    if ( cid == 0 ) return 0;
+    TDLog.v("Instance seconds: current seconds " + TDUtil.getSeconds() );
+    long seconds = TopoDroidApp.mDData.selectDataLastTime( cid );
+    TDLog.v("  last data time " + seconds );
+    if ( seconds == 0 ) {
+      String date = TopoDroidApp.mDData.selectCalibDate( cid );
+      if ( date != null ) {
+        seconds = TDUtil.dateToTimestamp( date );
+        TDLog.v("  calib date " + date + " " + seconds );
+      } else {
+        seconds = TDUtil.getSeconds();
+        TDLog.v("  get seconds " + seconds );
+      }
+    }
+    return seconds;
+  }
 }

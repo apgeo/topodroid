@@ -29,7 +29,7 @@ import android.content.Context;
 import android.view.View;
 // import android.view.View.OnClickListener;
 // import android.view.ViewGroup.LayoutParams;
-import android.inputmethodservice.KeyboardView;
+// import android.inputmethodservice.KeyboardView;
 
 import android.widget.EditText;
 import android.widget.Button;
@@ -72,8 +72,9 @@ class HighlightDialog extends MyDialog
     // mBtnCancel.setOnClickListener( this ); // CANCEL
     ( (Button) findViewById(R.id.btn_cancel) ).setOnClickListener( this ); // CANCEL
 
-    mKeyboard = new MyKeyboard( mContext, (KeyboardView)findViewById( R.id.keyboardview ), 
-                                R.xml.my_keyboard_base_sign, R.xml.my_keyboard_qwerty );
+    // mKeyboard = new MyKeyboard( mContext, (KeyboardView)findViewById( R.id.keyboardview ), R.xml.my_keyboard_base_sign, R.xml.my_keyboard_qwerty );
+    mKeyboard = MyKeyboard.getMyKeyboard( mContext, findViewById( R.id.keyboardview ), R.xml.my_keyboard_base_sign, R.xml.my_keyboard_qwerty );
+
     if ( TDSetting.mKeyboard ) {
       int flag = MyKeyboard.FLAG_POINT_LCASE_2ND;
       if ( TDSetting.mStationNames == 1 ) flag = MyKeyboard.FLAG_POINT;
@@ -103,12 +104,12 @@ class HighlightDialog extends MyDialog
   private boolean checkArgsName( String args, int nr )
   {
     if ( args.length() == 0 ) {
-      mName.setError( mContext.getResources().getString( R.string.error_name_required ) );
+      mName.setError( resString( R.string.error_name_required ) );
       return false;
     }
     String[] vals = TDString.splitOnSpaces( args );
     if ( vals.length != nr ) {
-      mName.setError( mContext.getResources().getString( R.string.error_station_number ) );
+      mName.setError( resString( R.string.error_station_number ) );
       return false;
     }
     return true;
@@ -123,7 +124,7 @@ class HighlightDialog extends MyDialog
     // TDLog.Log(  TDLog.LOG_INPUT, "Search Dialog onClick() " );
     Button b = (Button) v;
     if ( b == mBtnStation ) { // SEARCH station
-      String name = mName.getText().toString().trim();
+      String name = TDString.noSpaces( mName.getText().toString() );
       if ( ! checkArgsName( name, 1 ) ) return;
       mParent.highlightStations( name );
     // } else if ( b == mBtnCancel ) {

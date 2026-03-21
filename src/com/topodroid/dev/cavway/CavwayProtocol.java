@@ -1,4 +1,4 @@
-/* @file DeviceXBLEProtocol.java
+/* @file CavwayProtocol.java
  *
  * @author Siwei Tian
  * @date July 2024
@@ -18,6 +18,7 @@ import com.topodroid.dev.DataType;
 import com.topodroid.dev.Device;
 import com.topodroid.dev.TopoDroidProtocol;
 import com.topodroid.packetX.MemoryOctet;
+import com.topodroid.packetX.MemoryData;
 import com.topodroid.packetX.CavwayData;
 import com.topodroid.utils.TDLog;
 import com.topodroid.utils.TDUtil;
@@ -27,6 +28,8 @@ import android.content.Context;
 // import android.os.Handler;
 
 // import java.io.IOException;
+
+import java.util.Locale;
 
 public class CavwayProtocol extends TopoDroidProtocol
 {
@@ -38,6 +41,11 @@ public class CavwayProtocol extends TopoDroidProtocol
 
   public static final float ABSSCALE            = 10000;
   public static final float ANGLESCALE          = (float)(360.0 / 0xFFFF);
+
+  public static final int PACKET_INFO_SHOTDATA  = 0x03;
+  public static final int PACKET_INFO_CALIDATA  = 0x04;
+  public static final int PACKET_INFO_TIMESTAMP = 0x05;
+
   public static final int PACKET_REPLY          = 0x10;
   public static final int PACKET_INFO_SERIALNUM = 0x11;
   public static final int PACKET_INFO_FIRMWARE  = 0x12;
@@ -46,8 +54,6 @@ public class CavwayProtocol extends TopoDroidProtocol
   public static final int PACKET_WRITE_REPLY    = 0x15;
   public static final int PACKET_COEFF          = 0x16;
   public static final int PACKET_FLASH_CHECKSUM = 0x17;
-  public static final int PACKET_INFO_SHOTDATA  = 3;
-  public static final int PACKET_INFO_CALIDATA  = 4;
   public static final int PACKET_FLASH_BYTES_1  = 0x18;
   public static final int PACKET_FLASH_BYTES_2  = 0x19;
   public static final int PACKET_SIGNATURE      = 0x1A;
@@ -59,11 +65,13 @@ public class CavwayProtocol extends TopoDroidProtocol
   public static final int PACKET_NONE           = 0;
   public static final int PACKET_ERROR          = 0x80;
 
-  public long mG2X, mG2Y, mG2Z;
-  public long mM2X, mM2Y, mM2Z;
+  // public long mG2X, mG2Y, mG2Z;
+  // public long mM2X, mM2Y, mM2Z;
 
   public String mFirmVer;
   public String mHardVer;
+  public long mTimeStamp;
+
   public byte[] mRepliedData;
   public int mCheckCRC;
   public int mFwOpReturnCode;    //0: OK  1: Flash Error 2: Addr or CRC error
@@ -76,14 +84,32 @@ public class CavwayProtocol extends TopoDroidProtocol
 
   private byte[] mPacketBytes;
 
-  public long mTime = 0;
+  private int mCavwayFlag = 0; // complementary values than in the device packet
+  // 7: feature
+  // 6: border
+  // 5: backshot
+  // 4: generic
+  // 3,2,1: unused
+  // 0: no-flag
   public String mComment = "";
+
+  void resetRepliedData()
+  {
+    if ( mRepliedData != null ) {
+      int len = mRepliedData.length;
+      for ( int i=0; i<len; ++i ) mRepliedData[i] = 0;
+    }
+  }
 
   /** @return the shot timestamp [s]
    */
   @Override
-  public long getTimeStamp() {
-    return mTime; }
+  public long getTimeStamp() { return mTime; }
+
+  /** @return the shot Cavway flag: 0=none, 4=generic, 5=backsight, 6=ridge, 7=feature
+   */
+  @Override
+  public int getCavwayFlag() { return mCavwayFlag; }
 
   /** cstr
    * @param ctx      context
@@ -95,7 +121,7 @@ public class CavwayProtocol extends TopoDroidProtocol
   public CavwayProtocol(Context ctx, TopoDroidApp app, ListerHandler lister, Device device, CavwayComm comm )
   {
     super( device, ctx );
-    // if ( LOG ) TDLog.v( TAG + "cstr");
+    if ( LOG ) TDLog.v( TAG + "cstr");
     mLister = lister;
     mComm   = comm;
     mRepliedData = new byte[4];
@@ -104,6 +130,9 @@ public class CavwayProtocol extends TopoDroidProtocol
     for ( int k=0; k< CavwayData.SIZE ; ++k ) mPacketBytes[k] = (byte)0xa5;
   }
 
+  /** handle a Cavway packet
+   * @param packetdata   Cavway  packet (64 bytes)
+   */
   // public int handleCavwayPacket( CavwayData packet )
   public int handleCavwayPacket(byte [] packetdata)
   {
@@ -115,7 +144,11 @@ public class CavwayProtocol extends TopoDroidProtocol
     //   TDLog.v( TAG + "packet " + packetdata.length + ": " + sb.toString() );
     // }
 
-    byte flag = packetdata[1];   //leg, err flag
+    byte flag = packetdata[1];   // leg, err flag
+    mCavwayFlag = ( (flag >> 1) & 0x7 ) ^ 0x7; // cavway flag: this uses the complementary values than in the device
+    // boolean is_scan = (packetdata[1] & (0x01<<6)) == 0;
+    // if ( is_scan ) mCavwayFlag != (1<<4);
+    if ( mCavwayFlag != 0 ) TDLog.v("cavway data flag " + mCavwayFlag ); // DEBUG check the flag values
 
     mTime = MemoryOctet.toLong(packetdata[20],packetdata[19],packetdata[18],packetdata[17]);
     //mTime = ((long)packetdata[20] << 24 | (long)packetdata[19] << 16 | (long)packetdata[18] << 8 | (long)packetdata[17]);
@@ -140,45 +173,29 @@ public class CavwayProtocol extends TopoDroidProtocol
     // if ( dip >= 32768 ) { mDip = (65536 - dip) * (-90.0) / 16384.0; }
     mDip = CavwayData.toDip1( packetdata );
 
-    // mGX = MemoryOctet.toInt( packetdata[22], packetdata[21] ); // TODO use CavwayData functions
-    // mGY = MemoryOctet.toInt( packetdata[24], packetdata[23] );
-    // mGZ = MemoryOctet.toInt( packetdata[26], packetdata[25] );
-    // if ( mGX > TDUtil.ZERO ) mGX = mGX - TDUtil.NEG;
-    // if ( mGY > TDUtil.ZERO ) mGY = mGY - TDUtil.NEG;
-    // if ( mGZ > TDUtil.ZERO ) mGZ = mGZ - TDUtil.NEG;
-    mGX = CavwayData.toRawG1x( packetdata );
-    mGY = CavwayData.toRawG1y( packetdata );
-    mGZ = CavwayData.toRawG1z( packetdata );
+    // for shots encode G1x,G2x in a long
+    mGX = CavwayData.toRawGx( packetdata );
+    mGY = CavwayData.toRawGy( packetdata );
+    mGZ = CavwayData.toRawGz( packetdata );
+    // mGX = CavwayData.toRawG1x( packetdata );
+    // mGY = CavwayData.toRawG1y( packetdata );
+    // mGZ = CavwayData.toRawG1z( packetdata );
 
-    // mMX = MemoryOctet.toInt( packetdata[28], packetdata[27] );
-    // mMY = MemoryOctet.toInt( packetdata[30], packetdata[29] );
-    // mMZ = MemoryOctet.toInt( packetdata[32], packetdata[31] );
-    // if ( mMX > TDUtil.ZERO ) mMX = mMX - TDUtil.NEG;
-    // if ( mMY > TDUtil.ZERO ) mMY = mMY - TDUtil.NEG;
-    // if ( mMZ > TDUtil.ZERO ) mMZ = mMZ - TDUtil.NEG;
-    mMX = CavwayData.toRawM1x( packetdata );
-    mMY = CavwayData.toRawM1y( packetdata );
-    mMZ = CavwayData.toRawM1z( packetdata );
+    // encode M1x,M2x in a long
+    mMX = CavwayData.toRawMx( packetdata );
+    mMY = CavwayData.toRawMy( packetdata );
+    mMZ = CavwayData.toRawMz( packetdata );
+    // mMX = CavwayData.toRawM1x( packetdata );
+    // mMY = CavwayData.toRawM1y( packetdata );
+    // mMZ = CavwayData.toRawM1z( packetdata );
 
-    // mG2X = MemoryOctet.toInt( packetdata[34], packetdata[33] );
-    // mG2Y = MemoryOctet.toInt( packetdata[36], packetdata[35] );
-    // mG2Z = MemoryOctet.toInt( packetdata[38], packetdata[37] );
-    // if ( mG2X > TDUtil.ZERO ) mG2X = mG2X - TDUtil.NEG;
-    // if ( mG2Y > TDUtil.ZERO ) mG2Y = mG2Y - TDUtil.NEG;
-    // if ( mG2Z > TDUtil.ZERO ) mG2Z = mG2Z - TDUtil.NEG;
-    mG2X = CavwayData.toRawG2x( packetdata );
-    mG2Y = CavwayData.toRawG2y( packetdata );
-    mG2Z = CavwayData.toRawG2z( packetdata );
+    // mG2X = CavwayData.toRawG2x( packetdata );
+    // mG2Y = CavwayData.toRawG2y( packetdata );
+    // mG2Z = CavwayData.toRawG2z( packetdata );
 
-    // mM2X = MemoryOctet.toInt( packetdata[40], packetdata[39] );
-    // mM2Y = MemoryOctet.toInt( packetdata[42], packetdata[41] );
-    // mM2Z = MemoryOctet.toInt( packetdata[44], packetdata[43] );
-    // if ( mM2X > TDUtil.ZERO ) mM2X = mM2X - TDUtil.NEG;
-    // if ( mM2Y > TDUtil.ZERO ) mM2Y = mM2Y - TDUtil.NEG;
-    // if ( mM2Z > TDUtil.ZERO ) mM2Z = mM2Z - TDUtil.NEG;
-    mM2X = CavwayData.toRawM2x( packetdata );
-    mM2Y = CavwayData.toRawM2y( packetdata );
-    mM2Z = CavwayData.toRawM2z( packetdata );
+    // mM2X = CavwayData.toRawM2x( packetdata );
+    // mM2Y = CavwayData.toRawM2y( packetdata );
+    // mM2Z = CavwayData.toRawM2z( packetdata );
 
     byte[] errorbytes = new byte[9];
     for (int i = 0; i < 9; i++)
@@ -261,14 +278,16 @@ public class CavwayProtocol extends TopoDroidProtocol
    */
   public int packetProcess( byte[] databuf )
   {
-    // if ( LOG ) TDLog.v( TAG + "handle packet length " + databuf.length );
     if ( databuf.length == 0 ) {
       TDLog.e( TAG + "handle packet: 0-length data");
       return PACKET_NONE;
     }
-    // TDLog.v( TAG + " byte[0] " + String.format("%02x", databuf[0] ) );
+    if ( LOG ) TDLog.v( TAG + " packet byte[0] " + String.format("%02x", databuf[0] ) + " " + String.format("%02x", databuf[1] ) );
+    // scan mode   01 bf 1011.1111
+    // normal mode 01 ff 1111.1111
     if ( (databuf[0] == MemoryOctet.BYTE_PACKET_DATA || databuf[0] == MemoryOctet.BYTE_PACKET_G ) && databuf.length ==  CavwayData.SIZE  ) { // shot / calib data
       if ( mComm.isDownloading() ) {
+        mTime = TDUtil.getSeconds(); // not necesary because mTime is set by handleCavwayPacket
         for ( int kk=0; kk< CavwayData.SIZE ; ++kk ) {
           if ( mPacketBytes[kk] != databuf[kk] ) { // new packet data: send ack depends on handling packets
             // CavwayData packet = new CavwayData( 0 );
@@ -280,10 +299,12 @@ public class CavwayProtocol extends TopoDroidProtocol
               // mComm.sendCommand( packet.getData(1) | 0x55);
               mComm.sendCommand(mPacketBytes[1] | 0x55);
               if ( res == DataType.PACKET_DATA ) {
-                mComm.handleCavwayPacket(res, mLister, 0, mComment);
+                boolean is_scan = (mPacketBytes[1] & 0x40) == 0;
+                int scan_bit = mPacketBytes[1] & 0x20;
+                mComm.handleCavwayPacket(res, mLister, 0, mComment, is_scan, scan_bit );
                 return PACKET_MEASURE_DATA; // with ( PACKET_MEASURE_DATA | databuf[0]) shots would be distinguished from calib
               } else if (  res == DataType.PACKET_G ) {
-                mComm.handleCavwayPacket(res, mLister, 0, mComment);
+                mComm.handleCavwayPacket(res, mLister, 0, mComment, false, -1 );
                 return PACKET_CALIB_DATA; 
               } else {
                 return PACKET_ERROR;
@@ -303,11 +324,10 @@ public class CavwayProtocol extends TopoDroidProtocol
     } else { // command packet
       byte command = databuf[0];
       if ( command == MemoryOctet.BYTE_PACKET_3D || command == MemoryOctet.BYTE_PACKET_3E ) { // 0x3d or 0x3e
-        if ( LOG ) TDLog.v( TAG + "handle packet command " + command );
         int addr = (databuf[2] << 8 | (databuf[1] & 0xff)) & 0xFFFF;
         int len = databuf[3];
-        mRepliedData = new byte[len];
         if ( LOG ) TDLog.v( TAG + "command packet " + command + " length " + len );
+        mRepliedData = new byte[len];
         for (int i = 0; i < len; i++)
           mRepliedData[i] = databuf[i + 4];
         if ( addr == CavwayDetails.FIRMWARE_ADDRESS ) {
@@ -319,19 +339,34 @@ public class CavwayProtocol extends TopoDroidProtocol
           mHardVer = Float.toString(HardVer);
           if ( LOG ) TDLog.v( TAG + "hw v. " + mHardVer );
           return PACKET_INFO_HARDWARE;
+        } else if ( addr == CavwayDetails.TIMESTAMP_ADDRESS ) {
+          // TDLog.v(String.format("Reply %d %d %d %d %02x %02x %02x %02x", 
+          //   databuf[4], databuf[5], databuf[6], databuf[7], databuf[4], databuf[5], databuf[6], databuf[7] ) );
+          mTimeStamp = MemoryData.toLong( databuf[7], databuf[6], databuf[5], databuf[4]); // seconds since the epoch
+          if ( LOG ) TDLog.v( TAG + "time " + mTimeStamp );
+          mComm.setHasInfo();
+          System.arraycopy( databuf, 4, mRepliedData, 0, 4 );
+          mComm.mHasWritten = true;
+          return PACKET_INFO_TIMESTAMP;
         } else if ( command == MemoryOctet.BYTE_PACKET_3D ) { // 0x3d
           if ( LOG ) TDLog.v( TAG + "reply (3D)");
+          TDLog.v(String.format("PROTO Reply to 0x3d: %d %d %d %d %02x %02x %02x %02x", 
+            databuf[4], databuf[5], databuf[6], databuf[7], databuf[4], databuf[5], databuf[6], databuf[7] ) );
           if ( mComm.isReadingMemory() ) {
-            TDLog.v( TAG + "handle memory read");
+            if ( LOG ) TDLog.v( TAG + "handle memory read");
             System.arraycopy( databuf, 4, mPacketBytes, 0,  CavwayData.SIZE  );
             mComm.handleOneMemory( mPacketBytes );
-          } 
+          }
           // if(addr < 0x8000 && len == 64)  //dump memory
           //   handleCavwayPacket(mRepliedData);
           return PACKET_REPLY;
         } else if ( command == MemoryOctet.BYTE_PACKET_3E ) { // 0x3e
           // if ( LOG ) TDLog.v( TAG + "write reply (3E)");
-          TDLog.v( TAG + "write reply (3E)");
+          if ( LOG ) TDLog.v( TAG + "write reply (3E)");
+          TDLog.v(String.format(Locale.US, "PROTO Reply to 0x3e: %d %d %d %d %02x %02x %02x %02x", 
+            databuf[4], databuf[5], databuf[6], databuf[7], databuf[4], databuf[5], databuf[6], databuf[7] ) );
+          System.arraycopy( databuf, 4, mRepliedData, 0, 4 );
+          mComm.mHasWritten = true;
           return PACKET_WRITE_REPLY;
         // } else {
         //   return PACKET_ERROR;

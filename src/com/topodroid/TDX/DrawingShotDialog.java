@@ -11,7 +11,9 @@
  */
 package com.topodroid.TDX;
 
-// import com.topodroid.utils.TDLog;
+import com.topodroid.utils.TDLog;
+import com.topodroid.utils.TDUtil;
+import com.topodroid.utils.TDString;
 import com.topodroid.ui.MyKeyboard;
 import com.topodroid.ui.MyCheckBox;
 import com.topodroid.ui.MyButton;
@@ -20,8 +22,8 @@ import com.topodroid.ui.MyDialog;
 import com.topodroid.ui.TDLayout;
 import com.topodroid.utils.TDColor;
 import com.topodroid.prefs.TDSetting;
-import com.topodroid.common.ExtendType;
-// import com.topodroid.common.PlotType;
+import com.topodroid.types.ExtendType;
+// import com.topodroid.types.PlotType;
 
 import android.os.Bundle;
 import android.content.Context;
@@ -43,7 +45,7 @@ import android.widget.SeekBar;
 import android.widget.SeekBar.OnSeekBarChangeListener;
 
 // import android.text.InputType;
-import android.inputmethodservice.KeyboardView;
+// import android.inputmethodservice.KeyboardView;
 
 class DrawingShotDialog extends MyDialog
                         implements View.OnClickListener
@@ -73,11 +75,11 @@ class DrawingShotDialog extends MyDialog
   private MyCheckBox mRBdup  = null;
   private MyCheckBox mRBsurf = null;
   private MyCheckBox mRBcmtd = null;
+  private MyCheckBox mRBbcks = null; // BACKSHOT
   private MyCheckBox mCBxSplay = null;
 
   private CheckBox mCBfrom   = null;
   private CheckBox mCBto     = null;
-  // private CheckBox mRBbackshot;
   // private Button mRBwalls;
 
   private final DrawingWindow mParent;
@@ -117,14 +119,14 @@ class DrawingShotDialog extends MyDialog
   protected void onCreate(Bundle savedInstanceState)
   {
     super.onCreate(savedInstanceState);
-    initLayout( R.layout.drawing_shot_dialog,
-      String.format( mContext.getResources().getString( R.string.shot_title ), mBlock.mFrom, mBlock.mTo ) );
+    initLayout( R.layout.drawing_shot_dialog, String.format( resString( R.string.shot_title ), mBlock.mFrom, mBlock.mTo ) );
 
     TextView mLabel     = (TextView) findViewById(R.id.shot_label);
     mETfrom    = (EditText) findViewById(R.id.shot_from );
     mETto      = (EditText) findViewById(R.id.shot_to );
     mETcomment = (EditText) findViewById(R.id.shot_comment );
     TextView tv_type    = (TextView) findViewById(R.id.shot_type ); // 20230118 local var "tv_type"
+    // TextView tv_mark    = (TextView) findViewById(R.id.shot_mark ); // cavway flag
     if (mBlock.isBacksight() ) {
       tv_type.setText( R.string.type_b );
     } else if (mBlock.isForesight() ) {
@@ -132,6 +134,7 @@ class DrawingShotDialog extends MyDialog
     } else if (mBlock.isManual() ) {
       tv_type.setText( R.string.type_m );
     }
+
     if (mBlock.isMultiBad() ) {
       tv_type.setTextColor( TDColor.DARK_ORANGE );
     } else if ( TopoDroidApp.mShotWindow != null && TopoDroidApp.mShotWindow.isBlockMagneticBad( mBlock ) ) {
@@ -141,8 +144,8 @@ class DrawingShotDialog extends MyDialog
     mETfrom.setOnLongClickListener( this );
     mETto.setOnLongClickListener( this );
 
-    mKeyboard = new MyKeyboard( mContext, (KeyboardView)findViewById( R.id.keyboardview ),
-                                R.xml.my_keyboard_base, R.xml.my_keyboard_qwerty );
+    // mKeyboard = new MyKeyboard( mContext, (KeyboardView)findViewById( R.id.keyboardview ), R.xml.my_keyboard_base, R.xml.my_keyboard_qwerty );
+    mKeyboard= MyKeyboard.getMyKeyboard( mContext, findViewById( R.id.keyboardview ), R.xml.my_keyboard_base, R.xml.my_keyboard_qwerty );
 
     mBtnOK     = (Button) findViewById(R.id.btn_ok);
     mBtnCancel = (Button) findViewById(R.id.btn_cancel);
@@ -156,7 +159,6 @@ class DrawingShotDialog extends MyDialog
     // mRBsurvey    = (RadioButton) findViewById( R.id.survey );
     // mRBdup  = (CheckBox) findViewById( R.id.duplicate );
     // mRBsurf = (CheckBox) findViewById( R.id.surface );
-    // mRBbackshot  = (CheckBox) findViewById( R.id.backshot );
 
     // hideStretchBar = true;
     // hideColorBtn   = true;
@@ -230,12 +232,15 @@ class DrawingShotDialog extends MyDialog
       mRBdup      = new MyCheckBox( mContext, size, R.drawable.iz_dup_ok, R.drawable.iz_dup_no );
       mRBsurf     = new MyCheckBox( mContext, size, R.drawable.iz_surface_ok, R.drawable.iz_surface_no );
       mRBcmtd     = new MyCheckBox( mContext, size, R.drawable.iz_comment_ok, R.drawable.iz_comment_no );
+      mRBbcks     = new MyCheckBox( mContext, size, R.drawable.iz_backsight_ok, R.drawable.iz_backsight_no ); // BACKSHOT
       layout3.addView( mRBdup,  lp );
       layout3.addView( mRBsurf, lp );
       layout3.addView( mRBcmtd, lp );
+      layout3.addView( mRBbcks, lp ); // BACKSHOT
       mRBdup.setOnClickListener( this );
       mRBsurf.setOnClickListener( this );
       mRBcmtd.setOnClickListener( this );
+      mRBbcks.setOnClickListener( this ); // BACKSHOT
       if ( TDLevel.overAdvanced && mBlock.isOtherSplay() ) {
         mCBxSplay = new MyCheckBox( mContext, size, R.drawable.iz_xsplays_ok, R.drawable.iz_ysplays_no );
         mCBxSplay.setChecked( false ); // ??? setState( false );
@@ -280,17 +285,21 @@ class DrawingShotDialog extends MyDialog
     //   mRBignore.setClickable( false );
     //   mRBignore.setTextColor( TDColor.MID_GRAY );
     // }
+    StringBuilder sb = new StringBuilder();
     if ( TDInstance.datamode == SurveyInfo.DATAMODE_NORMAL ) {
-      mLabel.setText( mBlock.dataStringNormal( mContext.getResources().getString(R.string.shot_data) ) );
+      sb.append( mBlock.dataStringNormal( resString(R.string.shot_data) ) );
     } else { // SurveyInfo.DATAMODE_DIVING
-      mLabel.setText( mBlock.dataStringDiving( mContext.getResources().getString(R.string.shot_data) ) );
+      sb.append( mBlock.dataStringDiving( resString(R.string.shot_data) ) );
     }
+    int mark = mBlock.cavwayFlag();
+    if ( mark > 0 ) {
+      sb.append(" ").append( resString( ShotEditDialog.mShotMark[ (mark < 8)? mark : 8 ] ) );
+    }
+    mLabel.setText( sb.toString() );
 
     mRBleft.setOnClickListener( this );
     mRBvert.setOnClickListener( this );
     mRBright.setOnClickListener( this );
-
-    // mRBbackshot.setOnClickListener( this );
 
     // AUTOWALLS
     // if ( TDSetting.mWallsType != TDSetting.WALLS_NONE 
@@ -337,8 +346,8 @@ class DrawingShotDialog extends MyDialog
           mRBsurf.setState( true );
         } else if ( mBlock.isCommented() ) { // FIXME_COMMENTED
           mRBcmtd.setState( true );
-        // } else if ( mBlock.isBackshot() ) {
-        //   mRBbackshot.setChecked( true );
+        } else if ( mBlock.isBackshot() ) { // BACKSHOT
+          mRBbcks.setChecked( true );
         }
       }
     }
@@ -428,25 +437,31 @@ class DrawingShotDialog extends MyDialog
       if ( mRBdup.isChecked() ) {
         mRBsurf.setState( false );
         mRBcmtd.setState( false );
+        mRBbcks.setState( false ); // BACKSHOT
       }
     } else if ( TDLevel.overNormal && b == mRBsurf ) {
       mRBsurf.toggleState();
       if ( mRBsurf.isChecked() ) {
         mRBdup.setState( false );
         mRBcmtd.setState( false );
+        mRBbcks.setState( false ); // BACKSHOT
       }
     } else if ( TDLevel.overNormal && b == mRBcmtd ) {
       mRBcmtd.toggleState();
       if ( mRBcmtd.isChecked() ) {
         mRBdup.setState( false );
         mRBsurf.setState( false );
+        mRBbcks.setState( false ); // BACKSHOT
+      }
+    } else if ( TDLevel.overNormal && b == mRBbcks ) { // BACKSHOT
+      mRBbcks.toggleState();
+      if ( mRBbcks.isChecked() ) {
+        mRBdup.setState( false );
+        mRBsurf.setState( false );
+        mRBcmtd.setState( false );
       }
     } else if ( TDLevel.overNormal && b == mCBxSplay ) {
       mCBxSplay.toggleState();
-
-    // } else if ( b == mRBbackshot ) {
-    //   mRBdup.setChecked( false );
-    //   mRBsurf.setChecked( false );
 
     // } else if ( TDLevel.overExpert && b == mRBwalls ) { // AUTOWALLS
     //   mParent.drawWallsAt( mBlock );
@@ -456,6 +471,10 @@ class DrawingShotDialog extends MyDialog
       dismiss();
     } else if ( b == mBtnOK ) {
       MyKeyboard.close( mKeyboard );
+      if ( sameString( mETfrom, mETto ) ) {
+        mETto.setError( resString( R.string.equal_station_names ) );
+        return;
+      }
 
       if ( TDLevel.overAdvanced ) {
         if ( mCBfrom != null && mCBfrom.isChecked() ) {
@@ -483,12 +502,13 @@ class DrawingShotDialog extends MyDialog
       mParent.updateBlockExtend( mBlock, extend, mStretch ); // FIXME_STRETCH equal extend checked by the method
 
       if ( TDLevel.overNormal ) {
-        long flag  = mBlock.getFlag();
-        if ( mRBdup.isChecked() )       { flag = DBlock.FLAG_DUPLICATE; }
-        else if ( mRBsurf.isChecked() ) { flag = DBlock.FLAG_SURFACE; }
-        else if ( mRBcmtd.isChecked() ) { flag = DBlock.FLAG_COMMENTED; }
-        // else if ( mRBbackshot.isChecked() ) { flag = DBlock.FLAG_BACKSHOT; }
-        else /* if ( mRBsurvey.isChecked() ) */ { flag = DBlock.FLAG_SURVEY; }
+        mBlock.clearFlagDuplicateSurfaceCommentedBackshot();
+        long flag  = mBlock.getFlagFully();
+        if ( mRBdup.isChecked() )       { flag |= DBlock.FLAG_DUPLICATE; } // FIXME why |= ? because other flags have not been cleared
+        else if ( mRBsurf.isChecked() ) { flag |= DBlock.FLAG_SURFACE; }
+        else if ( mRBcmtd.isChecked() ) { flag |= DBlock.FLAG_COMMENTED; }
+        else if ( mRBbcks.isChecked() ) { flag |= DBlock.FLAG_BACKSHOT; }
+        // else /* if ( mRBsurvey.isChecked() ) */ { flag = DBlock.FLAG_SURVEY; }
         mParent.updateBlockFlag( mBlock, flag, mPath ); // equal flag is checked by the method
       }
 
@@ -498,15 +518,15 @@ class DrawingShotDialog extends MyDialog
 	}
       }
 
-      String from = mETfrom.getText().toString().trim();
-      String to   = mETto.getText().toString().trim();
+      String from = TDString.noSpaces( mETfrom.getText().toString() ); // N.B. no spaces in station names
+      String to   = TDString.noSpaces( mETto.getText().toString() );
 
       if ( ! from.equals( mBlock.mFrom ) || ! to.equals( mBlock.mTo ) ) { // FIXME revert equals
         mParent.updateBlockName( mBlock, from, to );
       }
 
       if ( mETcomment.getText() != null ) {
-        String comment = mETcomment.getText().toString().trim();
+        String comment = TDUtil.getTextOrEmpty( mETcomment );
         mParent.updateBlockComment( mBlock, comment ); // equal comment checked by the method
       }
 

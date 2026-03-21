@@ -12,6 +12,7 @@
 package com.topodroid.TDX;
 
 import com.topodroid.utils.TDLog;
+import com.topodroid.utils.TDUtil;
 import com.topodroid.ui.MyCheckBox;
 import com.topodroid.ui.MyDialog;
 import com.topodroid.ui.MyStateBox;
@@ -94,7 +95,7 @@ class DrawingLineDialog extends MyDialog
   {
     super.onCreate(savedInstanceState);
 
-    String title = String.format( mParent.getResources().getString( R.string.title_draw_line ), BrushManager.getLineName( mLine.mLineType ) );
+    String title = String.format( resString( R.string.title_draw_line ), BrushManager.getLineName( mLine.mLineType ) );
     initLayout( R.layout.drawing_line_dialog, title );
 
     mETtype = (Spinner) findViewById( R.id.line_type );
@@ -244,7 +245,6 @@ class DrawingLineDialog extends MyDialog
   public void onClick(View v) 
   {
     Button b = (Button)v;
-    // TDLog.Log( TDLog.LOG_INPUT, "DrawingLineDialog onClick() " + b.getText().toString() );
 
     if ( b == mBtnOutlineIn ) {
       mBtnOutlineOut.setChecked( false );
@@ -285,11 +285,7 @@ class DrawingLineDialog extends MyDialog
       }
 
       if ( mDoOptions ) {
-        if ( mEToptions.getText() == null ) {
-          mLine.setOptions( "" );
-        } else {
-          mLine.setOptions( mEToptions.getText().toString().trim() );
-        }
+        mLine.setOptions( TDUtil.getTextOrEmpty( mEToptions ) );
       }
       if ( mBtnOutlineOut.isChecked() ) mLine.mOutline = DrawingLinePath.OUTLINE_OUT;
       else if ( mBtnOutlineIn.isChecked() ) mLine.mOutline = DrawingLinePath.OUTLINE_IN;

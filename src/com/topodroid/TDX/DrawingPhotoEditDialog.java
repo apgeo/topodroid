@@ -12,9 +12,10 @@
 package com.topodroid.TDX;
 
 import com.topodroid.utils.TDLog;
+import com.topodroid.utils.TDUtil;
 import com.topodroid.ui.MyDialog;
 import com.topodroid.ui.TDImage;
-// import com.topodroid.prefs.TDSetting;
+import com.topodroid.prefs.TDSetting;
 
 import android.os.Bundle;
 import android.content.Context;
@@ -84,7 +85,7 @@ class DrawingPhotoEditDialog extends MyDialog
     // mButtonCancel = (Button) findViewById( R.id.photo_cancel );
 
     ((TextView) findViewById( R.id.photo_azimuth )).setText(
-       String.format( mContext.getResources().getString( R.string.photo_azimuth_clino ), mTdImage.azimuth(), mTdImage.clino() ) );
+       String.format( resString( R.string.photo_azimuth_clino ), mTdImage.azimuth(), mTdImage.clino() ) );
     ((TextView) findViewById( R.id.photo_date )).setText( mTdImage.date() );
 
     if ( mPhoto.mPointText != null ) {
@@ -122,19 +123,21 @@ class DrawingPhotoEditDialog extends MyDialog
   @Override
   public void onClick(View v) 
   {
-    // Button b = (Button) v;
-    // TDLog.Log(  TDLog.LOG_INPUT, "DrawingPhotoEditDialog onClick() " + b.getText().toString() );
-
     int vid = v.getId();
     if ( vid == R.id.photo_ok ) {
-      String comment = ( mETcomment.getText() == null )? "" : mETcomment.getText().toString();
+      String comment = TDUtil.getTextOrEmpty( mETcomment );
       mPhoto.setPointText( comment );
       mPhoto.setCode( mGeoCode );
       try {
         float size = Float.parseFloat( mETsize.getText().toString() );
-        if ( size < 1 ) size = 1; // min size 1 meter
-        mPhoto.setPhotoSize( size );
+        if ( size < TDSetting.mPictureMin ) size = TDSetting.mPictureMin; // same as DrawingPhotoDialog
+        if ( size > TDSetting.mPictureMax ) size = TDSetting.mPictureMax;
+        if ( mPhoto.setPhotoSize( size ) ) {
+          // mActivity.setPhotoSize( mPhoto );
+        }
       } catch ( NumberFormatException e ) {
+        // do not update photo size
+        // TODO feddback to the user
       }
       TopoDroidApp.mData.updatePhotoCommentAndCode( TDInstance.sid, mPhoto.mId, comment, mGeoCode );
     // } else if ( vid == R.id.photo_delete ) {
@@ -143,7 +146,7 @@ class DrawingPhotoEditDialog extends MyDialog
     } else if ( vid == R.id.photo_image ) {
       // TopoDroidApp.viewPhoto( mContext, mFilename );
       if ( mTdImage != null ) {
-        (new PhotoViewDialog( mContext, mFilename )).show();
+        (new PhotoViewDialog( mContext, mFilename, null )).show(); // null title
       }
       return;
     } else if ( vid == R.id.photo_geocode ) {

@@ -8,13 +8,22 @@
  *  Copyright This software is distributed under GPL-3.0 or later
  *  See the file COPYING.
  * --------------------------------------------------------
+ * flow with no local man pages:
+ *   show page filename.htm
+ *   load filename.htm
+ *   load asset filename.htm
+ *   AI ...
+ *   load asset filename.htm
  */
 package com.topodroid.help;
 
 import com.topodroid.utils.TDTag;
 import com.topodroid.utils.TDLog;
 import com.topodroid.utils.TDFile;
+import com.topodroid.prefs.TDPref;
 import com.topodroid.prefs.TDSetting;
+import com.topodroid.prefs.GeminiDialog;
+import com.topodroid.help.AIdialog;
 import com.topodroid.TDX.TDandroid;
 // import com.topodroid.TDX.TDPath;
 import com.topodroid.TDX.TDToast;
@@ -37,6 +46,10 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.ActivityNotFoundException;
 import android.net.Uri;
+// import google.android.material.floatingactionbutton.FloatingActionButton;
+// import com.google.ai.client.generativeai.GenerativeModel;
+// import com.google.ai.client.generativeai.type.Content;
+// import com.google.ai.client.generativeai.java.GenerativeModelFeature;
 
 // import android.widget.TextView;
 import android.widget.ImageView;
@@ -54,24 +67,59 @@ import android.webkit.WebView;
 import android.webkit.WebViewClient;
 
 public class UserManualActivity extends Activity
-                                implements OnItemClickListener, OnClickListener
+                                implements OnItemClickListener
+                                , OnClickListener
+                                , IHelpViewer
 {
   private static final String WEBSITE = "https://sites.google.com/site/speleoapps";
   private static final String NEEDLE = "DistoX/files/man";
   private WebView mTV_text;
   private int mCloseOnBack = 0;
+  private String mCurrentPage = null;
+
+  /** load a man page
+   * @param view webview view - if null use the privale webview
+   * @param filename  page filename
+   */
+  private void loadManPage( WebView view, String filename ) 
+  {
+    TDLog.v("UserManual load manpage " + filename );
+    ++mCloseOnBack;
+    if ( view == null ) view = mTV_text;
+    if ( ! ( TDSetting.mLocalManPages && TDFile.hasManFile( filename ) ) ) { // pagefile.exists()
+      loadAssetPage( view, filename );
+    } else {
+      try {
+        loadLocal( view, TDFile.getManFileReader( filename ), TDFile.getManFilePath( filename ) );
+      } catch ( IOException e ) {
+        loadAssetPage( view, filename );
+      }
+    }
+  }
+
+  /** load a man page
+   * @param view webview view - must be nonnull
+   * @param filename  page filename
+   */
+  private void loadAssetPage( WebView view, String filename )
+  {
+    TDLog.v("UserManual load asset " + filename );
+    String page = "/android_asset/man/" + filename;
+    view.loadUrl( "file://" + page );
+  }
 
   /** load and display a man page
    * @param view     display view
    * @param filename man page file
    */
-  private void load( WebView view, String filename ) throws IOException
+  private void load( WebView view, String filename ) 
   {
+    TDLog.v("UserManual load " + filename );
     ++mCloseOnBack;
     // String filepath = TDPath.getManFile( filename );
     // view.loadUrl( filepath );
     // setWebViewSettings( mTVtext );
-    TDLog.v( "MAN-0 filename <" + filename + ">" );
+    // TDLog.v( "MAN-0 filename <" + filename + ">" );
 
     if ( filename.startsWith("http://" ) ) {
       // ++mCloseOnBack;
@@ -89,7 +137,11 @@ public class UserManualActivity extends Activity
           // File pagefile = TDFile.getManFile( name );
           // TDLog.v( "MAN-2 pagefile " + pagefile.getPath() );
           // TDLog.v( "MAN-2 pagename " + pagename );
-          loadLocal( view, TDFile.getManFileReader( name ), TDFile.getManFilePath( name ) );
+          try {
+            loadLocal( view, TDFile.getManFileReader( name ), TDFile.getManFilePath( name ) );
+          } catch ( IOException e ) {
+            loadAssetPage( view, name );
+          }
         } 
       }
     } else {
@@ -100,14 +152,7 @@ public class UserManualActivity extends Activity
       // TDLog.v( "MAN-3 filename " + filename );
       // TDLog.v( "MAN-3 pagename " + pagename );
       // TDLog.v( "MAN-3 pagefile path " + pagefile.getPath() );
-      if ( ! ( TDSetting.mLocalManPages && TDFile.hasManFile( filename ) ) ) { // pagefile.exists()
-        String page = "/android_asset/man/" + filename;
-        // TDLog.v( "MAN-4 assets page " + page );
-        view.loadUrl( "file://" + page );
-      } else {
-        // TDLog.v( "MAN-4 local pagefile " + pagefile );
-        loadLocal( view, TDFile.getManFileReader( filename ), TDFile.getManFilePath( filename ) );
-      }
+      loadManPage( view, filename );
     }
   }
    
@@ -116,31 +161,29 @@ public class UserManualActivity extends Activity
    * @param fr       file reader
    * @param pagepath man page filepath
    */
-  private void loadLocal( WebView view, FileReader fr, String pagepath ) throws IOException
+  private void loadLocal( WebView view, FileReader fr, String pagepath ) 
   {
-    // view.loadUrl( "file://" + page );
-    StringBuilder page_data = new StringBuilder();
     String encoding = "UTF-8";
     String mime = "text/html";
     String baseurl = "file://" + pagepath;
-    // TDLog.v( "MAN-5 baseurl " + baseurl );
-    // FileReader fr = new FileReader( pagefile );
-    encoding = fr.getEncoding();
-    BufferedReader br = new BufferedReader( fr );
-    String line;
-    while ( ( line = br.readLine() ) != null ) {
-      page_data.append( line );
+    StringBuilder page_data = new StringBuilder();
+    try {
+      encoding = fr.getEncoding();
+      BufferedReader br = new BufferedReader( fr );
+      String line;
+      while ( ( line = br.readLine() ) != null ) {
+        page_data.append( line );
+      }
+      fr.close();
+    } catch ( IOException e ) {
+      page_data = new StringBuilder();
+      page_data.append( "<html><body>Failed to load local page<br><b>")
+               .append( pagepath )
+               .append( "</b><br><p>Error:<br>" )
+               .append( e.getMessage() )
+               .append( "</body></html>" );
     }
-    fr.close();
     view.loadDataWithBaseURL( baseurl, page_data.toString(), mime, encoding, null );
-
-    // try { 
-    //   URI pageuri = pagefile.toURI();
-    //   // TDLog.v( "MAN url " +  pageuri.toURL().toString() );
-    //   view.loadUrl( pageuri.toURL().toString() );
-    // } catch ( MalformedURLException e ) {
-    //   TDLog.e( "MAN error " + e.getMessage() );
-    // }
   }
 
   // private void getManualFromWeb()
@@ -163,6 +206,7 @@ public class UserManualActivity extends Activity
 // -------------------------------------------------------------------
   // SlidingDrawer mDrawer;
   private ImageView     mImage;
+  private ImageView     mAI;
   private ListView      mList;
 
   /** set the settings of the display view
@@ -187,6 +231,7 @@ public class UserManualActivity extends Activity
     view.getSettings().setSupportZoom( true ); 
   }
 
+
   @Override
   protected void onCreate(Bundle savedInstanceState) 
   {
@@ -201,7 +246,16 @@ public class UserManualActivity extends Activity
     String page = null;
     Bundle extras = getIntent().getExtras();
     if ( extras != null ) page = extras.getString( TDTag.TOPODROID_HELP_PAGE );
-    if ( page == null ) page = "manual00.htm";
+    mCurrentPage = null;
+    if ( page == null ) {
+      page = "manual00.htm";
+      mCurrentPage = page;
+    } else if ( page.startsWith( "manual" ) && page.length() > 7 ) {
+      int nr = 10 * (page.charAt(6) - '0') + (page.charAt(7) - '0');
+      if ( nr < 16 ) mCurrentPage = page;
+    } else if ( page.startsWith("page_") ) {
+      mCurrentPage = page;
+    }
 
     setContentView(R.layout.distox_manual_dialog);
     mTV_text   = (WebView) findViewById(R.id.manual_text );
@@ -214,11 +268,7 @@ public class UserManualActivity extends Activity
         ++mCloseOnBack;
         // view.loadUrl( url );
         // TDLog.v( "MAN Web client " + url );
-        try {
-          load( view, url );
-        } catch ( IOException e ) {
-          TDLog.e( "UserMan load " + url.toString() + " Error: " + e.getMessage() );
-        }
+        load( view, url );
         return false;
       }
 
@@ -230,12 +280,17 @@ public class UserManualActivity extends Activity
     } );
 
     setTitle( R.string.title_manual );
-    try {
-      load( mTV_text, page );
-    } catch ( IOException e ) { 
-      TDLog.e( "UserMan load " + page + " Error: " + e.getMessage() );
-    }
+    load( mTV_text, page );
 
+    boolean is_online = TDandroid.isOnline( this );
+    mAI  = (ImageView) findViewById( R.id.ai );
+    if ( is_online ) {
+      mAI.setOnClickListener( this );
+      // mAI.setImageResource( R.drawable.iz_ai );
+    } else {
+      // mAI.setVisibility( View.GONE );
+      mAI.setImageResource( R.drawable.iz_ai_no );
+    }
     mImage  = (ImageView) findViewById( R.id.handle );
     mImage.setOnClickListener( this );
     mList = (ListView) findViewById( R.id.content );
@@ -259,12 +314,24 @@ public class UserManualActivity extends Activity
     adapter.add( getResources().getString( R.string.man_threed ) );
     adapter.add( getResources().getString( R.string.man_content ) );
     adapter.add( getResources().getString( R.string.man_index ) );
-    adapter.add( getResources().getString( R.string.man_website ) );
+    if ( is_online ) adapter.add( getResources().getString( R.string.man_website ) );
+    // if ( TDSetting.mGeminiApiKey != null && ! TDSetting.mGeminiApiKey.isEmpty() ) {
+    //   adapter.add( getResources().getString( R.string.man_gemini ) );
+    // }
  
     mList.setAdapter( adapter );
     mList.setVisibility( View.GONE );
     mList.invalidate();
     mList.setOnItemClickListener( this );
+  }
+
+  /** lifecycle: activity destroy
+   */
+  @Override
+  public void onDestroy( )
+  {
+    super.onDestroy();
+    AIdialog.resetChat();
   }
 
   /** react to a user tap
@@ -282,6 +349,12 @@ public class UserManualActivity extends Activity
       } else {
         mList.setVisibility( View.VISIBLE );
       }
+    } else if ( b == mAI ) {
+      if ( TDSetting.mGeminiApiKey != null && ! TDSetting.mGeminiApiKey.isEmpty() ) {
+        showAIdialog();
+      } else { // start API key dialog
+        (new GeminiDialog( this, this, null )).show();
+      }
     }
   }
 
@@ -297,15 +370,19 @@ public class UserManualActivity extends Activity
     // CharSequence item = ((TextView) view).getText();
     // TDLog.v( "click " + item + " pos " + pos);
     mList.setVisibility( View.GONE );
+    mCurrentPage = null;
     if ( pos <= 17 ) {
       mCloseOnBack = 0;
-      try { 
-        load( mTV_text, String.format(Locale.US, "manual%02d.htm", pos ) );
-      } catch ( IOException e ) {
-        TDLog.e("User-man pos " + pos + " error " + e.getMessage() );
-      }
-    } else if ( pos == 18 ) { // website
+      mCurrentPage = String.format(Locale.US, "manual%02d.htm", pos );
+      load( mTV_text, mCurrentPage );
+    } else if ( pos == 18 && TDandroid.isOnline(this) ) { // website
       viewUrl( WEBSITE );
+    // } else if ( pos == 19 ) {
+    //   if ( TDSetting.mGeminiApiKey != null && ! TDSetting.mGeminiApiKey.isEmpty() ) {
+    //     (new HelpAIdialog( this, this, TDSetting.mGeminiApiKey, pos )).show();
+    //   } else {
+    //     TDToast.make( R.string.no_api_key );
+    //   }
     } else {
       // getManualFromWeb();
       TDToast.makeBad( R.string.no_manual );
@@ -340,11 +417,37 @@ public class UserManualActivity extends Activity
   public static void showHelpPage( Context context, String page )
   {
     // if ( page == null ) return;
+    TDLog.v("UserManual show page " + page );
     Intent intent = new Intent( Intent.ACTION_VIEW );
     intent.setClass( context, UserManualActivity.class );
     intent.putExtra( TDTag.TOPODROID_HELP_PAGE, page );
     context.startActivity( intent );
   }
+
+  /** open the AI dialog
+   * @note IHelpViwer interface
+   */
+  public void showAIdialog()
+  {
+    TDToast.make( R.string.ai_internet );
+    (new HelpAIdialog( this, this, TDSetting.mGeminiApiKey, mCurrentPage )).show();
+  }
+
+  public void showManPage( String page )
+  {
+    TDLog.v("User Manual show page " + page );
+    loadManPage( null, page );
+  }
+
+  public void showInvalid( final TDPref pref, final String response )
+  {
+    this.runOnUiThread( new Runnable() { public void run() {
+      TDToast.makeWarn( response ); 
+      if ( pref != null ) pref.setButtonValue( "---" );
+      TDSetting.setGeminiApiKey( "" );
+    } } );
+  }
+  
 
   // /** react to a change in the configuration
   //  * @param cfg   new configuration
@@ -354,6 +457,8 @@ public class UserManualActivity extends Activity
   // {
   //   super.onConfigurationChanged( new_cfg );
   // }
+
+  public void setAIbuttonEnabled( boolean enabled ) { /* nothing */ }
 
 }
 

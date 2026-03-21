@@ -11,6 +11,8 @@
  */
 package com.topodroid.TDX;
 
+import com.topodroid.utils.TDString;
+import com.topodroid.utils.TDUtil;
 import com.topodroid.ui.MyDialog;
 import com.topodroid.dev.Device;
 
@@ -38,6 +40,7 @@ class DeviceNameDialog extends MyDialog
   private EditText mETnickname;
   private CheckBox mCBsecondDevice;
   private Button mBTok;
+  private Button mBTforget;
   // private Button mBTback;
 
   private final DeviceActivity mParent;
@@ -65,7 +68,7 @@ class DeviceNameDialog extends MyDialog
 
     mCBsecondDevice = (CheckBox) findViewById( R.id.second_device );
 
-    // setTitle( mParent.getResources().getString( R.string.device_info ) );
+    // setTitle( resString( R.string.device_info ) );
 
     mTVmodel.setText( mDevice.mModel );
     mTVname.setText( mDevice.mName );
@@ -76,6 +79,9 @@ class DeviceNameDialog extends MyDialog
 
     mBTok = (Button) findViewById( R.id.button_ok );
     mBTok.setOnClickListener( this );
+
+    mBTforget = (Button) findViewById( R.id.button_forget );
+    mBTforget.setOnClickListener( this );
     // mBTback = (Button) findViewById( R.id.button_cancel );
     // mBTback.setOnClickListener( this );
     ((Button)findViewById( R.id.button_cancel ) ).setOnClickListener( this );
@@ -86,13 +92,15 @@ class DeviceNameDialog extends MyDialog
   {
     Button b = (Button)view;
     if ( b == mBTok ) {
-      if ( mETnickname.getText() != null ) {
-        String nickname = mETnickname.getText().toString();
+      String nickname = TDUtil.getTextOrNull( mETnickname ); // FIXME NOSPACES ?
+      if ( nickname != null ) {
         mParent.setDeviceNickname( mDevice, nickname );
       }
       if ( mCBsecondDevice.isChecked() ) {
         mParent.setSecondDevice( mDevice.getAddress() );
       }
+    } else if ( b == mBTforget ) {
+      mParent.forgetDevice( mDevice );
     // } else if ( b == mBTback ) {
     //   /* nothing */
     }

@@ -4,6 +4,19 @@
 <!-- arrays marker with "translatable=false" MUST NOT BE TRANSLATED -->
 
 <resources>
+  <!-- TODO string-array name="scanLegType">
+     <item name="s">Generic</item>
+     <item name="sX">XSection</item>
+     <item name="sH">Horizontal</item>
+     <item name="sV">Vertical</item>
+  </string-array -->
+
+  <!-- TODO string-array name="toolbarUpdate">
+     <item name="oldest">Replace oldest</item>
+     <item name="front">Put at front</item>
+     <item name="front_oldest">At front, drop oldest</item>
+  </string-array -->
+
   <!-- TODO string-array name="teamNames">
      <item name="plain">Text plain</item>
      <item name="separated">Text separated</item>
@@ -83,7 +96,7 @@
   </string-array>
 
   
-  <string-array name="闭环关闭">
+  <string-array name="loopClosure">
      <item name="none">不补偿</item>
      <item name="normal">标准</item>
      <item name="weighted">Weighted</item>
@@ -364,12 +377,12 @@
      <item name="ddmmss">度, 分, 秒</item>
   </string-array>
 
-  <string-array name="calibAlgo">
+  <!-- string-array name="calibAlgo">
      <item name="auto">自动</item>
      <item name="linear">线性</item>
      <item name="nonlinear">非线性</item>
-     <!-- item name="minimum">Minimum</item -->
-  </string-array>
+     <! - - item name="minimum">Minimum</item - - >
+  </string-array -->
 
   <string-array name="rawCData">
      <item name="none">不显示</item>

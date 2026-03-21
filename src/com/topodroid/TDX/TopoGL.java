@@ -23,6 +23,7 @@ import com.topodroid.utils.TDLocale;
 // import com.topodroid.c3bt.BleUtils;
 // import com.topodroid.c3bt.BricComm;
 // import com.topodroid.c3bt.SapComm;
+// import com.topodroid.c3bt.DiscoXComm;
 // import com.topodroid.c3bt.DistoXComm;
 
 import com.topodroid.c3in.ParserTh;
@@ -39,6 +40,10 @@ import com.topodroid.c3out.ExportData;
 import com.topodroid.c3out.ExportTask;
 
 import com.topodroid.c3walls.cw.CWConvexHull;
+
+import com.topodroid.dem.ParserDEM;
+import com.topodroid.dem.DEMasciiParser;
+import com.topodroid.dem.DEMgridParser;
 
 import com.topodroid.prefs.TDSetting;
 import com.topodroid.prefs.TDPrefCat;
@@ -365,7 +370,7 @@ public class TopoGL extends Activity
     getWindow().getDecorView().setSystemUiVisibility( TDSetting.mUiVisibility );
 
     // TDLog.v("on create: Not Android 10 " + NOT_ANDROID_10 + " 11 " + NOT_ANDROID_11 );
-    // TDLog.v("on create");
+    TDLog.v("GL on create - texture root: " + mTextureRoot );
     checkPreferences();
 
     mHasC3d     &= TDLevel.overExpert;
@@ -495,7 +500,7 @@ public class TopoGL extends Activity
 
     TDLocale.resetTheLocale();
 
-    mListView = (MyHorizontalListView) findViewById(R.id.listview);
+    mListView = (MyHorizontalListView) findViewById(R.id.listview); // button bar on the top
     int size = resetButtonBar();
 
     mMenuImage = (Button) findViewById( R.id.handle );
@@ -861,7 +866,7 @@ public class TopoGL extends Activity
       // startActivity( new Intent( this, TopoGLPreferences.class ) );
     } else if ( p++ == pos ) { // HELP
       // new DialogHelp(this).show();	    
-      new HelpDialog(this, izons, menus, help_icons, help_menus, mNrButton1, help_menus.length, getResources().getString( HELP_PAGE )).show();
+      new HelpDialog(this, this, izons, menus, help_icons, help_menus, mNrButton1, help_menus.length, getResources().getString( HELP_PAGE )).show();
     }
   }
 
@@ -1659,10 +1664,11 @@ public class TopoGL extends Activity
           // TDLog.v("xunit " + xunit + " yunit " + yunit );
           isr = new InputStreamReader( TDsafUri.docFileInputStream( pfd ) );
           dem = new DEMasciiParser( isr, pathname, mDEMmaxsize, false, xunit, yunit ); // false: flip horz
-        } else { 
-          return false;
+        } else if ( pathname.toLowerCase( Locale.getDefault() ).endsWith( ".hgt" ) ) {
+          // TODO support of HGT DEM file has not been debugged
+          // dem = new DEMhgtParser( null, pathname, mDEMmaxsize, mParser.getOrigin() );
         }
-        if ( ! dem.valid() ) return false;
+        if ( dem == null || ! dem.valid() ) return false;
         final double dd = mDEMbuffer;
         // mParser = survey data parser
         // TDLog.v("BBox X " + mParser.emin + " " + mParser.emax + " Y " + mParser.nmin + " " + mParser.nmax + " Z " + mParser.zmin + " " + mParser.zmax );
@@ -1942,7 +1948,7 @@ public class TopoGL extends Activity
   public static float mDEMbuffer  = 200;
   public static int   mDEMmaxsize = 400;
   public static int   mDEMreduce  = DEM_SHRINK;
-  public static String mTextureRoot = "/sdcard/";
+  public static String mTextureRoot = "/sdcard/"; // Environment.getExternalStorageDirectory().getPath();
   // static boolean mWallConvexHull = false;
   // static boolean mWallPowercrust = false;
   // static boolean mWallDelaunay   = false;
@@ -2638,6 +2644,8 @@ public class TopoGL extends Activity
         mBluetoothComm = new BricComm( this, this, mBtRemoteDevice );
       } else if ( Device.isSap( mBtRemoteName ) ) {
         mBluetoothComm = new SapComm( this, this, mBtRemoteDevice );
+      } else if ( Device.isDiscoX( mBtRemoteName ) ) {
+        mBluetoothComm = new DiscoXComm( this, this, mBtRemoteDevice );
       } else if ( mBtRemoteName.startsWith( Device.NAME_DISTOX2 ) ) {
         mBluetoothComm = new DistoXComm( this, this, mBtRemoteDevice, mBtRemoteDevice.getAddress() );
       } else if ( mBtRemoteName.startsWith( Device.NAME_DISTOXBLE ) ) {
@@ -3069,6 +3077,7 @@ public class TopoGL extends Activity
 
   /** export file selection: send a request to select a file, on success return the model is exported
    * @param export   export data-struct
+   * @note called by ExportDialogModel
    */
   void selectExportFile( ExportData export )
   {

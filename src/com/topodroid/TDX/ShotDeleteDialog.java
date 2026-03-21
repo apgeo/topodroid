@@ -76,9 +76,9 @@ class ShotDeleteDialog extends MyDialog
     TextView mTVdata = (TextView) findViewById( R.id.shot_shot_data );
     mTVstations.setText( mBlk.Name() );
     if ( TDInstance.datamode == SurveyInfo.DATAMODE_NORMAL ) {
-      mTVdata.setText( mBlk.dataStringNormal( mContext.getResources().getString(R.string.shot_data) ) );
+      mTVdata.setText( mBlk.dataStringNormal( resString(R.string.shot_data) ) );
     } else { // TDInstance.datamode == SurveyInfo.DATAMODE_NORMAL
-      mTVdata.setText( mBlk.dataStringDiving( mContext.getResources().getString(R.string.shot_data) ) );
+      mTVdata.setText( mBlk.dataStringDiving( resString(R.string.shot_data) ) );
     }
 
     mButtonDelete.setOnClickListener( this );
@@ -92,7 +92,6 @@ class ShotDeleteDialog extends MyDialog
   public void onClick(View v) 
   {
     Button b = (Button) v;
-    // TDLog.Log(  TDLog.LOG_INPUT, "PhotoSensorDialog onClick() " + b.getText().toString() );
     if ( b == mButtonDelete ) {
       mParent.doDeleteShot( mBlk.mId, mBlk, TDStatus.DELETED, mCBleg.isChecked() );
     // } else if ( b == mButtonCancel ) {

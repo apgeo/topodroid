@@ -13,6 +13,7 @@ package com.topodroid.TDX;
 
 import com.topodroid.dev.Device;
 import com.topodroid.utils.TDLog;
+import com.topodroid.utils.TDString;
 import com.topodroid.help.UserManualActivity;
 import com.topodroid.prefs.TDSetting;
 
@@ -64,11 +65,11 @@ public class BtAliasActivity extends Activity
 
   private String mModel = null;
   private int mSelectedPos = -1;
-  private int[] mPosToIndex;
+  private int[] mPosToIndex; // from position in the adapter list to index in the Device arrays
   
   private boolean setBtAlias()
   {
-    String alias = mETalias.getText().toString();
+    String alias = TDString.noSpaces( mETalias.getText().toString() ); // NOSPACES
     if ( alias == null || alias.isEmpty() ) {
       mETalias.setError( getResources().getString( R.string.bt_alias_missing ) );
       return false;
@@ -77,7 +78,8 @@ public class BtAliasActivity extends Activity
     if ( mSelectedPos == 0 ) {
       bt_name = mModel;
     } else {
-      String code  = mETcode.getText().toString();
+      // String code  = mETcode.getText().toString();
+      String code  = TDString.noSpaces( mETcode.getText().toString() );  // NOSPACES
       if ( code == null || code.isEmpty() ) {
         mETcode.setError( getResources().getString( R.string.bt_code_missing ) );
         return false;

@@ -70,6 +70,7 @@ public class CalibExport
       pw.format("# %s\n", ci.comment );
       pw.format("# %d\n", ci.algo );
       pw.format("# %d\n", ci.sensors );
+      pw.format("# index G1x G1y G1z M1x M1y M1z group azimuth clino roll error status - G2x G2y G2z M2x M2y M2z\n");
 
       List< CBlock > list = data.selectAllGMs( cid, 1, true ); // status 1: all shots, true: negative_grp too
       // TDLog.v("calib export: data " + list.size() );
@@ -94,6 +95,7 @@ public class CalibExport
       String coeff_str = data.selectCalibCoeff( cid );
       if ( coeff_str != null ) {
         byte[] coeff1 = CalibAlgo.stringToCoeff( coeff_str, 1 ); // 1: first set
+        TDLog.v("coeff size " + coeff1.length );
         TDMatrix mG = new TDMatrix();
         TDMatrix mM = new TDMatrix();
         TDVector vG = new TDVector();
@@ -112,7 +114,9 @@ public class CalibExport
         pw.format(Locale.US, "#    %.4f %.4f %.4f\n", mM.z.x, mM.z.y, mM.z.z );
         pw.format(Locale.US, "# NL %.4f %.4f %.4f\n", nL.x,   nL.y,   nL.z );
         if ( two_sensors ) { // TWO_SENSORS
-          byte[] coeff2 = CalibAlgo.stringToCoeff( coeff_str, 2 ); // 2: second set
+          // byte[] coeff2 = CalibAlgo.stringToCoeff( coeff_str, 2 ); // 2: second set
+          byte[] coeff2 = new byte[ CalibTransform.COEFF_DIM ];
+          System.arraycopy( coeff1, CalibTransform.COEFF_DIM, coeff2, 0, CalibTransform.COEFF_DIM );
           if ( coeff2 != null ) {
             CalibAlgo.coeffToG( coeff2, vG, mG );
             CalibAlgo.coeffToM( coeff2, vM, mM );
@@ -214,15 +218,21 @@ public class CalibExport
                 algo = Long.parseLong( line.substring(2) );
               } catch ( NumberFormatException e ) { TDLog.v("Error " + e.getMessage() ); }
               line = br.readLine();
-              if ( version > 602078 && line != null && line.charAt(0) == '#' ) { // TWO_SENSORS
+            } 
+            if ( version > 602078 ) {
+              if ( line != null && line.charAt(0) == '#' ) { // TWO_SENSORS
                 try {
                   sensors = Integer.parseInt( line.substring(2) );
                   two_sensors = ( sensors == 2 );
                 } catch ( NumberFormatException e ) { TDLog.v("Error " + e.getMessage() ); }
                 line = br.readLine();
               }
-
-                
+            }
+            if ( version > 603073 ) {
+              if ( line != null && line.charAt(0) == '#' ) { // HEADER
+                /* nothing */
+                line = br.readLine();
+              }
             }
             if ( line == null ) {
               ret = -4;
@@ -244,7 +254,8 @@ public class CalibExport
                       long mx = Long.parseLong( vals[4] );
                       long my = Long.parseLong( vals[5] );
                       long mz = Long.parseLong( vals[6] );
-                      long gid = data.insertGM( cid, gx, gy, gz, mx, my, mz );
+                      long time = TDUtil.dateToTimestamp( date ); // FIXME CALIB DATA TIME
+                      long gid = data.insertGM( cid, gx, gy, gz, mx, my, mz, time );
                       String grp = vals[7].trim();
                       data.updateGMName( gid, cid, grp );  // this sets the "group"
                       if ( vals.length > 12 ) { // status can be only 0:normal or 1:delete

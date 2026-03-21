@@ -12,7 +12,7 @@
 package com.topodroid.TDX;
 
 import com.topodroid.prefs.TDSetting;
-import com.topodroid.common.SymbolType;
+import com.topodroid.types.SymbolType;
 import com.topodroid.utils.TDLog;
 
 import android.graphics.Paint;
@@ -168,6 +168,8 @@ public class Symbol implements SymbolInterface
    */
   public String getFullThName() { return (mThPrefix == null)? mThName : mThPrefix + mThName; }
 
+  public String getFullThNameEscapedColon() { return ( (mThPrefix == null)? mThName : (mThPrefix + mThName) ).replaceAll(":", "_"); }
+
   /** @return true if the symbol Therion name is non-null and coincides with the given name
    * @param th_name   given name
    */
@@ -211,6 +213,14 @@ public class Symbol implements SymbolInterface
    */
   public Path   getPath()       { return null; }
 
+  /** @return the symbol scaled path - default to getPath()
+   */
+  public Path   getScaledPath() { return getPath(); }
+
+  // /** @return the original path
+  //  */
+  // public Path   getOrigPath()       { return null; }
+
   /** @return true if the symbol is orientable - default to false
    */
   public boolean isOrientable() { return false; }
@@ -221,10 +231,15 @@ public class Symbol implements SymbolInterface
 
   /** @return the symbol color - either the paint color of full white
    */
-  public int    getColor() 
+  public int getColor( ) { return getColor( 0xffffffff ); }
+
+  /** @return the symbol color - either the paint color of the provided color
+   * @param color  provided color
+   */
+  public int getColor( int color )
   { 
     Paint paint = getPaint();
-    return ( paint == null )? 0xffffffff : paint.getColor();
+    return ( paint == null )? color : paint.getColor();
   }
 
   /** @return true if the symbol is enabled
@@ -270,12 +285,12 @@ public class Symbol implements SymbolInterface
   /** @return the symbol X-dimension
    * @param type   symbol type (point, line, or area)
    */
-  static float sizeX( int type ) { return ( type == SymbolType.POINT )? TDSetting.mUnitIcons * sizeFactorXP : TDSetting.mUnitIcons * sizeFactorXL; }
+  static float sizeX( int type, float unit ) { return ( type == SymbolType.POINT )? unit * sizeFactorXP : unit * sizeFactorXL; }
 
   /** @return the symbol Y-dimension
    * @param type   symbol type (point, line, or area)
    */
-  static float sizeY( int type ) { return ( type == SymbolType.POINT )? TDSetting.mUnitIcons * sizeFactorYP : TDSetting.mUnitIcons * sizeFactorYL; }
+  static float sizeY( int type, float unit ) { return ( type == SymbolType.POINT )? unit * sizeFactorYP : unit * sizeFactorYL; }
 
   /** @return the therion name, removing the "u:" prefix if present
    * @param name  full therion name

@@ -33,7 +33,7 @@ import com.topodroid.help.HelpDialog;
 import com.topodroid.help.UserManualActivity;
 import com.topodroid.prefs.TDSetting;
 import com.topodroid.prefs.TDPrefCat;
-import com.topodroid.common.PlotType;
+import com.topodroid.types.PlotType;
 
 import android.content.Intent;
 import android.content.res.Resources;
@@ -327,14 +327,20 @@ public class OverviewWindow extends ItemDrawer
 
     if ( type == PlotType.PLOT_PLAN ) {
       for ( NumShot sh : shots ) {
-        NumStation st1 = sh.from;
-        NumStation st2 = sh.to;
-        addFixedLine( sh.getFirstBlock(), st1.e, st1.s, st2.e, st2.s ); // xoff, yoff
+        DBlock blk = sh.getFirstBlock();
+        if ( ! blk.isCommented() ) {
+          NumStation st1 = sh.from;
+          NumStation st2 = sh.to;
+          addFixedLine( sh.getFirstBlock(), st1.e, st1.s, st2.e, st2.s ); // xoff, yoff
+        }
       }
       for ( NumSplay sp : splays ) {
-        if ( Math.abs( sp.getBlock().mClino ) < TDSetting.mSplayVertThrs ) {
-          NumStation st = sp.from;
-          addFixedSplayLine( sp.getBlock(), st.e, st.s, sp.e, sp.s ); // xoff, yoff
+        DBlock blk = sp.getBlock();
+        if ( ! blk.isCommented() ) {
+          if ( Math.abs( blk.mClino ) < TDSetting.mSplayVertThrs ) {
+            NumStation st = sp.from;
+            addFixedSplayLine( blk, st.e, st.s, sp.e, sp.s ); // xoff, yoff
+          }
         }
       }
       for ( NumStation st : stations ) {
@@ -346,14 +352,20 @@ public class OverviewWindow extends ItemDrawer
     } else { // if ( PlotType.isProfile( type ) // FIXME OK PROFILE
       for ( NumShot sh : shots ) {
         if  ( ! sh.mIgnoreExtend ) {
-          NumStation st1 = sh.from;
-          NumStation st2 = sh.to;
-          addFixedLine( sh.getFirstBlock(), st1.h, st1.v, st2.h, st2.v ); // xoff, yoff
+          DBlock blk = sh.getFirstBlock();
+          if ( ! blk.isCommented() ) {
+            NumStation st1 = sh.from;
+            NumStation st2 = sh.to;
+            addFixedLine( blk, st1.h, st1.v, st2.h, st2.v ); // xoff, yoff
+          }
         }
       } 
       for ( NumSplay sp : splays ) {
-        NumStation st = sp.from;
-        addFixedSplayLine( sp.getBlock(), st.h, st.v, sp.h, sp.v ); // xoff, yoff
+        DBlock blk = sp.getBlock();
+        if ( ! blk.isCommented() ) {
+          NumStation st = sp.from;
+          addFixedSplayLine( blk, st.h, st.v, sp.h, sp.v ); // xoff, yoff
+        }
       }
       for ( NumStation st : stations ) {
         DrawingStationName dst;
@@ -639,7 +651,7 @@ public class OverviewWindow extends ItemDrawer
         // mPid = plot.id;
         // NOTE Overview only for plan or extended plots
         // float decl = mData.getSurveyDeclination( mSid );
-        mNum = new TDNum( mBlockList, start, null, null, 0.0f, null ); // null formatClosure
+        mNum = new TDNum( mBlockList, start, 0.0f, null ); // null formatClosure
         mStartStation = mNum.getStation( start );
         // computeReferences( (int)type, mOffset.x, mOffset.y, mZoom );
         computeReferences( (int)type, mZoom );
@@ -684,7 +696,7 @@ public class OverviewWindow extends ItemDrawer
    * @param ext    export type (ie, extension)
    * @note called only by export menu
    */
-  private void saveWithExt( /* Uri uri, */ final String ext )
+  private void saveWithExt( /* Uri uri, */ final String ext ) // FIXME 20251206
   {
     TDNum num = mNum;
     final String fullname = TDInstance.survey + ( (mType == PlotType.PLOT_PLAN )? "-p" : "-s" );
@@ -716,7 +728,7 @@ public class OverviewWindow extends ItemDrawer
         // oblique = 0
         // save = OVERVIEW
         // rotate  = 0
-        (new SavePlotFileTask( this, uri, null, th2Handler, mNum, manager, null, fullname, mType, 0, 0, PlotSave.OVERVIEW, 0, false )).execute(); // TH2EDIT false
+        (new SavePlotFileTask( mApp, this, uri, null, th2Handler, mNum, manager, null, fullname, mType, 0, 0, PlotSave.OVERVIEW, 0, false )).execute(); // TH2EDIT false
       } else {
         GeoReference station = null;
         if ( mType == PlotType.PLOT_PLAN && ext.equals("shz") ) {
@@ -725,7 +737,7 @@ public class OverviewWindow extends ItemDrawer
         }
         SurveyInfo info = mData.selectSurveyInfo( mSid );
         // null PlotInfo, null FixedInfo, true toast
-        (new ExportPlotToFile( this, uri, info, null, null, mNum, manager, mType, fullname, ext, true, station )).execute();
+        (new ExportPlotToFile( mApp, this, uri, info, null, null, mNum, manager, mType, fullname, ext, true, station )).execute();
       }
     }
   }
@@ -837,10 +849,10 @@ public class OverviewWindow extends ItemDrawer
       TDToast.makeBad( R.string.null_bitmap );
       return;
     }
-    if ( TDandroid.BELOW_API_19 ) { // Android-4.4 (KITKAT)
-      TDToast.makeBad( R.string.no_feature_pdf );
-      return;
-    }
+    // if ( TDandroid.BELOW_API_19 ) { // Android-4.4 (KITKAT)
+    //   TDToast.makeBad( R.string.no_feature_pdf );
+    //   return;
+    // }
 
     // if ( ! TDSetting.mExportUri ) uri = null; // FIXME_URI
 
@@ -870,6 +882,12 @@ public class OverviewWindow extends ItemDrawer
       pdf.close();
       /* if ( fos != null ) */ fos.close(); // test always true
       TDToast.make( String.format( getResources().getString(R.string.saved_file_1), fullname ) ); // PDF
+      if ( TDSetting.mExportPlotShare ) {
+        String filename = fullname + ".pdf";
+        // TDLog.v("sharing PDF filename " + filename );
+        String mimetype = TDConst.getMimeFromExtension("pdf");
+        mApp.shareFile( filename, mimetype, 2 ); // 2 DrawingActivity FIXME 20251206
+      }
     } catch ( IOException e ) {
       TDLog.e("Failed PDF export " + e.getMessage() );
     } finally {
@@ -1417,7 +1435,7 @@ public class OverviewWindow extends ItemDrawer
       intent.putExtra( TDPrefCat.PREF_CATEGORY, TDPrefCat.PREF_CATEGORY_PLOT );
       mActivity.startActivity( intent );
     } else if ( p++ == pos ) { // HELP
-      new HelpDialog(mActivity, izons, menus, help_icons, help_menus, mNrButton1, help_menus.length, getResources().getString( HELP_PAGE ) ).show();
+      new HelpDialog(mActivity, mActivity, izons, menus, help_icons, help_menus, mNrButton1, help_menus.length, getResources().getString( HELP_PAGE ) ).show();
     }
   }
 

@@ -17,10 +17,11 @@ package com.topodroid.TDX;
 
 import com.topodroid.utils.TDLog;
 import com.topodroid.utils.TDString;
+import com.topodroid.utils.TDUtil;
 import com.topodroid.ui.MyKeyboard;
 import com.topodroid.ui.MyDialog;
 import com.topodroid.prefs.TDSetting;
-import com.topodroid.common.StationFlag;
+import com.topodroid.types.StationFlag;
 
 // import androidx.annotation.RecentlyNonNull;
 
@@ -35,7 +36,7 @@ import android.content.res.Configuration;
 
 import android.view.View;
 // import android.view.View.OnClickListener;
-import android.inputmethodservice.KeyboardView;
+// import android.inputmethodservice.KeyboardView;
 
 // import android.widget.ArrayAdapter;
 import android.widget.ListView;
@@ -58,6 +59,7 @@ class CurrentStationDialog extends MyDialog
   private String mStationName;    // station name
   private EditText mName;
   private EditText mComment;
+  private int mPos; // position of the block with the station
  
   private String mGeoCode = "";
 
@@ -66,6 +68,8 @@ class CurrentStationDialog extends MyDialog
   private Button mBtnOK;
   private Button mBtnClear;
   private Button mBtnGeoCode;
+  private Button mBtnPhoto;
+  private Button mBtnSplay;
   // private Button mBtnCancel;
 
   private CheckBox mBtnFixed;
@@ -78,15 +82,16 @@ class CurrentStationDialog extends MyDialog
 
   /** cstr
    * @param context   context
-   * @param parent    parent window
+   * @param parent    parent window - can be null if called from DrawingStationDialog
    * @param app       application (used to set the active station)
    * @param station   station name
    */
-  CurrentStationDialog( Context context, ShotWindow parent, TopoDroidApp app, String station )
+  CurrentStationDialog( Context context, ShotWindow parent, TopoDroidApp app, String station, int pos )
   {
     super( context, app, R.string.CurrentStationDialog );
     mParent  = parent;
     mStationName = ( station == null )? mApp.getCurrentOrLastStation() : station ;
+    mPos = pos;
   }
 
   @Override
@@ -127,6 +132,8 @@ class CurrentStationDialog extends MyDialog
     mBtnOK      = (Button) findViewById(R.id.button_current );
     mBtnClear   = (Button) findViewById(R.id.button_clear );
     mBtnGeoCode = (Button) findViewById(R.id.button_code );
+    mBtnPhoto   = (Button) findViewById(R.id.button_photo );
+    mBtnSplay   = (Button) findViewById(R.id.button_splay );
 
     if ( TDLevel.overExpert ) {
       GeoCodes geocodes = TopoDroidApp.getGeoCodes();
@@ -135,7 +142,13 @@ class CurrentStationDialog extends MyDialog
       } else {
         mBtnGeoCode.setVisibility( View.GONE );
       }
+      if ( mParent == null ) {
+        mBtnPhoto.setVisibility( View.GONE );
+      } else {
+        mBtnPhoto.setOnClickListener( this );
+      }
     } else {
+      mBtnPhoto.setVisibility( View.GONE );
       mBtnGeoCode.setVisibility( View.GONE );
     }
 
@@ -143,13 +156,19 @@ class CurrentStationDialog extends MyDialog
     mBtnPop.setOnClickListener( this );  // DELETE
     mBtnOK.setOnClickListener( this );   // OK-SAVE
     mBtnClear.setOnClickListener( this );   // CLEAR
+    if ( mPos < 0 || mParent == null ) {
+      mBtnSplay.setVisibility( View.GONE );
+    } else {
+      mBtnSplay.setOnClickListener( this );   // CLEAR
+    }
 
     // mBtnCancel = (Button) findViewById(R.id.button_cancel);
     // mBtnCancel.setOnClickListener( this );
     ( (Button) findViewById(R.id.button_cancel) ).setOnClickListener( this );
 
-    mKeyboard = new MyKeyboard( mContext, (KeyboardView)findViewById( R.id.keyboardview ), 
-                                R.xml.my_keyboard_base_sign, R.xml.my_keyboard_qwerty );
+    // mKeyboard = new MyKeyboard( mContext, (KeyboardView)findViewById( R.id.keyboardview ), R.xml.my_keyboard_base_sign, R.xml.my_keyboard_qwerty );
+    mKeyboard = MyKeyboard.getMyKeyboard( mContext, findViewById( R.id.keyboardview ), R.xml.my_keyboard_base_sign, R.xml.my_keyboard_qwerty );
+
     if ( TDSetting.mKeyboard ) {
       int flag = MyKeyboard.FLAG_POINT_LCASE_2ND;
       if ( TDSetting.mStationNames == 1 ) flag = MyKeyboard.FLAG_POINT;
@@ -212,6 +231,8 @@ class CurrentStationDialog extends MyDialog
   {
     if ( TDString.isNullOrEmpty( name ) ) return; // safety check
     mStationName = name;
+    mPos = -1;
+    mBtnSplay.setVisibility( View.GONE ); // switch off toggle SPLAY display
     StationInfo cs = ( name == null )? null : TopoDroidApp.mData.getStation( TDInstance.sid, name, null ); // null: do not create
     if ( cs == null ) {
       mName.setText( TDString.EMPTY );
@@ -279,6 +300,65 @@ class CurrentStationDialog extends MyDialog
     return true;
   }
 
+  /** commit a saved station to the database
+   * @param name     name of the saved station
+   * @return true if success
+   */
+  private boolean storeStation( String name )
+  {
+    if ( name.length() == 0 ) {
+      mName.setError( resString( R.string.error_name_required ) );
+      return false;
+    }
+    int flag = StationFlag.STATION_NONE;
+    if ( mBtnFixed.isChecked() ) {
+      flag = StationFlag.STATION_FIXED;
+    } else if ( mBtnPainted.isChecked() ) {
+      flag = StationFlag.STATION_PAINTED;
+    }
+
+    String comment = TDUtil.getTextOrEmpty( mComment ); // COMMENT
+
+    mStationName = name;
+    TopoDroidApp.mData.insertStation( TDInstance.sid, name, comment, flag, name, mGeoCode ); // PRESENTATION = name
+    updateList();
+    return true;
+  }
+
+  /** take a station photo
+   * @return true on success
+   * @note called by StationPhotoDialog
+   */
+  public boolean takePhoto()
+  {
+    if ( mParent == null ) {
+      TDLog.v("Current Station Dialog. Null parent: no photo");
+      return false;
+    }
+    int camera   = TDandroid.AT_LEAST_API_21 ? PhotoInfo.CAMERA_TOPODROID_2 : PhotoInfo.CAMERA_TOPODROID;
+    long photoId = mParent.doTakePhoto( mContext, 0, mStationName, "", camera, "", MediaInfo.TYPE_STATION ); // shot_id=0, comment="", mGeoCode=""
+    // TDLog.v("current station took photo " + photoId );
+    if ( photoId > 0 ) {
+      storeStationPhoto( mStationName, photoId );
+      return true;
+    }
+    return false;
+  }
+
+  /** commit a station and its photo
+   * @param name    station name
+   * @param photoId photo id
+   * @note called by the StationPhotoDialog
+   */
+  public void storeStationPhoto( String name, long photoId )
+  {
+    if ( name != null && photoId > 0 ) {
+      if ( storeStation( name ) ) {
+        TopoDroidApp.mData.updateStationPhoto( TDInstance.sid, name, photoId );
+      }
+    }
+  }
+
   /** react to a user tap
    * @param v tapped view
    */
@@ -290,7 +370,7 @@ class CurrentStationDialog extends MyDialog
 
     // TDLog.Log(  TDLog.LOG_INPUT, "CurrentStationDialog onClick() " );
     Button b = (Button) v;
-    String name = mName.getText().toString().trim();
+    String name = TDString.noSpaces( mName.getText().toString() ); // NOSPACES
     if ( b == mBtnFixed ) {
       mBtnPainted.setChecked( false );
       return;
@@ -299,41 +379,27 @@ class CurrentStationDialog extends MyDialog
       return;
 
     } else if ( b == mBtnPush ) { // STORE
-      if ( name.length() == 0 ) {
-        mName.setError( mContext.getResources().getString( R.string.error_name_required ) );
-        return;
-      }
-      
-      int flag = StationFlag.STATION_NONE;
-      if ( mBtnFixed.isChecked() ) {
-        flag = StationFlag.STATION_FIXED;
-      } else if ( mBtnPainted.isChecked() ) {
-        flag = StationFlag.STATION_PAINTED;
-      }
-
-      String comment = TDString.EMPTY;
-      if ( mComment.getText() != null ) {
-        comment = mComment.getText().toString().trim();
-      }
-
-      mStationName = name;
-      TopoDroidApp.mData.insertStation( TDInstance.sid, name, comment, flag, name, mGeoCode ); // PRESENTATION = name
-      updateList();
+      storeStation( name );
+      // mStationName = name; already in store station
       return;
 
-    } else if ( b == mBtnPop ) { // DELETE
+    } else if ( b == mBtnPop ) { // DELETE saved station and dismiss
       if ( name.length() == 0 ) {
-        mName.setError( mContext.getResources().getString( R.string.error_name_required ) );
+        mName.setError( resString( R.string.error_name_required ) );
         return;
       }
-      TopoDroidApp.mData.deleteStation( TDInstance.sid, name );
-      clear();
-      updateList();
-      return;
+      long photoId = TopoDroidApp.mData.deleteStation( TDInstance.sid, name );
+      if ( photoId > 0 ) {
+        String photoFile = "st-" + photoId + ".jpg";
+        TDLog.v("TODO ? delete photo file " + photoFile );
+      }
+      // clear();
+      // updateList();
+      // return;
     } else if ( b == mBtnClear ) { // CLEAR
       clear();
       return;
-    } else if ( b == mBtnOK ) { // ACTIVE
+    } else if ( b == mBtnOK ) { // make station ACTIVE and dismiss
       if ( name.length() > 0 ) {
         mApp.setCurrentStationName( name );
       } else {
@@ -341,13 +407,30 @@ class CurrentStationDialog extends MyDialog
       }
       if ( mParent != null ) mParent.updateDisplay();
     } else if ( b == mBtnGeoCode ) { // GEOCODE
-      (new GeoCodeDialog( mContext, this, mGeoCode )).show();
+      if ( storeStation( name ) ) {
+        (new GeoCodeDialog( mContext, this, mGeoCode )).show();
+      }
+      return;
+    } else if ( mParent != null && b == mBtnSplay ) { // toggle SPLAY display
+      if ( mPos >= 0 ) {
+        mParent.recomputeItems( mStationName, mPos );
+      }
+    } else if ( mParent != null && b == mBtnPhoto ) { // PHOTO
+      if ( storeStation( name ) ) {
+        StationInfo cs = TopoDroidApp.mData.getStation( TDInstance.sid, name, null ); // null: do not create
+        if ( cs == null ) {
+          TDToast.makeWarn( R.string.station_not_saved );
+        } else {
+          (new StationPhotoDialog( mContext, this, cs )).show();
+        }
+      } 
       return;
     // } else if ( b == mBtnCancel ) {
     //   /* nothing : dismiss */
     }
     dismiss();
   }
+    
 
   @Override
   public void onBackPressed()
@@ -357,6 +440,9 @@ class CurrentStationDialog extends MyDialog
     dismiss();
   }
 
+  /** update the station geocode
+   * @param geocode   geocode
+   */
   public void setGeoCode( String geocode ) 
   { 
     mGeoCode = (geocode == null)? "" : geocode;

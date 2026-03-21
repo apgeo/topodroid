@@ -4,13 +4,17 @@
 
 <div style="font-size=90%">
 In order to manage cave survey projects involving several survey sessions, it is advisable to use a specific work directory (folder) for each cave project.<br>
-The default survey folder is "TopoDroid".<br>
-The folder name "tmp" is reserved. If you type it, the dafault folder is used.<br> 
+All project folders are stored inside the TopoDroid base folder "Documents/TDX", the default subfolder is "TopoDroid".<br>
+The folder name "tmp" is reserved. If you type it, the default folder is used.<br>
 <!-- The name of any work directory must begin with "TopoDroid" (case independent), otherwise "TopoDroid-" is prepended.<br> -->
-The project folders are created inside TopoDroid base folder "Documents/TDX".<br><p>
+<p>
 
 The drawing symbol files and the files related to the devices (database, firmware, memory dumps, calibrations) are stored only in the
-app private "files" folder (in the <i>primary external storage</i>: for example "/sdcard/Android/data/com.topodroid.TDX/files").<br>
+app private <i>files</i> folder (in the <i>primary external storage</i>: for example "/sdcard/Android/data/com.topodroid.TDX/files").<br>
+The drawing symbols files are stored in the <i>point</i>, <i>line</i>, and <i>area</i> folders.<br>
+The firmware files are in the <i>bin</i> folder.<br>
+The exported calibration files are in the <i>ccsv</i> folder, and the memory dumps in the <i>dump</i> folder.<br><p>
+
 The project folders contain only the survey database of the project and survey folders.<br>
 The drawing symbols in use in the project are configured in the project database. When a project is created, only the default drawing symbols
 are enabled in the configuration. Other symbols can be enabled from the "Palette" button of the <i>Main Window</i>.<br><p>

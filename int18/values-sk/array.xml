@@ -37,13 +37,14 @@
      <item name="tab">Tabulátor</item>
   </string-array>
 
-  <string-array name="lineContinue">
+  <!-- UNUSED string-array name="lineContinue">
      <item name="none">Žiadne</item>
      <item name="start">Nadpojiť na počiatočný bod</item>
      <item name="end">Nadpojiť na koncový bod</item>
      <item name="both">Nadpojiť na obidva body</item>
      <item name="continue">Pokračovanie</item>
-  </string-array>
+  </string-array -->
+
   <string-array name="unitGrid">
      <item name="meter">Metre</item>
      <item name="yard">Yardy</item>
@@ -57,12 +58,13 @@
      <item name="tf">Stopy</item>
   </string-array>
      
-  <string-array name="loopClosure">
+  <!-- TODO string-array name="loopClosure">
      <item name="none">Žiadne</item>
      <item name="normal">Normálne</item>
      <item name="weighted">Weighted</item>
+     <item name="selective">Selective</item>
      <item name="triangles">Trilaterácia</item>
-  </string-array>
+  </string-array -->
 
   <!-- UNUSED string-array name="wallsType">
      <item name="none">Žiadne</item>
@@ -265,11 +267,11 @@
      <item name="ddmmss">Stupne, Minúty, Sekúndy</item>
   </string-array>
 
-  <string-array name="calibAlgo">
+  <!-- string-array name="calibAlgo">
      <item name="auto">Automatický</item>
      <item name="linear">Lineárne DistoX</item>
      <item name="nonlinear">Nelineárne DistoX</item>
-  </string-array>
+  </string-array -->
 
   <!-- FIXME string-array name="rawCData">
      <item name="none">Žiadne</item>

@@ -11,10 +11,10 @@ add new ones that are not provided in the apk.<br><p>
 
 The line tool file contains lines specifying the property of the drawing tool.
 <ul>
-<li>"symbol line" [mandatory]</li>
+<li>"symbol line" line [mandatory]</li>
 <li>"name NAME", where NAME is the line default name [mandatory]</li>
 <li>translated names, eg, "name-es ..." [optional]</li>
-<li>"th_name NAME", where NAME is the Therion name. The filename must be the same as the Therion name, without the possible prefix "u": [mandatory]</li>
+<li>"th_name NAME", where NAME is the <i>Therion</i> name. The filename must be the same as the <i>Therion</i> name, without the possible prefix "u": [mandatory]</li>
 <lI>"group GROUP", specifies the group this line belongs to [optional, default no group]</li>
 <li>"color rgb alpha" (rgb and alpha in hex format, for example '0x00ff00' is green, and '0xff' is fully opaque) [rgb mandatory, alpha is optional,
 if not specified 0xff is taken]</li>
@@ -30,7 +30,7 @@ if not specified 0xff is taken]</li>
 
 <b>Name</b><br>
 Refer to the <a href="page_symbol_point.htm">Point Tool</a> for how to specify the names.
-<br><p> 
+<br><p>
 
 <b>Group</b><br>
 This attribute is used to replace a missing symbol with the group symbol.<br><p>
@@ -40,7 +40,7 @@ The "dash" directive specifies that the line is drawn with a dashed scheme.
 For example, "dash 15 5" means that the line is drawn with segments of 15 units, separated by 5 units spaces.
 <br><p>
 
-<b>Style</b><br> 
+<b>Style</b><br>
 The "style" directive is used to draw lines using sparse points.<br>
 A "style x3" means that the line is drawn using one every three points. The effect is that the line is less "curvy".<br>
 If you want straight segments use "style straight".

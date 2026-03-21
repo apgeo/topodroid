@@ -27,9 +27,9 @@ import com.topodroid.ptopo.PTPolygonElement;
 import com.topodroid.ptopo.PTPoint;
 // import com.topodroid.ptopo.PTMapping;
 // import com.topodroid.prefs.TDSetting;
-import com.topodroid.common.ExtendType;
-import com.topodroid.common.PlotType;
-import com.topodroid.common.PointScale;
+import com.topodroid.types.ExtendType;
+import com.topodroid.types.PlotType;
+import com.topodroid.types.PointScale;
 import com.topodroid.TDX.DrawingIO;
 import com.topodroid.TDX.DrawingUtil;
 import com.topodroid.TDX.DrawingPath;
@@ -131,8 +131,8 @@ class ParserPocketTopo extends ImportParser
       float ca = shot.inclination();
       float ra = shot.roll();
       // TDLog.v("Parser PT shot <" + from + ">-<" + to + ">: " + da + " " + ba + " " + ca );
-      from = from.replaceAll( "^0+", "" );
-      to   = to.replaceAll( "^0+", "" );
+      // from = from.replaceAll( "^0+", "" ); // HBPT
+      // to   = to.replaceAll( "^0+", "" ); // HBPT
       if ( from.equals("-") ) from = "";
       if ( to.equals("-") )   to = "";
       if ( from.equals( from_prev ) && to.equals( to_prev ) && ! to_prev.equals("") ) {

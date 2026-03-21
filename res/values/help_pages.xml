@@ -21,8 +21,11 @@
   <string name="OverviewWindow" translatable="false">manual12.htm</string>
   <string name="TopoGL" translatable="false">manual15.htm</string>
   <string name="PlotReloadWindow" translatable="false">page_backup.htm</string>
+  <string name="PlotSearchDialog" translatable="false">page_plot_search.htm</string>
   <string name="CWDActivity" translatable="false">page_cwd.htm</string>
   <!-- string name="CBDdialog" translatable="false">page_cwd.htm</string -->
+
+  <string name="AIdialog" translatable="false">page_ai_dialog.htm</string>
 
   <string name="AzimuthDialog" translatable="false">page_azimuth.htm</string>
   <string name="AudioDialog" translatable="false">page_audio.htm</string>
@@ -34,12 +37,14 @@
   <string name="CalibGMDialog" translatable="false">page_gm.htm</string>
   <string name="CalibImportDialog" translatable="false">page_calib_import.htm</string>
   <string name="CalibListDialog" translatable="false">page_calib_dialog.htm</string>
+  <string name="RecalibrateDialog" translatable="false">page_recalibrate_dialog.htm</string>
   <string name="CalibValidateListDialog" translatable="false">page_validation.htm</string>
   <string name="CalibValidateResultDialog" translatable="false">page_validation.htm</string>
   <string name="ExportDialogCalib" translatable="false">page_calib_import.htm</string>
   <string name="GMSearchDialog" translatable="false">page_gm_search.htm</string>
   <!-- string name="ConnectDialog" translatable="false">page_connect.htm</string -->
   <string name="CurrentStationDialog" translatable="false">page_saved_station.htm</string>
+  <string name="StationPhotoDialog" translatable="false">page_station_photo.htm</string>
   <string name="SearchDialog" translatable="false">page_search.htm</string>
   <string name="DeviceA3InfoDialog" translatable="false">page_a3_info.htm</string>
   <string name="DeviceA3MemoryDialog" translatable="false">page_memory.htm</string>
@@ -106,8 +111,11 @@
   <string name="SensorEditDialog" translatable="false">page_sensors_edit.htm</string>
   <string name="ShotDeleteDialog" translatable="false">page_shot_edit1.htm</string>
   <string name="ShotEditDialog" translatable="false">page_shot_edit1.htm</string>
+  <string name="ScanShotEditDialog" translatable="false">page_scan_shot.htm</string>
+  <string name="DrawingScanSetDialog" translatable="false">page_plot_scan.htm</string>
   <string name="ShotDisplayDialog" translatable="false">page_displaymode.htm</string>
   <string name="ShotNewDialog" translatable="false">page_man_data.htm</string>
+  <string name="StationsDialog" translatable="false">page_stations_map.htm</string>
   <!-- FIXME_SKETCH_3D string name="Sketch3dNewDialog" translatable="false">page_todo.htm</string -->
   <!-- FIXME_SKETCH_3D string name="SketchModeDialog" translatable="false">page_todo.htm</string -->
   <!-- FIXME_SKETCH_3D string name="SketchNewShotDialog" translatable="false">page_todo.htm</string -->

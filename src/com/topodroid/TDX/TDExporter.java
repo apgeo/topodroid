@@ -52,9 +52,10 @@ import com.topodroid.trb.TRobotSeries;
 import com.topodroid.trb.TRobot;
 import com.topodroid.prefs.TDSetting;
 import com.topodroid.dev.Device;
-import com.topodroid.common.ExtendType;
-import com.topodroid.common.PlotType;
-// import com.topodroid.common.StationFlag;
+import com.topodroid.types.ExtendType;
+import com.topodroid.types.PlotType;
+import com.topodroid.packetX.MemoryData;
+// import com.topodroid.types.StationFlag;
 
 import android.os.ParcelFileDescriptor;
 import android.net.Uri;
@@ -101,7 +102,7 @@ public class TDExporter
       for ( DBlock blk : list ) {
 	if ( blk.mTo != null && blk.mTo.length() > 0 && blk.mFrom != null && blk.mFrom.length() > 0 ) {
           // sets the blocks clino
-          TDNum num = new TDNum( list, blk.mFrom, null, null, 0.0f, null ); // no declination, null formatClosure
+          TDNum num = new TDNum( list, blk.mFrom, 0.0f, null ); // no declination, null formatClosure
 	  break;
 	}
       }
@@ -681,7 +682,7 @@ public class TDExporter
     for ( FixedInfo fixed : fixeds ) {
       float decl0 = decl;
       if ( convergence && fixed.hasCSCoords() ) decl0 -= fixed.getConvergence();
-      TDNum num = new TDNum( shots_data, fixed.name, null, null, decl0, null ); // null formatClosure
+      TDNum num = new TDNum( shots_data, fixed.name, decl0, null ); // null formatClosure
       // TDLog.v( "Num shots " + num.getShots().size() );
       if ( num.getShots().size() > 0 ) {
         makeGeolocalizedData( num, fixed, h_geo_factor, ellipsoid_h, convergence );
@@ -1472,11 +1473,12 @@ public class TDExporter
   static private void doTherionMaps( PrintWriter pw, SurveyInfo info, List< PlotInfo > plots )
   {
     if ( TDUtil.isEmpty(plots) ) return;
+    String with_comment = TDSetting.mTherionUncommentedMaps ? " " : "  #";
     for ( PlotInfo plt : plots ) {
       String subdir = TDInstance.survey + "/tdr"; // plot files
       String plotname =  info.name + "-" + plt.name;
       if (  TDFile.hasMSfile( subdir, plotname + ".tdr" ) ) {
-        pw.format("  # input \"%s.th2\"\n", plotname );
+        pw.format("%s input \"%s.th2\"\n", with_comment, plotname );
       }
     } 
     pw.format("\n");
@@ -1487,14 +1489,14 @@ public class TDExporter
         String plotname =  info.name + "-" + plt.name;
         if ( TDFile.hasMSfile( subdir, plotname + ".tdr" ) ) {
           if ( plt.type == PlotType.PLOT_PROJECTED ){
-            pw.format("  # map m%s -projection [%s %d]\n", plt.name, PlotType.projName( plt.type ) , (int) plt.azimuth);
+            pw.format("%s map m%s -projection [%s %d]\n", with_comment, plt.name, PlotType.projName( plt.type ) , (int) plt.azimuth);
           } else {
-            pw.format("  # map m%s -projection %s\n", plt.name, PlotType.projName( plt.type ) );
+            pw.format("%s map m%s -projection %s\n", with_comment, plt.name, PlotType.projName( plt.type ) );
           }
-          pw.format("  #   %s\n", plotname );
-          for ( int k=1; k<=scrap_nr; ++k) pw.format("  #   %s%d\n", plotname, k );
-          pw.format("  # endmap\n");
-        } 
+          pw.format("%s   %s\n", with_comment, plotname );
+          for ( int k=1; k<=scrap_nr; ++k) pw.format("  %s   %s%d\n", with_comment, plotname, k );
+          pw.format("%s endmap\n", with_comment );
+        }
       }
     }
     pw.format("\n");
@@ -1581,8 +1583,8 @@ public class TDExporter
     float ul = TDSetting.mUnitLength;
     float ua = TDSetting.mUnitAngle;
 
-    String uls = ( ul < 1.01f )? "meters"  : "feet"; // FIXME
-    String uas = ( ua < 1.01f )? "degrees" : "grads";
+    String uls = ( ul < 1.01f )? "meter"  : "foot"; // FIXME
+    String uas = ( ua < 1.01f )? "degree" : "grad";
     // String uls = TDSetting.mUnitLengthStr;
     // String uas = TDSetting.mUnitAngleStr;
 
@@ -1885,7 +1887,7 @@ public class TDExporter
         pw.format("    data dimensions station left right up down\n");
         for ( String station : lruds.keySet() ) {
           LRUD lrud = lruds.get( station );
-          pw.format(Locale.US, "    %s %.2f %.2f %.2f %.2f\n", station, lrud.l * ul, lrud.r * ul, lrud.r * ul, lrud.d * ul );
+          pw.format(Locale.US, "    %s %.2f %.2f %.2f %.2f\n", station, lrud.l * ul, lrud.r * ul, lrud.u * ul, lrud.d * ul );
         }
       }
 
@@ -2045,8 +2047,8 @@ public class TDExporter
 
     float ul = TDSetting.mUnitLength;
     float ua = TDSetting.mUnitAngle;
-    String uls = ( ul < 1.01f )? "meters"  : "feet"; // FIXME
-    String uas = ( ua < 1.01f )? "degrees" : "grads";
+    String uls = ( ul < 1.01f )? "meters"  : "feet"; // HB https://survex.com/docs-1.0/manual/datafile.htm
+    String uas = ( ua < 1.01f )? "degrees" : "grads"; // HB https://survex.com/docs-1.0/manual/datafile.htm
 
     List< DBlock > list = data.selectAllExportShots( sid, TDStatus.NORMAL );
     checkShotsClino( list );
@@ -2241,7 +2243,7 @@ public class TDExporter
         }
         if ( from != null ) {
           boolean do_header = true;
-          TDNum num = new TDNum( list, from, null, null, 0.0f, null ); // no declination, null formatClosure
+          TDNum num = new TDNum( list, from, 0.0f, null ); // no declination, null formatClosure
           List< NumBranch > branches = num.makeBranches( true );
           // TDLog.v( "Station " + from + " shots " + num.shotsNr() + " splays " + num.splaysNr()
           //               + " branches " + branches.size() );
@@ -2362,6 +2364,24 @@ public class TDExporter
    *  NOTE declination exported in comment only in CSV
    *       handled flags: duplicate surface commented 
    */
+
+  static private void writeCsvHeader( PrintWriter pw, SurveyInfo info, String uls, String uas, String newline )
+  {
+    pw.format("# %s [*] created by TopoDroid v %s%s", TDUtil.getDateString("yyyy.MM.dd"), TDVersion.string(), newline );
+    pw.format("# name: %s%s", info.name, newline );
+    pw.format("# date: %s%s", info.date, newline );
+    pw.format("# team: %s%s", info.team, newline );
+    if ( ! TDString.isNullOrEmpty( info.comment ) ) {
+      pw.format("# comment: %s%s", info.comment, newline );
+    }
+    if ( info.hasDeclination() ) {
+      pw.format(Locale.US, "# declination: %.2f%s", info.declination, newline );
+    } else {
+      pw.format(Locale.US, "# declination: undefined%s", newline );
+    }
+    pw.format(Locale.US, "# units: tape %s compass clino %s%s", uls, uas, newline );
+  }
+
   static private void writeCsvLeg( PrintWriter pw, AverageLeg leg, float ul, float ua, int leg_extend, char sep )
   {
     pw.format(Locale.US, "%c%.2f%c%.1f%c%.1f%c%d", sep, leg.length() * ul, sep, leg.bearing() * ua, sep, leg.clino() * ua, sep, leg_extend );
@@ -2403,7 +2423,8 @@ public class TDExporter
     if ( comment == null ) {
       pw.format("%c%s", sep, newline );
     } else {
-      pw.format("%c%s%s", sep, TDString.escapeSeparator(sep, comment), newline );
+      // pw.format("%c%s%s", sep, TDString.escapeSeparator(sep, comment), newline ); // \,
+      pw.format("%c\"%s\"%s", sep, comment, newline ); // " " HBc
     }
   }
 
@@ -2422,9 +2443,15 @@ public class TDExporter
     try {
       // BufferedWriter bw = TDFile.getMSwriter( "csv", survey_name + ".csv", "text/csv" );
       PrintWriter pw = new PrintWriter( bw );
-      pw.format("# %s [*] created by TopoDroid v %s%s", TDUtil.getDateString("yyyy.MM.dd"), TDVersion.string(), newline );
-      pw.format("# %s%s", info.name, newline );
-      pw.format("# id, from, to, dist, azi, clino, roll, G, M, dip, time, type, addres, extend, flag, leg-type, status, Mx, My, Mz, Gx, Gy, Gz, comment%s", newline );
+      writeCsvHeader( pw, info, "meter", "degree", newline );
+
+      // FIXME TOPO put sep in this line OK HB
+      // pw.format("# id, from, to, dist, azi, clino, roll, G, M, dip, time, type, addres, extend, flag, leg-type, status, M1x, M1y, M1z, G1x, G1y, G1z, M2x, M2y, M2z, G2x, G2y, G2z, comment%s", newline );
+      pw.format("# id%c from%c to%c dist%c azi%c clino%c roll%c G%c M%c dip%c time%c type%c addres%c extend%c flag%c leg-type%c status%c M1x%c M1y%c M1z%c G1x%c G1y%c G1z%c M2x%c M2y%c M2z%c G2x%c G2y%c G2z%c comment%s",
+              sep, sep, sep, sep, sep, sep, sep, sep, sep, sep,
+              sep, sep, sep, sep, sep, sep, sep, sep, sep, sep,
+              sep, sep, sep, sep, sep, sep, sep, sep, sep, newline );// 30
+
       for ( RawDBlock b : list ) {
 	// String f = ( b.mFrom == null )? "" : b.mFrom;
 	// String t = ( b.mTo   == null )? "" : b.mTo;
@@ -2435,7 +2462,18 @@ public class TDExporter
         if ( TDString.isNullOrEmpty( address ) ) address = "-";
         pw.format(Locale.US, "%d%c%d%c%s%c", b.mTime, sep, b.getShotType(), sep, address, sep );
         pw.format(Locale.US, "%d%c%d%c%d%c%d%c", b.mExtend, sep, b.mFlag, sep, b.mLeg, sep, b.mStatus, sep );  // NOTE mLeg is not mBlockType
-        pw.format(Locale.US, "%d%c%d%c%d%c%d%c%d%s%d%c", b.mRawMx, sep, b.mRawMy, sep, b.mRawMz, sep, b.mRawGx, sep, b.mRawGy, sep, b.mRawGz, sep );
+        pw.format(Locale.US, "%d%c%d%c%d%c%d%c%d%s%d%c", MemoryData.longToSignedInt1( b.mRawMx ), sep, 
+                                                         MemoryData.longToSignedInt1( b.mRawMy ), sep,
+                                                         MemoryData.longToSignedInt1( b.mRawMz ), sep,
+                                                         MemoryData.longToSignedInt1( b.mRawGx ), sep,
+                                                         MemoryData.longToSignedInt1( b.mRawGy ), sep,
+                                                         MemoryData.longToSignedInt1( b.mRawGz ), sep );
+        pw.format(Locale.US, "%d%c%d%c%d%c%d%c%d%s%d%c", MemoryData.longToSignedInt2( b.mRawMx ), sep, 
+                                                         MemoryData.longToSignedInt2( b.mRawMy ), sep,
+                                                         MemoryData.longToSignedInt2( b.mRawMz ), sep,
+                                                         MemoryData.longToSignedInt2( b.mRawGx ), sep,
+                                                         MemoryData.longToSignedInt2( b.mRawGy ), sep,
+                                                         MemoryData.longToSignedInt2( b.mRawGz ), sep );
         pw.format(Locale.US, "%s%s", TDString.escapeSeparator(sep, b.mComment), newline );
       }
       bw.flush();
@@ -2464,27 +2502,21 @@ public class TDExporter
     // List< FixedInfo > fixed = data.selectAllFixed( sid, TDStatus.NORMAL );
     float ul = TDSetting.mUnitLength;
     float ua = TDSetting.mUnitAngle;
-    String uls = ( ul < 1.01f )? "meters"  : "feet"; // FIXME
-    String uas = ( ua < 1.01f )? "degrees" : "grads";
+    String uls = ( ul < 1.01f )? "meter"  : "foot"; // FIXME
+    String uas = ( ua < 1.01f )? "degree" : "grad";
     try {
       // TDLog.Log( TDLog.LOG_IO, "export CSV " + file.getName() );
       // BufferedWriter bw = TDFile.getMSwriter( "csv", survey_name + ".csv", "text/csv" );
       PrintWriter pw = new PrintWriter( bw );
+      writeCsvHeader( pw, info, uls, uas, newline );
 
-      pw.format("# %s created by TopoDroid v %s%s", TDUtil.getDateString("yyyy.MM.dd"), TDVersion.string(), newline );
-      pw.format("# %s%s", info.name, newline );
       // if ( fixed.size() > 0 ) {
       //   pw.format("  ; fix stations as long-lat h_geo\n");
       //   for ( FixedInfo fix : fixed ) {
       //     pw.format("  ; *fix %s\n", fix.toExportString() );
       //   }
       // }
-      if ( info.hasDeclination() ) { // DECLINATION in CSV
-        pw.format(Locale.US, "# from to tape compass clino extend flags (declination %.4f)%s", info.declination, newline ); 
-      } else {
-        pw.format(Locale.US, "# from to tape compass clino extend flags (declination undefined)%s", newline );
-      }
-      pw.format(Locale.US, "# units tape %s compass clino %s%s", uls, uas, newline );
+      pw.format(Locale.US, "# from%c to%c tape%c compass%c clino%c extend%c flags%c comment%s",sep, sep, sep, sep, sep, sep, sep, newline );
       
       AverageLeg leg = new AverageLeg(0);
       DBlock ref_item = null;
@@ -2531,7 +2563,7 @@ public class TDExporter
           if ( TDString.isNullOrEmpty( to ) ) { // splay shot
             if ( leg.mCnt > 0 && ref_item != null ) { // write pervious leg shot
               writeCsvLeg( pw, leg, ul, ua, leg_extend, sep );
-              writeCsvFlag( pw, duplicate, surface, ref_item.isCommented(), item.mComment, sep, newline );
+              writeCsvFlag( pw, duplicate, surface, ref_item.isCommented(), ref_item.mComment, sep, newline ); //HBc 
               duplicate = false; // reset flags
               surface   = false;
               ref_item = null; 
@@ -2577,6 +2609,40 @@ public class TDExporter
         // duplicate = false; // reset flags
         // surface   = false;
       }
+
+      // HBx CSV ext
+      List< StationInfo > stations = data.getStations( sid );
+      if ( stations.size() > 0 ) {
+        pw.format(Locale.US, "%s", newline);
+        pw.format(Locale.US, "# station%c comment%c flag%c%s", sep, sep, sep, newline );
+        for ( StationInfo station : stations ) {
+          pw.format(Locale.US, "%s%c \"%s\"%c", station.mName, sep, station.mComment, sep );
+          if ( station.mFlag.isFixed() ) {
+            pw.format("F");
+          } else if ( station.mFlag.isPainted() ) {
+            pw.format("P");
+          }
+          //station.mPresentation
+          pw.format(Locale.US, "%s", newline);
+        }
+      }
+
+      List< FixedInfo > fixed = data.selectAllFixed( sid, TDStatus.NORMAL );
+      if ( fixed.size() > 0 ) {
+        pw.format(Locale.US, "%s", newline);
+        pw.format(Locale.US, "# station%c lon%c lat%c h_geo%c accuracy%c V_accuracy%c comment%c CRS%s", sep, sep, sep, sep, sep, sep, sep, newline );
+        for ( FixedInfo fix : fixed ) {
+          pw.format(Locale.US, "%s%c %.6f%c %.6f%c %.0f%c %.1f%c %.1f%c", fix.name, sep, fix.lng, sep, fix.lat, sep, fix.h_geo, sep, fix.accuracy, sep, fix.accuracy_v, sep );
+          pw.format(Locale.US, "\"%s\"%c", fix.comment, sep );
+          if ( fix.hasCSCoords() ) {
+            pw.format(" \"%s\"%c", fix.csName(), sep );
+            pw.format(Locale.US, "%.0f%c %.0f%c %.0f", fix.cs_lng*fix.mToUnits, sep, fix.cs_lat*fix.mToUnits, sep, fix.cs_h_geo*fix.mToVUnits );
+          }
+          pw.format(Locale.US, "%s", newline);
+        }
+      }
+      // HBx CSV extend
+
       bw.flush();
       bw.close();
       return 1;
@@ -3135,6 +3201,68 @@ public class TDExporter
     return ret;
   }
 
+  /** reorder shots as incresing series
+   * @param shots   array of shots
+   * @return list of stations
+   */
+  static private ArrayList < String > reorderShotsAsTopoRobot( ArrayList<DBlock> shots )
+  {
+    ArrayList < DBlock > ret = new ArrayList<>();
+    ArrayList< String > stations = new ArrayList<>();
+    int sr_max = 0;
+    for ( DBlock shot : shots ) {
+      int sr_from = getTrbSeries( shot.mFrom );
+      int sr_to   = getTrbSeries( shot.mTo );
+      if ( sr_from > sr_max ) sr_max = sr_from;
+      if ( sr_to   > sr_max ) sr_max = sr_to;
+    }
+    int unlinking = 0;
+    int nr = shots.size();
+    for ( int k1 = 0; k1 < nr; ++k1 ) {
+      if ( unlinking == nr - k1 ) {
+        TDLog.e("TROBOT disconnected survey - removing " + unlinking + " shots " + k1 + "/" + nr  );
+        for ( int k3 = k1; k3 < nr; ++k3 ) shots.remove( k1 );
+        break;
+      }
+      DBlock shot = shots.get( k1 );
+      if ( stations.isEmpty() ) {
+        stations.add( shot.mFrom );
+        stations.add( shot.mTo );
+        continue;
+      }
+      String from = shot.mFrom;
+      String to   = shot.mTo;
+      if ( stations.contains( to ) ) {
+        if ( stations.contains( from ) ) {
+          ++ sr_max;
+          shot.mTo   = Integer.toString(sr_max) + ".1";
+          for ( int k2 = k1+1; k2 < nr; ++k2 ) {
+            DBlock shot2 = shots.get( k2 );
+            if ( to.equals( shot2.mFrom ) ) shot2.mFrom = shot.mTo;
+            if ( to.equals( shot2.mTo   ) ) shot2.mTo   = shot.mTo;
+          }
+        } else { // reverse shot
+          shot.mFrom = to;
+          shot.mTo   = from;
+          shot.mBearing += 180; if ( shot.mBearing >= 360 ) shot.mBearing -= 360;
+          shot.mClino = -shot.mClino;
+        }
+      } else {
+        if ( ! stations.contains( from ) ) { // unlinked shot
+          shots.remove( shot );
+          shots.add( shot );
+          -- k1;
+          unlinking ++;
+          continue;
+        } else {
+          unlinking = 0;
+        }
+      }
+      stations.add( shot.mTo );
+    }
+    return stations;
+  }
+
   static TrbStruct makeTrbStations( List<DBlock> list )
   {
     TrbStruct trb = new TrbStruct();
@@ -3151,7 +3279,12 @@ public class TDExporter
       }
     }
     int nr = shots.size();
+    if ( nr == 0 ) return trb;
+    reorderShotsAsTopoRobot( shots );
+
     if ( trb.areStationsAllTopoRobot() ) {
+      TDLog.v("TROBOT after reorder " + nr + " " + shots.size() );
+      nr = shots.size();
       trb.copyStations();
       for ( DBlock shot : shots ) {
         String from = shot.mFrom;
@@ -3178,7 +3311,7 @@ public class TDExporter
           }
         }
       }
-    } else {
+    } else if ( nr > 0 ) {
       DBlock item = shots.get( 0 );
       String st = item.mFrom; // current station
       trb.put( st, "1.0" );
@@ -3188,45 +3321,56 @@ public class TDExporter
       int series = 1;
       int start_series = 1;
       int start_point  = 0;
+      DBlock single_shot = null;
       while ( repeat1 ) {
         repeat1 = false;
         TDLog.v("TRB make series " + series + " start " + start_series + "." + start_point );
         TrbSeries trb_series = new TrbSeries( series, start_series, start_point );
         trb.addSeries( trb_series );
-        int point  = 0;
-        boolean repeat2 = true;
-        while ( repeat2 ) {
-          repeat2 = false;
-          
-          for ( int k = 0; k < shots.size(); ) {
-            item = shots.get( k );
-            String from = item.mFrom;
-            String to   = item.mTo;
-            TDLog.v("TRB shot " + k + "/" + shots.size() + ": " + from + "-" + to );
-            if ( from.equals( st ) && trb.get( to ) == null ) {
-              point ++;
-              TDLog.v("TRB forward shot " + from + "-" + to + " put " + to + " as " + series + "." + point );
-              trb.put( to, String.format("%d.%d", series, point ) );
-              trb_series.appendShot( item, true );
-              st = to;
-              shots.remove( k );
-              repeat2 = true;
-              break;
-            } else if ( to.equals( st ) && trb.get( from ) == null ) {
-              point ++;
-              TDLog.v("TRB backward shot " + from + "-" + to + " put " + from + " as " + series + "." + point );
-              trb.put( from, String.format("%d.%d", series, point ) );
-              trb_series.appendShot( item, false );
-              st = from;
-              shots.remove( k );
-              repeat2 = true;
-              break;
-            } else {
-              ++k;
+        if ( single_shot != null ) {
+          trb_series.appendShot( item, true );
+          shots.remove( single_shot );
+          trb_series.setPoints( 1 );
+        } else { // regular series
+          int point  = 0;
+          boolean repeat2 = true;
+          while ( repeat2 ) {
+            repeat2 = false;
+            for ( int k = 0; k < shots.size(); ) {
+              item = shots.get( k );
+              String from = item.mFrom;
+              String to   = item.mTo;
+              TDLog.v("TRB shot " + k + "/" + shots.size() + ": " + from + "-" + to );
+              if ( from.equals( st ) && trb.get( to ) == null ) {
+                point ++;
+                TDLog.v("TRB forward shot " + from + "-" + to + " put " + to + " as " + series + "." + point );
+                trb.put( to, String.format("%d.%d", series, point ) );
+                trb_series.appendShot( item, true );
+                st = to;
+                shots.remove( k );
+                repeat2 = true;
+                break;
+              } else if ( to.equals( st ) && trb.get( from ) == null ) {
+                point ++;
+                TDLog.v("TRB backward shot " + from + "-" + to + " put " + from + " as " + series + "." + point );
+                trb.put( from, String.format("%d.%d", series, point ) );
+                trb_series.appendShot( item, false );
+                st = from;
+                shots.remove( k );
+                repeat2 = true;
+                break;
+              } else {
+                ++k;
+              }
             }
           }
+          trb_series.setPoints( point );
         }
-        trb_series.setPoints( point );
+ 
+        if ( shots.size() == 0 ) {
+          TDLog.v("TRB finished shots");
+          break;
+        }
 
         TDLog.v("TRB check new series. shots " + shots.size() );
         boolean found = false;
@@ -3240,6 +3384,7 @@ public class TDExporter
           if ( spf != null && spt == null ) { // new series
             ++ series;
             repeat1 = true;
+            single_shot = null;
             start_series = getTrbSeries( spf );
             start_point  = getTrbStation( spf );
             st = from;
@@ -3249,12 +3394,22 @@ public class TDExporter
           } else if ( spt != null && spf == null ) { // new series
             ++ series;
             repeat1 = true;
+            single_shot = null;
             start_series = getTrbSeries( spt );
             start_point  = getTrbStation( spt );
             st = to;
             found = true;
             TDLog.v("TRB new series T " + series + " from " + st + " = " + spt );
             break;
+          } else if ( spt != null && spf != null ) { // close loop single-shot series
+            ++ series;
+            repeat1 = true;
+            single_shot = item;
+            start_series = getTrbSeries( spf );
+            start_point  = getTrbStation( spf );
+            st = from;
+            found = true;
+            TDLog.v("TRB new single-shot series F " + series + " from " + st + " = " + spf );
           }
         }
         if ( ! found ) { 
@@ -4553,7 +4708,7 @@ public class TDExporter
             }
           } else { // only TO station
             if ( leg.mCnt > 0 && ref_item != null ) {
-              flag = printFlagToCav( pw, flag, ref_item.getFlag(), eol );
+              flag = printFlagToCav( pw, flag, ref_item.getFlag(), eol ); // no cavway bits
               printShotToCav( pw, leg, ref_item, eol, ents );
               ref_item = null; 
             }
@@ -4618,25 +4773,24 @@ public class TDExporter
   //   }
   //   printPolygonEOL( pw );
   // }
-
   static private void printPolygonData( PrintWriter pw, PolygonData data )
   {
     pw.format( "%s\t%s\t", data.from, data.to );
-    pw.format(Locale.US, "%.2f\t%.1f\t%.1f\t\t%.2f\t%.2f\t%.2f\t%.2f\t", 
-      data.length, data.bearing, data.clino, data.lrud.l, data.lrud.r, data.lrud.u, data.lrud.d );
+    pw.format(Locale.US, "%.2f\t%.1f\t%.1f\t\t%.2f\t%.2f\t%.2f\t%.2f\t",
+            data.length, data.bearing, data.clino, data.lrud.l, data.lrud.r, data.lrud.u, data.lrud.d );
     if ( data.comment != null && data.comment.length() > 0 ) {
       pw.format("%s", data.comment );
     }
     printPolygonEOL( pw );
   }
- 
-  /** export survey data in PLG (Polygon) format
+
+  /** export survey data in PLG (Polygon) format // HBPly
    * @param bw      buffered writer
    * @param sid     survey ID
    * @param data    database helper
    * @param info    survey info
    * @param survey_name survey export name (unused)
-   */ 
+   */
   static int exportSurveyAsPlg( BufferedWriter bw, long sid, DataHelper data, SurveyInfo info, String survey_name )
   {
     // TDLog.v("polygon " + file.getName() );
@@ -4644,6 +4798,10 @@ public class TDExporter
     float ua = 1; // TDSetting.mUnitAngle;
     // String uls = ( ul < 1.01f )? "Meters"  : "Feet"; // FIXME
     // String uas = ( ua < 1.01f )? "Degrees" : "Grads";
+    boolean mPlgSplay = !TDSetting.mPlyLRUD; // HBPly TODO stringek, settings I/O
+    boolean mPlgMinus = TDSetting.mPlyMinus; // HBPly TODO stringek, settings I/O
+    int snr = 0; // HBPly splay number
+    String splay_name = "-"; // HBPly splay name
 
     try {
       // TDLog.Log( TDLog.LOG_IO, "export Polygon " + file.getName() );
@@ -4657,13 +4815,13 @@ public class TDExporter
       pw.format("-------------------------------"); printPolygonEOL( pw ); printPolygonEOL( pw );
 
       pw.format("*** Project ***");                 printPolygonEOL( pw );
-      pw.format("Project name: %s", info.name );    printPolygonEOL( pw );
-      pw.format("Project place: %s", info.name );   printPolygonEOL( pw );
-      pw.format("Project code: 9999");              printPolygonEOL( pw );
+      pw.format("Project name: %s", info.name );    printPolygonEOL( pw );  // FIXME char coding
+      pw.format("Project place: %s", "" );          printPolygonEOL( pw ); // HBPly
+      pw.format("Project code: ");                  printPolygonEOL( pw ); // HBPly
       pw.format("Made by: TopoDroid %s", TDVersion.string() );   printPolygonEOL( pw );
       pw.format(Locale.US, "Made date: %f", TDUtil.getDatePlg() ); printPolygonEOL( pw );
-      pw.format("Last modi: 0");   printPolygonEOL( pw ); // modi ???
-      pw.format("AutoCorrect: 1"); printPolygonEOL( pw );
+      pw.format("Last modi: 0");   printPolygonEOL( pw ); // no modification
+      pw.format("AutoCorrect: 0"); printPolygonEOL( pw ); // HBPly no closed loops
       pw.format("AutoSize: 20.0"); printPolygonEOL( pw ); printPolygonEOL( pw );
 
       String date = info.date;
@@ -4681,7 +4839,7 @@ public class TDExporter
       }
       // TDLog.v("Date Y " + y + " M " + m + " d " + d + " " + date );
       pw.format("*** Surveys ***");             printPolygonEOL( pw );
-      pw.format("Survey name: %s", info.name ); printPolygonEOL( pw );
+      pw.format("Survey name: %s", info.name ); printPolygonEOL( pw );  // FIXME char coding
       pw.format("Survey team:");                printPolygonEOL( pw );
       pw.format("\t%s", (info.team != null)? info.team : "" ); printPolygonEOL( pw );
       printPolygonTabEOL( pw );
@@ -4700,10 +4858,17 @@ public class TDExporter
       // if ( info.comment != null ) {
       //   pw.format("; %s\n", info.comment );
       // }
+      List< DBlock > list = data.selectAllExportShots( sid, TDStatus.NORMAL ); // HBPly
+      checkShotsClino( list ); // HBPly
+      String first_from = "0"; // HBPly if not first data
+      for ( DBlock blk : list ) { // HBPly
+        if (blk.mFrom != null) { first_from = blk.mFrom; break;}
+      }
 
       List< FixedInfo > fixed = data.selectAllFixed( sid, TDStatus.NORMAL );
       if ( fixed.size() > 0 ) {
         for ( FixedInfo fix : fixed ) {
+          first_from = fix.name;  // HBPly first name TODO több induló pont
           pw.format("Fix point: %s", fix.name );
           printPolygonEOL( pw );
           pw.format(Locale.US, "%.7f\t%.7f\t%.0f\t0\t0\t0\t0", fix.lng, fix.lat, fix.h_geo );
@@ -4711,7 +4876,7 @@ public class TDExporter
           break;
         }
       } else {
-        pw.format("Fix point: 0" );
+        pw.format("Fix point: %s", first_from);
         printPolygonEOL( pw );
         pw.format(Locale.US, "0\t0\t0\t0\t0\t0\t0" );
         printPolygonEOL( pw );
@@ -4721,13 +4886,16 @@ public class TDExporter
       printPolygonEOL( pw );
       pw.format("From\tTo\tLength\tAzimuth\tVertical\tLabel\tLeft\tRight\tUp\tDown\tNote");
       printPolygonEOL( pw );
-
-      List< DBlock > list = data.selectAllExportShots( sid, TDStatus.NORMAL );
-      checkShotsClino( list );
-
+      
       int size = 0; // count legs
       for ( DBlock blk : list ) {
-        if ( blk.mFrom != null && blk.mFrom.length() > 0 && blk.mTo != null && blk.mTo.length() > 0 ) ++size;
+        if ( ! mPlgSplay ) { // HBPly
+          if (blk.mFrom != null && blk.mTo != null)
+            ++size;
+        } else {
+          if ((blk.mFrom != null) || (blk.mTo != null))// HBPly
+            ++size;
+        }
       }
       PolygonData[] polygon_data = new PolygonData[ size ];
       // TDLog.v("size " + size + " list " + list.size() );
@@ -4746,45 +4914,112 @@ public class TDExporter
       for ( DBlock item : list ) {
         String from = item.mFrom;
         String to   = item.mTo;
-        if ( TDString.isNullOrEmpty( from ) ) {
-          if ( TDString.isNullOrEmpty( to ) ) { // no station: not exported
-            if ( ref_item != null && 
-               ( item.isSecLeg() || item.isRelativeDistance( ref_item ) ) ) {
+        // TDLog.v(" HBPly item " + nr_data + " from " + from + " to " + to + " length " + item.mLength + " cmnt "+ item.mComment);
+        if ( TDString.isNullOrEmpty( from ) ) { // no from station
+          if ( TDString.isNullOrEmpty( to ) ) { // no station: not exported repeated leg shot
+            if ( ref_item != null &&
+                    ( item.isSecLeg() || item.isRelativeDistance( ref_item ) ) ) {//HB problem Secleg
               leg.add( item.mLength, item.mBearing, item.mClino );
             }
-          } else { // only TO station
-            if ( leg.mCnt > 0 && ref_item != null ) {
-              lrud = computeLRUD( ref_item, list, at_from );
-              // FIXME_P pw.format("%s\t%s\t", ref_item.mFrom, ref_item.mTo );
-              // FIXME_P printShotToPlg( pw, leg, lrud, ref_item.mComment );
-              polygon_data[nr_data] = new PolygonData( ref_item.mFrom, ref_item.mTo, leg, lrud, ref_item.mComment );
+          } else
+          { // only TO station
+            if ( ! mPlgSplay ){ // HBPly
+              if (leg.mCnt > 0 && ref_item != null) {
+                lrud = computeLRUD(ref_item, list, at_from);
+                // FIXME_P pw.format("%s\t%s\t", ref_item.mFrom, ref_item.mTo );
+                // FIXME_P printShotToPlg( pw, leg, lrud, ref_item.mComment );
+                polygon_data[nr_data] = new PolygonData(ref_item.mFrom, ref_item.mTo, leg, lrud, ref_item.mComment);
+                nr_data++;
+                leg.reset();
+                // duplicate = false;
+                // surface = false;
+                ref_item = null;
+              }
+            } else
+            { // HBPly
+              if (leg.mCnt > 0 && ref_item != null) {
+                lrud = computeLRUD(ref_item, list, at_from);
+                // FIXME_P pw.format("%s\t%s\t", ref_item.mFrom, ref_item.mTo );
+                // FIXME_P printShotToPlg( pw, leg, lrud, ref_item.mComment );
+                // TDLog.v(" HBPly ref_item " + nr_data + " from " + ref_item.mFrom + " to " + ref_item.mTo + " length " + ref_item.mLength + " cmnt " + ref_item.mComment);
+                polygon_data[nr_data] = new PolygonData(ref_item.mFrom, ref_item.mTo, leg, lrud, ref_item.mComment);
+                nr_data++;
+                leg.reset();
+                ref_item = null;
+              }
+              leg.reset();
+              leg.set( item.mLength, item.mBearing, item.mClino );
+              lrud = new LRUD(); lrud.l = 0;lrud.r = 0;lrud.u = 0;lrud.d = 0;
+              if (mPlgMinus){
+                splay_name = "-";
+              } else {
+                splay_name = "S_" + snr;
+                snr++;
+              }
+              // TDLog.v(" HBPly splay " + snr + " name " + splay_name + " nr " + nr_data);
+
+              polygon_data[nr_data] = new PolygonData( splay_name, to, leg, lrud, item.mComment);
               nr_data ++;
               leg.reset();
-              // duplicate = false;
-              // surface = false;
-              ref_item = null; 
+              ref_item = null;
             }
           }
-        } else { // with FROM station
-          if ( TDString.isNullOrEmpty( to ) ) { // splay shot
-            if ( leg.mCnt > 0 && ref_item != null ) { // write previous leg shot
-              lrud = computeLRUD( ref_item, list, at_from );
-              // FIXME_P pw.format("%s\t%s\t", ref_item.mFrom, ref_item.mTo );
-              // FIXME_P printShotToPlg( pw, leg, lrud, ref_item.mComment );
-              polygon_data[nr_data] = new PolygonData( ref_item.mFrom, ref_item.mTo, leg, lrud, ref_item.mComment );
-              nr_data ++;
+        } else
+        { // with FROM station
+          if (TDString.isNullOrEmpty(to)) { // splay shot
+            if (!mPlgSplay) { // HBPly
+              if (leg.mCnt > 0 && ref_item != null) { // write previous leg shot
+                lrud = computeLRUD(ref_item, list, at_from);
+                // FIXME_P pw.format("%s\t%s\t", ref_item.mFrom, ref_item.mTo );
+                // FIXME_P printShotToPlg( pw, leg, lrud, ref_item.mComment );
+                polygon_data[nr_data] = new PolygonData(ref_item.mFrom, ref_item.mTo, leg, lrud, ref_item.mComment);
+                nr_data++;
+                leg.reset();
+                // duplicate = false;
+                // surface = false;
+                ref_item = null;
+              }
+            } else
+            { // HBPly
+              if (leg.mCnt > 0 && ref_item != null) {
+                lrud = computeLRUD(ref_item, list, at_from);
+                // FIXME_P pw.format("%s\t%s\t", ref_item.mFrom, ref_item.mTo );
+                // FIXME_P printShotToPlg( pw, leg, lrud, ref_item.mComment );
+                // TDLog.v(" HBPly ref_item " + nr_data + " from " + ref_item.mFrom + " to " + ref_item.mTo + " length " + ref_item.mLength + " cmnt " + ref_item.mComment);
+                polygon_data[nr_data] = new PolygonData(ref_item.mFrom, ref_item.mTo, leg, lrud, ref_item.mComment);
+                nr_data++;
+                leg.reset();
+                ref_item = null;
+              }
               leg.reset();
-              // duplicate = false;
-              // surface = false;
-              ref_item = null; 
+              leg.set(item.mLength, item.mBearing, item.mClino);
+              lrud = new LRUD();
+              lrud.l = 0;
+              lrud.r = 0;
+              lrud.u = 0;
+              lrud.d = 0;
+              if (mPlgMinus){
+                splay_name = "-";
+              } else {
+                splay_name = "S_" + snr;
+                snr++;
+              }
+              // TDLog.v(" HBPly splay " + snr + " name " + splay_name + " ." + " nr " + nr_data);
+              // TDLog.v(" HBPly poligon " + nr_data + " from " + from + " " + item.mComment);
+              polygon_data[nr_data] = new PolygonData(from, splay_name, leg, lrud, item.mComment);
+              nr_data++;
+              leg.reset();
+              ref_item = null;
             }
-          } else {
-            if ( leg.mCnt > 0 && ref_item != null ) {
-              lrud = computeLRUD( ref_item, list, at_from );
+          } else //normal leg
+          {
+            if (leg.mCnt > 0 && ref_item != null) {
+              lrud = computeLRUD(ref_item, list, at_from);
               // FIXME_P pw.format("%s\t%s\t", ref_item.mFrom, ref_item.mTo );
               // FIXME_P printShotToPlg( pw, leg, lrud, ref_item.mComment );
-              polygon_data[nr_data] = new PolygonData( ref_item.mFrom, ref_item.mTo, leg, lrud, ref_item.mComment );
-              nr_data ++;
+              // TDLog.v(" HBPly ref_item " + nr_data + " from " + ref_item.mFrom + " to " + ref_item.mTo + " length " + ref_item.mLength + " cmnt " + ref_item.mComment);
+              polygon_data[nr_data] = new PolygonData(ref_item.mFrom, ref_item.mTo, leg, lrud, ref_item.mComment);
+              nr_data++;
               leg.reset();
             }
             ref_item = item;
@@ -4793,31 +5028,48 @@ public class TDExporter
             leg.set( item.mLength, item.mBearing, item.mClino );
           }
         }
-      }
-      if ( leg.mCnt > 0 && ref_item != null ) {
+      } // for dBlock
+      if ( leg.mCnt > 0 && ref_item != null ) { // maradék leg kiírása
         lrud = computeLRUD( ref_item, list, at_from );
         // FIXME_P pw.format("%s\t%s\t", ref_item.mFrom, ref_item.mTo );
         // FIXME_P printShotToPlg( pw, leg, lrud, ref_item.mComment );
+        // TDLog.v(" HBPly ref_item " + nr_data + " from " + ref_item.mFrom + " to " + ref_item.mTo + " length " + ref_item.mLength + " cmnt "+ ref_item.mComment);
         polygon_data[nr_data] = new PolygonData( ref_item.mFrom, ref_item.mTo, leg, lrud, ref_item.mComment );
         nr_data ++;
         // leg.reset(); // not necessary
       }
 
       if ( nr_data > 0 ) {
-        PolygonData d0 = polygon_data[0];
-        printPolygonData( pw, d0 );
-        d0.used = true;
+        // boolean repeat2 = false;
+        for ( int n0 = 0; n0 < nr_data; ++n0 ) { // HBPly first leg
+          PolygonData d0 = polygon_data[n0];
+          if (d0.from.equals(first_from) && !d0.to.equals("-")) { // forward
+            printPolygonData( pw, d0 );
+            d0.used = true;
+            break;
+          }
+          if (d0.to.equals(first_from) && !d0.from.equals("-")) { // backward to GPS
+            d0.reverse();
+            printPolygonData( pw, d0 );
+            d0.used = true;
+            break;
+          }
+        }
+        //PolygonData d0 = polygon_data[0]; // HBPly
+        //printPolygonData( pw, d0 ); // HBPly
+        //d0.used = true;  // HBPly
         boolean repeat = true;
         while ( repeat ) {
           repeat = false;
-          for ( int n2 = 1; n2 < nr_data; ++n2 ) {
+          //TDLog.v(" HBPly rpeat " + repeat);
+          for ( int n2 = 0; n2 < nr_data; ++n2 ) {  // HBPly
             PolygonData d2 = polygon_data[n2];
-            if ( d2.used ) continue;
+            if ( d2.used ) continue; // ha nem nyomtatott
             String from = d2.from;
             String to   = d2.to;
             for ( int n1 = 0; n1 < nr_data; ++n1 ) {
               PolygonData d1 = polygon_data[n1];
-              if ( d1.used ) {
+              if ( d1.used && !(mPlgMinus && d1.to.equals( "-" )) && !(mPlgMinus && d1.from.equals( "-" ))) {// HBPly "-" not point
                 if ( from.equals( d1.to ) || from.equals( d1.from ) ) {
                   printPolygonData( pw, d2 );
                   d2.used = true;
@@ -4856,6 +5108,7 @@ public class TDExporter
       return 0;
     }
   }
+
 
 
   // -----------------------------------------------------------------------

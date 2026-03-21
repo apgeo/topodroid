@@ -1,19 +1,19 @@
 <html><body>
 
-<h4>DistoX CALIBRATION COEFFICIENTS</h4>
+<h4>CALIBRATION COEFFICIENTS</h4>
 
 This dialog displays the 24 coefficients of the calibration linear transformations for the <b>G</b> and the <b>M</b> vectors (12 coefficients each) and 3 coefficients of the non-linear terms (only DistoX2 v. 2.3 or higher).<br><p>
 
 It is used in three different situations:
 <ul>
-<li>The <i>Read</i> button of the <u>Device window</u> display the coefficients read from the DistoX.</li>
+<li>The <i>Read</i> button of the <u>Device window</u> display the coefficients read from the DistoX/Cavway.</li>
 <li>The <i>Read</i> button of the <u>Calibration Info window</u> displays the coefficients stored in the database</li>
 <li>The <i>Compute</i> button of the <u>Calibration Data window</u> displays the computed coefficients</li>
 </ul>
 
-In the last case the dialog displays also 
+If the calibration info (errors, iterations, dip) are available the dialog displays also
 <ul>
-<li>an histogram of the residual errors of the calibration data,</li>
+<li>a histogram of the residual errors of the calibration data,</li>
 <li>the average error [degrees]</li>
 <li>the "delta" of the original algorithm</li>
 <li>the standard deviation of the error distribution [degrees]</li>
@@ -21,8 +21,10 @@ In the last case the dialog displays also
 <li>the number of iterations taken by the calibration computation,</li>
 <li>the average angle between magnetic field and vertical [degrees]</li>
 <li>the average difference between the roll angles computed using G vectors of the data in each group and using M vectors [degrees]</li>
-<li>only for double-sensor devices the statistics (avergae, std-dev, and max [degrees]) of the differences of the device directions between the two sensors.</li>
+<li>only for double-sensor devices the statistics (average, std-dev, and max [degrees]) of the differences of the device directions between the two sensors.</li>
 </ul><br><p>
+
+In case some calibration info is not known the value 0 is shown.<br><p>
 
 Assuming that the azimuth-clino error distribution is normal, the standard deviation of the errors should be slightly over half the average value.<br><p>
 
@@ -37,9 +39,13 @@ It gives an estimate of the calibration accuracy (precision of the instrument):
 
 The dialog displays also the magnetic dip [degrees] computed by the calibration algorithm.<br><p>
 
-After a computation of the calibration coefficients, the dialog has a button to <b>write</b> the coefficients to the DistoX.<br>
+After a computation of the calibration coefficients, the dialog has a button to <b>write</b> the coefficients to the DistoX/Cavway.<br>
 A warning is given if the data direction distribution is below 95%, or the calibration average error is above 0.5&deg;.
 <br><p>
+
+For the <b>Cavway</b> there is a button to switch between the coefficients of the calibration of the first sensosr set, and those of the second sensor set.<br>
+The reported errors are from the calibration of the first sensor set. Because of the board layout the first sensor set has smaller magnetic influences.
+Nevertheless the differences of direction between the data of the two sensor sets are very small, for a good callibration.<br><p>
 
 
 </body></html>

@@ -43,7 +43,7 @@ import android.view.View;
 // import android.widget.GridView;
 // import android.view.View.OnKeyListener;
 // import android.view.KeyEvent;
-import android.inputmethodservice.KeyboardView;
+// import android.inputmethodservice.KeyboardView;
 
 import android.text.method.KeyListener; 
 
@@ -186,9 +186,9 @@ class FixedDialog extends MyDialog
       double accur_v = mFxd.getAccuracyVert();
       TextView tv = (TextView) findViewById( R.id.fix_accuracy );
       if (accur_v < 0 ) {
-        tv.setText( String.format(Locale.US, mContext.getResources().getString( R.string.fmt_error_h ), accur ) );
+        tv.setText( String.format(Locale.US, resString( R.string.fmt_error_h ), accur ) );
       } else {
-        tv.setText( String.format(Locale.US, mContext.getResources().getString( R.string.fmt_error_m ), accur, accur_v ) );
+        tv.setText( String.format(Locale.US, resString( R.string.fmt_error_m ), accur, accur_v ) );
       }
     }
 
@@ -204,8 +204,9 @@ class FixedDialog extends MyDialog
     // mTVh_ell.setText( String.format( Locale.US, "%.0f", mFxd.h_ell ) );
     mTVh_geo.setText( String.format( Locale.US, "%.0f", mFxd.h_geo ) );
 
-    mKeyboard = new MyKeyboard( mContext, (KeyboardView)findViewById( R.id.keyboardview ),
-                                R.xml.my_keyboard, -1 );
+    // mKeyboard = new MyKeyboard( mContext, (KeyboardView)findViewById( R.id.keyboardview ), R.xml.my_keyboard, -1 );
+    mKeyboard = MyKeyboard.getMyKeyboard( mContext, findViewById( R.id.keyboardview ), R.xml.my_keyboard, -1 );
+
     if ( TDSetting.mKeyboard ) {
       if ( TDSetting.mNegAltitude ) {
         // MyKeyboard.registerEditText( mKeyboard, mTVh_ell, MyKeyboard.FLAG_POINT_SIGN );
@@ -281,31 +282,29 @@ class FixedDialog extends MyDialog
     MyKeyboard.close( mKeyboard );
 
     Button b = (Button) v;
-    // TDLog.Log( TDLog.LOG_INPUT, "FixedDialog onClick() button " + b.getText().toString() );
 
     if ( b == mButtonSave ) {
-      String station = mETstation.getText().toString();
+      String station = TDString.noSpaces( mETstation.getText().toString() ); // no spaces in station names
       if ( /* station == null || */ station.length() == 0 ) { // FIXME this should never happen: mETstation is TextView
-        mETstation.setError( mContext.getResources().getString( R.string.error_station_required ) );
+        mETstation.setError( resString( R.string.error_station_required ) );
         return;
       }
       // station = TDUtil.toStationFromName( station );
       if ( ! TDUtil.isStationName( station ) ) {
-        mETstation.setError( mContext.getResources().getString( R.string.bad_station_name ) );
+        mETstation.setError( resString( R.string.bad_station_name ) );
         return;
       }
       // mETstation.setText( station );
       
-      String comment = mETcomment.getText().toString();
-      // if ( comment == null ) comment = "";
+      String comment = TDUtil.getTextOrEmpty( mETcomment );
       if ( mButtonDecl.isChecked() && mTVdecl.getText() != null ) {
         String decl_str = mTVdecl.getText().toString();
-        if ( /* decl_str != null && */ decl_str.length() > 0 ) {
+        if ( TDString.isNullOrEmpty( decl_str ) ) {
           decl_str = TDString.commaToPoint( decl_str );
           try {
             mParent.setDeclination( Float.parseFloat( decl_str ) );
           } catch ( NumberFormatException e ) {
-            mTVdecl.setError( mContext.getResources().getString( R.string.error_declination_number ) );
+            mTVdecl.setError( resString( R.string.error_declination_number ) );
             return;
           }
         }

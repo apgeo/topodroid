@@ -13,6 +13,7 @@ package com.topodroid.TDX;
 
 // import com.topodroid.utils.TDLog;
 import com.topodroid.utils.TDUtil;
+import com.topodroid.utils.TDString;
 import com.topodroid.ui.MyKeyboard;
 import com.topodroid.ui.MyDialog;
 import com.topodroid.prefs.TDSetting;
@@ -22,7 +23,7 @@ import java.util.Locale;
 import android.os.Bundle;
 
 import android.content.Context;
-import android.inputmethodservice.KeyboardView;
+// import android.inputmethodservice.KeyboardView;
 
 import android.widget.EditText;
 import android.widget.Button;
@@ -36,8 +37,8 @@ class PlotNewDialog extends MyDialog
   private INewPlot mMaker;
   // private boolean notDone;
 
-  private EditText mEditName;
-  private EditText mEditStart;
+  private EditText mEtName;
+  private EditText mEtStart;
   // private EditText mEditProject;
 
   private Button   mBtnOK;
@@ -66,14 +67,13 @@ class PlotNewDialog extends MyDialog
   protected void onCreate(Bundle savedInstanceState) 
   {
     super.onCreate(savedInstanceState);
-    // requestWindowFeature(Window.FEATURE_NO_TITLE);
     initLayout( R.layout.plot_new_dialog, R.string.plot_new );
 
-    mEditName  = (EditText) findViewById(R.id.edit_plot_name);
-    mEditStart = (EditText) findViewById(R.id.edit_plot_start);
+    mEtName  = (EditText) findViewById(R.id.edit_plot_name);
+    mEtStart = (EditText) findViewById(R.id.edit_plot_start);
     // mEditProject = (EditText) findViewById(R.id.plot_project);
 
-    mEditName.setText( String.format(Locale.US, "%d", mIndex ) );
+    mEtName.setText( String.format(Locale.US, "%d", mIndex ) );
     // if current station is set:
     String station = null;
     if ( TDSetting.mFixedOrigin ) {
@@ -87,8 +87,8 @@ class PlotNewDialog extends MyDialog
       }
     }
     if ( station == null ) station = TDSetting.mInitStation;
-    if ( station != null ) mEditStart.setText( station );
-    mEditStart.setOnLongClickListener( this );
+    if ( station != null ) mEtStart.setText( station );
+    mEtStart.setOnLongClickListener( this );
 
     mBtnOK = (Button) findViewById(R.id.btn_ok );
     mBtnBack = (Button) findViewById(R.id.btn_cancel );
@@ -107,17 +107,18 @@ class PlotNewDialog extends MyDialog
       mCBdangling.setVisibility( View.GONE );
     }
 
-    mKeyboard = new MyKeyboard( mContext, (KeyboardView)findViewById( R.id.keyboardview ), 
-                                R.xml.my_keyboard_base_sign, R.xml.my_keyboard_qwerty );
+    // mKeyboard = new MyKeyboard( mContext, (KeyboardView)findViewById( R.id.keyboardview ), R.xml.my_keyboard_base_sign, R.xml.my_keyboard_qwerty );
+    mKeyboard = MyKeyboard.getMyKeyboard( mContext, findViewById( R.id.keyboardview ), R.xml.my_keyboard_base_sign, R.xml.my_keyboard_qwerty );
+
     if ( TDSetting.mKeyboard ) {
-      MyKeyboard.registerEditText( mKeyboard, mEditName,  MyKeyboard.FLAG_POINT_LCASE_2ND );
+      MyKeyboard.registerEditText( mKeyboard, mEtName,  MyKeyboard.FLAG_POINT_LCASE_2ND );
       int flag = ( TDSetting.mStationNames == 1 ) ? MyKeyboard.FLAG_POINT : MyKeyboard.FLAG_POINT_LCASE_2ND;
-      MyKeyboard.registerEditText( mKeyboard, mEditStart, flag);
+      MyKeyboard.registerEditText( mKeyboard, mEtStart, flag);
       // MyKeyboard.registerEditText( mKeyboard, mEditProject, 0 ); // MyKeyboard.FLAG_POINT );
     } else {
       mKeyboard.hide();
       if ( TDSetting.mStationNames == 1 ) {
-        mEditStart.setInputType( TDConst.NUMBER_DECIMAL );
+        mEtStart.setInputType( TDConst.NUMBER_DECIMAL );
       }
       // mEditProject.setInputType( TDConst.NUMBER );
     }
@@ -130,7 +131,7 @@ class PlotNewDialog extends MyDialog
   @Override
   public boolean onLongClick(View v) 
   {
-    if ( v.getId() == R.id.edit_plot_start ) { // mEditStart
+    if ( v.getId() == R.id.edit_plot_start ) { // mEtStart
       CutNPaste.makePopup( mContext, (EditText)v );
       return true;
     }
@@ -149,7 +150,6 @@ class PlotNewDialog extends MyDialog
     // When the user clicks, just finish this activity.
     // onPause will be called, and we save our data there.
     Button b = (Button) v;
-    // TDLog.Log( TDLog.LOG_INPUT, "PlotDialog onClick() button " + b.getText().toString() ); 
 
     int vid = v.getId( );
     if ( vid == R.id.btn_ok ) {
@@ -165,50 +165,46 @@ class PlotNewDialog extends MyDialog
    */
   private boolean handleOK( )
   {
-    String name  = mEditName.getText().toString().trim();
-    String start = mEditStart.getText().toString().trim();
+    String plot_name  = mEtName.getText().toString(); 
+
+    String plot_start = TDString.noSpaces( mEtStart.getText().toString() );
     // String view  = mEditView.getText().toString();
     // String view = null;
+    if ( ! TDString.checkName( plot_name, mEtName, mContext.getResources() ) ) {
+      return false;
+    }
+    plot_name = TDString.spacesToUnderscore( plot_name ); // this trims the string
 
-    // if ( name == null ) { // CANNOT HAPPEN
-    //   mEditName.setError( mContext.getResources().getString( R.string.error_name_required ) );
+    // if ( mApp.hasSurveyPlotName( plot_name ) ) { // this checks "plot_name"
+    //   mEtName.setError( resString( R.string.error_name_duplicate ) );
     //   return false;
     // }
-    name = TDUtil.toStationFromName( name );
-    if ( name == null || name.length() == 0 ) {
-      mEditName.setError( mContext.getResources().getString( R.string.error_name_required ) );
+    if ( mMaker.hasSurveyPlot( plot_name ) ) { // this checks "plot_name" + "p"
+      mEtName.setError( resString( R.string.plot_duplicate_name ) );
       return false;
     }
-    if ( ! TDUtil.isStationName( name ) ) {
-      mEditName.setError( mContext.getResources().getString( R.string.bad_station_name ) );
-      return false;
-    }
-    if ( mApp.hasSurveyPlotName( name ) ) {
-      mEditName.setError( mContext.getResources().getString( R.string.error_name_duplicate ) );
-      return false;
-    }
+    // if ( ! TDUtil.isStationName( plot_name ) ) {
+    //   mEtName.setError( resString( R.string.bad_station_name ) );
+    //   return false;
+    // }
 
-    // if ( start == null ) { // CANNOT HAPPEN
-    //   mEditStart.setError( mContext.getResources().getString( R.string.error_start_required ) );
+    // if ( plot_start == null ) { // CANNOT HAPPEN
+    //   mEtStart.setError( resString( R.string.error_start_required ) );
     //   return false;
     // }
     
-    // start = TDUtil.toStationFromName( start );
-    if ( start.length() == 0 ) {
-      mEditStart.setError( mContext.getResources().getString( R.string.error_start_required ) );
+    // plot_start = TDUtil.toStationFromName( plot_start );
+    if ( TDString.isNullOrEmpty( plot_start ) ) {
+      mEtStart.setError( resString( R.string.error_start_required ) );
       return false;
     } 
-    if ( ! TDUtil.isStationName( start ) ) {
-      mEditStart.setError( mContext.getResources().getString( R.string.bad_station_name ) );
-      return false;
-    }
-    if ( mMaker.hasSurveyPlot( name ) ) {
-      mEditName.setError( mContext.getResources().getString( R.string.plot_duplicate_name ) );
+    if ( ! TDUtil.isStationName( plot_start ) ) {
+      mEtStart.setError( resString( R.string.bad_station_name ) );
       return false;
     }
     boolean dangling = TDLevel.overExpert && mCBdangling.isChecked();
-    if ( ! ( dangling || mMaker.hasSurveyStation( start ) ) ) {
-      mEditStart.setError( mContext.getResources().getString( R.string.error_station_non_existing ) );
+    if ( ! ( dangling || mMaker.hasSurveyStation( plot_start ) ) ) {
+      mEtStart.setError( resString( R.string.error_station_non_existing ) );
       return false;
     }
 
@@ -218,9 +214,9 @@ class PlotNewDialog extends MyDialog
     }
 
     if ( projected ) {
-      mMaker.doProjectionDialog( name, start );
+      mMaker.doProjectionDialog( plot_name, plot_start );
     } else {
-      mMaker.makeNewPlot( name, start, true, 0, 0 ); // true = extended
+      mMaker.makeNewPlot( plot_name, plot_start, true, 0, 0 ); // true = extended
     }
     return true;
   }

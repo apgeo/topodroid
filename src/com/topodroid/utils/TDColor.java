@@ -100,12 +100,25 @@ public class TDColor
   public static final int TRANSPARENT    = 0x00000000;
   public static final int TRANSPARENT_MS = 0x99ff3333;
 
+  public static final int SEARCH        = 0xff996600; // search result highlight color
+
   public static final int SPLAY_LIGHT   = BLUE;
   public static final int SPLAY_NORMAL  = MID_BLUE;
   public static final int SPLAY_LRUD    = GREEN;
   public static final int SPLAY_COMMENT = VERYDARK_GRAY;
   public static final int SPLAY_LATEST  = 0xff66ccff;
 
-  public static final int SEARCH        = 0xff996600; // search result highlight color
+  public static final int SPLAY_FEATURE   = 0xccffee44; // yellow
+  public static final int SPLAY_RIDGE     = 0xccee44ff; // purple
+  public static final int SPLAY_BACKSIGHT = 0xcc66ccee; // blue
+  public static final int SPLAY_GENERIC   = 0xcc77ff77; // green
+
+  public static final int SCAN_SHOT       = 0xcc999999; // gray
+
+  // public static final int YELLOW_GREEN = 0xff99cc3d;
+  // public static final int YELLOW_GREEN_X  = 0xff88ff2c;
+  // public static final int YELLOW_GREEN_H  = 0xff66abcb;
+  // public static final int YELLOW_GREEN_V  = 0xff668bfd;
+
 }
   

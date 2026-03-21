@@ -1,6 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
 
 <resources>
+  <string-array name="scanLegType">
+     <item name="s">Általános</item>
+     <item name="sX">Keresztmetszet</item>
+     <item name="sH">Vízszintes</item>
+     <item name="sV">Függőleges</item>
+  </string-array>
+
+  <string-array name="toolbarUpdate">
+     <item name="oldest">Legrégebbi cseréje</item>
+     <item name="front">Előre helyezés</item>
+     <item name="front_oldest">Előre helyezés, legrégebbi eldobása</item>
+  </string-array>
+
   <string-array name="teamNames">
      <item name="plain">Sima szöveg</item>
      <item name="separated">Szöveg elválasztva</item>
@@ -310,12 +323,12 @@
      <item name="ddmmss">fok, perc, másodperc</item>
   </string-array>
 
-  <string-array name="calibAlgo">
+  <!-- string-array name="calibAlgo">
      <item name="auto">Automatikus</item>
      <item name="linear">Lineáris</item>
      <item name="nonlinear">Nem lineáris</item>
-     <!-- item name="minimum">Minimum</item -->
-  </string-array>
+     <! - - item name="minimum">Minimum</item - - >
+  </string-array -->
 
   <string-array name="rawCData">
      <item name="none">Nincs</item>

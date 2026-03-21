@@ -45,16 +45,16 @@ public class DeviceUtil
   public static final String ACTION_ACL_CONNECTED      = BluetoothDevice.ACTION_ACL_CONNECTED;
   public static final String ACTION_ACL_DISCONNECTED   = BluetoothDevice.ACTION_ACL_DISCONNECTED;
   public static final String ACTION_ACL_DISCONNECT_REQUESTED = BluetoothDevice.ACTION_ACL_DISCONNECT_REQUESTED;
-  // public static final String ACTION_FOUND              = BluetoothDevice.ACTION_FOUND;
+  public static final String ACTION_FOUND              = BluetoothDevice.ACTION_FOUND;
   public static final String ACTION_BOND_STATE_CHANGED = BluetoothDevice.ACTION_BOND_STATE_CHANGED;
-  // public static final String ACTION_PAIRING_REQUEST    = BluetoothDevice.ACTION_PAIRING_REQUEST;  // REQUIRES API-19
+  public static final String ACTION_PAIRING_REQUEST    = BluetoothDevice.ACTION_PAIRING_REQUEST;  // REQUIRES API-19
 
   // public static final int SCAN_MODE_CONNECTABLE_DISCOVERABLE = BluetoothAdapter.SCAN_MODE_CONNECTABLE_DISCOVERABLE;
 
   // public static final String EXTRA_DISCOVERABLE_DURATION  = BluetoothAdapter.EXTRA_DISCOVERABLE_DURATION;
-  // public static final String ACTION_DISCOVERY_STARTED     = BluetoothAdapter.ACTION_DISCOVERY_STARTED;
-  // public static final String ACTION_DISCOVERY_FINISHED    = BluetoothAdapter.ACTION_DISCOVERY_FINISHED;
-  // public static final String ACTION_REQUEST_DISCOVERABLE  = BluetoothAdapter.ACTION_REQUEST_DISCOVERABLE;
+  public static final String ACTION_DISCOVERY_STARTED     = BluetoothAdapter.ACTION_DISCOVERY_STARTED;
+  public static final String ACTION_DISCOVERY_FINISHED    = BluetoothAdapter.ACTION_DISCOVERY_FINISHED;
+  public static final String ACTION_REQUEST_DISCOVERABLE  = BluetoothAdapter.ACTION_REQUEST_DISCOVERABLE;
   public static final String ACTION_REQUEST_ENABLE        = BluetoothAdapter.ACTION_REQUEST_ENABLE;
 
   public static final String EXTRA_DEVICE              = BluetoothDevice.EXTRA_DEVICE;
@@ -73,7 +73,7 @@ public class DeviceUtil
    */
   public static boolean hasAdapter() { return BluetoothAdapter.getDefaultAdapter() != null; }
 
-  /** @return the set of bonded devices
+  /** @return the set of bonded (paired) devices
    */
   public static Set< BluetoothDevice > getBondedDevices() 
   {
@@ -99,17 +99,24 @@ public class DeviceUtil
   }
 
   /** start BT devices discovery
+   * @return 0 on success or error code
    */
-  public static void startDiscovery()
+  public static int startDiscovery()
   {
     BluetoothAdapter adapter = BluetoothAdapter.getDefaultAdapter();
-    if ( adapter != null ) {
-      try {
-        adapter.startDiscovery();
-      } catch ( SecurityException e ) {
-        TDLog.e("SECURITY start discovery " + e.getMessage() );
-        // TDToast.makeBad("Security error: start discovery");
-      }
+    if ( adapter == null ) return 1;
+    if ( ! adapter.isEnabled() ) return 2;
+    if ( adapter.getState() != 12 ) return 3; // BT off  " [10 off, 12 on]"); 
+    if ( adapter.isDiscovering() ) return 4;
+    try {
+      // TDLog.v("Device util BT scanmode " + adapter.getScanMode() + " [20 none, 21/23 connectable]"); 
+      boolean ret = adapter.startDiscovery();
+      TDLog.v("Device util - start BT discovery: " + ret );
+      return ( ret ? 0 : 5 );
+    } catch ( SecurityException e ) {
+      TDLog.e("Device util - security error " + e.getMessage() );
+      // TDToast.makeBad("Security error: start discovery");
+      return 6;
     }
   }
 
@@ -279,24 +286,24 @@ public class DeviceUtil
     }
   }
 
-  /** check that a remote device is paired
-   * @param  address  remote device address
-   */
-  public static void checkPairing( String address )
-  {
-    if ( TDSetting.mAutoPair ) { // try to get the system ask for the PIN
-      // TDLog.Log( TDLog.LOG_COMM, " check pairing " + address );
-      BluetoothDevice btDevice = getRemoteDevice( address );
-      // TDLog.Log( TDLog.LOG_BT, "auto-pairing remote device " + btDevice.getAddress() + " status " + btDevice.getBondState() );
-      if ( ! isPaired( btDevice ) ) {
-        pairDevice( btDevice );
-        bindDevice( btDevice );
-        for (int c=0; c<TDSetting.mConnectSocketDelay; ++c ) {
-          if ( isPaired( btDevice ) ) break;
-          TDUtil.slowDown( 100 ); // Thread.yield();
-        }
-      }
-    }
-  }
+  // /** check that a remote device is paired
+  //  * @param  address  remote device address
+  //  */
+  // public static void checkPairing( String address )
+  // {
+  //   if ( TDSetting.mAutoPair ) { // try to get the system ask for the PIN
+  //     // TDLog.Log( TDLog.LOG_COMM, " check pairing " + address );
+  //     BluetoothDevice btDevice = getRemoteDevice( address );
+  //     // TDLog.Log( TDLog.LOG_BT, "auto-pairing remote device " + btDevice.getAddress() + " status " + btDevice.getBondState() );
+  //     if ( ! isPaired( btDevice ) ) {
+  //       pairDevice( btDevice );
+  //       bindDevice( btDevice );
+  //       for (int c=0; c<TDSetting.mConnectSocketDelay; ++c ) {
+  //         if ( isPaired( btDevice ) ) break;
+  //         TDUtil.slowDown( 100 ); // Thread.yield();
+  //       }
+  //     }
+  //   }
+  // }
 
 }

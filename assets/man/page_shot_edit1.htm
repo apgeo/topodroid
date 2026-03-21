@@ -20,16 +20,18 @@ It displays
 </li>
 <li>shot <b>comment</b></li>
 <li>profile <b>extend</b>: "left", "vertical", "right". The "extend" is "unset" if none is checked</li>
+<li>If the shot has a <b>mark</b>, this is displayed on the right of the extend: (x) feature, (&#8741;) ridge, (v) backsight, (o) generic.</li>
 </ul><br><p>
 
 Properties buttons:
 <ul>
 <li><img src="btn_duplicate.png" width="36" border="1" > "duplicate" flag [A]</li>
 <li><img src="btn_surface.png" width="36" border="1" > "surface" flag [A]</li>
-<li><img src="btn_comment.png" width="36" border="1" > "commented" flag [A]</li>
+<li><img src="btn_comment.png" width="36" border="1" > "commented" flag [A] Commented shots are not displayed in the sketches.</li>
+<li><img src="btn_backsight.png" width="36" border="1" > "backshot" flag.</li>
 <li><img src="btn_leg_after.png" width="36" border="1" > the shot belongs to the immediately preceding leg.</li>
 <li><img src="btn_leg_before.png" width="36" border="1" > the shot belongs to the immediately following leg.</li>
-<li><img src="btn_backleg.png" width="36" border="1" > the shot is a backsight leg.</li>
+<li><img src="btn_backleg.png" width="36" border="1" > the shot is a backsight leg (ie, marked as "backleg" type).</li>
 <li><img src="btn_numbers.png" width="36" border="1" > reassign shot stations from this leg onward following the current station naming policy. Both FROM and TO stations must have been specified</li>
 <li><img src="btn_splays_no.png" width="36" border="1" > apply the station change to all splays in the group of the splay shot.</li>
 <li><img src="btn_plan_profile.png" width="36" border="1" > hide the splay in either the plan, or the profile view, or both (splay only) [A]</li>
@@ -45,11 +47,17 @@ Action buttons:
 </ul>
 <br><p>
 
-For BRIC shots the date and time are the values downloaded with the shot data from the device.
-For other devices and for manually entered shots they are the time of download/insertion.<br><p> 
+<b>Station names</b><br>
+Station names cannot contain special characters ('/'. '\'. '?', '&lt;', '&gt;', '|', ':', '"'),
+and must end with an alphanumeric charactere or
+one of '-' '.' '_' '@'.
+<br><p>
+
+For <i>BRIC</i> shots the date and time are the values downloaded with the shot data from the device.
+For other devices and for manually entered shots, they are the time of download/insertion.<br><p>
 
 The shot flags, "duplicate", "surface" and "commented", are mutually exclusive.
-The survey data info take into account these flags.
+The survey data info takes into account these flags.
 The export of the shot is also affected by the shot flag, either with an export flag, if the format supports it, or as comment.<br><p>
 
 There is a warning if, upon editing a leg shot, it differs from another leg between the same stations more than one fourth in length, or 15&deg;.<br><p>
@@ -69,7 +77,7 @@ Long-tapping the station entry field opens the drop-down menu with the three opt
 <b>Station reassignment</b><br>
 Station reassignment can be initiated only from a leg.
 By default the reassignment affects all the shots following the leg up to the end.
-If the custom setting <i>splay station</i> is disabled, the stations of splay shots are not reassigned.
+If the secondary setting <i>splay station</i> is disabled, the stations of splay shots are not reassigned.
 <br><p>
 
 Normal reassignment should be used only for very last few legs, in case a leg
@@ -88,13 +96,13 @@ Splay group station change applies only to the contiguous set of splays with sam
 Only FROM station must have been specified.
 <br><p>
 
-If the custom setting "Splay group" is set, only the splays after the editing shot are modified.
+If the secondary setting "Splay group" is set, only the splays after the editing shot are modified.
 <br><p>
 </div>
 
 <div style="font-size=90%">
 <b>Splay classes</b><br>
-Splay classes are enabled with a "custom setting". There are four classes:
+Splay classes are enabled with a secondary setting. There are four classes:
 <ul>
 <li><i>normal</i>, generic, splays. Blue</li>
 <li><i>x-section</i> splays. Green</li>
@@ -113,32 +121,33 @@ In multi-shot you can select splays that are not contiguous and assign them all 
 If you take splays shots in a consistent way, splay classes can be set editing the leg shot and checking the
 splay group button.
 You must take first the x-section splays starting with +90 and going around in circle.
-Next you take the H-splays. Finally you take the splays in the vertical plane starting again with +90.<br><p> 
+Next you take the H-splays. Finally, you take the splays in the vertical plane starting again with +90.<br><p>
 </div>
 
 
 <b>Additional actions</b><br>
 
-At an activity level "Basic" or "Normal" the additional actions are only a button to <i>delete</i> the shot.<br><p>
+At the usage profiles "Basic" or "Normal" the additional actions are only a button to <i>delete</i> the shot.<br><p>
 
-At higher activity levels it has more buttons:<p>
+At higher usage profiles it has more buttons:<p>
 
 <ul>
 <li><img src="btn_photo.png" width="36" border="1" > <a href="page_photo_dialog.htm">photo</a></li>
 <li><img src="btn_audio.png" width="36" border="1" > <a href="page_audio.htm">audio</a> comment</li>
 <li><img src="btn_sensor.png" width="36" border="1" > <a href="page_sensors.htm">Sensor measurements</a></li>
-<li><img src="btn_shot.png" width="36" border="1" > add a shot before this (manually entering the data)</li>
+<!-- li><img src="btn_shot.png" width="36" border="1" > add a shot before this (manually entering the data)</li -->
 <li><img src="btn_split.png" width="36" border="1" > <a href="page_survey_split_move.htm">split the survey</a> at this shot (creating a new survey or append to another survey)</li>
 <li><b>Color</b>, only for splays</li>
-<li><img src="btn_delete.png" width="36" border="1" > delete the shot</li>
 <li><img src="btn_calib_check.png" width="36" border="1" > mark the shot as calibration-check (only for legs)</li>
+<li><img src="btn_recompute.png" width="36" border="1" > recompute the direction of the survey shots, starting from this shot (only for Cavway) [T]</li>
+<li><img src="btn_delete.png" width="36" border="1" > delete the shot</li>
 </ul>
 <br><p>
 
 For legs there are also fields to add intermediate LRUD.<br><p>
 
 The <b>delete</b> button does not remove the shot from the database.
-The shot gets marked as "deleted" and can be later recovered with the 
+The shot gets marked as "deleted" and can be later recovered with the
 <a href="./page_undelete.htm">Recovery</a> dialog.
 If the shot is the first shot of a leg you can also delete all the shots of the leg, by
 checking the checkbox besides the buttons.
@@ -147,7 +156,7 @@ checking the checkbox besides the buttons.
 Leg shots have also a <b>calibration</b> button. This button marks the shot as "calibration-check".
 These shots are not used in the survey, and their data should be taken at different roll angles.
 They are recorded in the database, and are a record of the reliability of the device calibration
-when the survey was done. They can be displayed with the 
+when the survey was done. They can be displayed with the
 <a href="./page_undelete.htm">Recovery</a> dialog.
 <br><p>
 
@@ -162,9 +171,10 @@ At tester level you get also the option to <b>move</b> the data to another surve
 Select the target survey from the pull-down option set, and tap the "Move" button.
 <br><p>
 
-<b>Warning</b>. It is advisable to make a zip archive before splitting/moving the 
-survey and back it up to a safe place.<br><p> 
+<b>Warning</b>. It is advisable to make a zip archive before splitting/moving the
+survey and back it up to a safe place.<br><p>
 
+<!--
 <b>At-station LRUD</b><br>
 LRUD shots, at either the FROM or the TO station, are added by filling the four LRUD edit boxes
 and tapping the <i>Add LRUD</i> button. <br>
@@ -173,7 +183,8 @@ between the LRUD point and the FROM station.<br>
 For splay shots there is only the FROM station.<br>
 "Intermediate" LRUD are appended to the data list, the others are added before the shot.<br>
 The manual LRUD are marked as "x-splays".<br>
-<br><p> 
+<br><p>
+-->
 
 <b>Splay color</b><br>
 For splays there is also a button to assign a color to the shot.<br>

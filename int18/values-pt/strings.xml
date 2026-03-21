@@ -1,9 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:tools="http://schemas.android.com/tools">
+
+    <!-- TODO string name="ai_null_chat">Null AI chat</string -->
+    <!-- TODO string name="ai_error">AI error %1$s</string -->
+    <!-- TODO string name="ai_internet">Warning. AI help requires web connection.</string -->
+    <!-- TODO string name="ai_no_internet">No web connection.</string -->
+    <!-- TODO string name="ai_prompt">Type your question</string -->
+    <!-- TODO string name="ai_invalid_key">Invalid API key</string -->
+    <!-- TODO string name="ai_key_instruction">The API key is stored on the Android internal memory\nand is only sent to Google.\nSearch internet about how to obtain a Gemini API key from Google.</string -->
+	
   <!-- UNUSED string name="topodroid_man">https://sites.google.com/site/speleoapps/home/topodroid/docs</string -->
   <string name="no_manual">Não é possível obter o manual do usuário na internet</string>
   <string name="user_man_ok">Manual traduzido instalado</string>
-  <string name="user_man_fail">Instalação do manual traduzido falhou</string>
+  <string name="user_man_fail">Instalação do manual traduzido falhou [%1$d]</string>
   <!-- UNUSED string name="string_false">false</string -->
   <!-- UNUSED string name="string_true">true</string -->
   <!-- UNUSED string name="target_sdk" translatable="false">TopoDroidX official app is on http://marcocorvi.altervista.com/TopoDroidX.html\nFinish ?</string -->
@@ -17,13 +26,7 @@
   <!-- UNUSED string name="r_dialog_1">
 On Android-11+ storage access must be granted to TopoDroidX.\nYou can do this with the PC program "adb".\nOn Android: enable developer settings and usb-debug.\nConnect Android to the PC with a USB cable.\nOn the PC type "adb shell appops set com.TopoDroidX.TDX MANAGE_EXTERNAL_STORAGE allow".
   </string -->
-  <string name="r_dialog">
-A partir do Android 13 o TopoDroidX é obrigado a armazenar seus dados em um diretório privado do app dentro de "Android/data".
-Fique atento pois esse diretório normalmente é apagado ao desintalar o app.
-Para confirmar, digite
-"%1$s"
-no campo abaixo e aperte o botão.
-  </string>
+  <string name="r_dialog">A partir do Android 13 o TopoDroidX é obrigado a armazenar seus dados em um diretório privado do app dentro de "Android/data". Fique atento pois esse diretório normalmente é apagado ao desintalar o app.\nPara confirmar, digite "%1$s" no campo abaixo e aperte o botão.</string>
   <!-- UNUSED string name="r_checkboxes">Você deve confirmar marcando as caixas de seleção.</string -->
   <!-- FIXME FIXME FIXME -->
   <!-- UNUSED string name="r_disclaimer">I agree that the app author(s) are not liable for any damage or loss of data.</string -->
@@ -61,6 +64,16 @@ no campo abaixo e aperte o botão.
   <string name="xsplay">X</string>
   <string name="hsplay">H</string>
   <string name="vsplay">V</string>
+  <string name="pref_gen">Geral</string>
+  <string name="pref_ui">Interface do usuário</string>
+  <string name="pref_data">Dados</string>
+  <string name="pref_plot">Croqui</string>
+  <string name="pref_3d">Visualizador 3D</string>
+  <string name="pref_io">Exportação</string>
+  <string name="pref_bt">Bluetooth</string>
+  <string name="pref_cal">Calibração</string>
+  <string name="pref_xt">Funções especiais</string>
+
   <string name="cut">CORTAR</string>
   <string name="copy">COPIAR</string>
   <string name="paste">COLAR</string>
@@ -85,11 +98,15 @@ no campo abaixo e aperte o botão.
   <string name="missing_station">Base inexistente</string>
   <string name="station_not_found">Base não encontrada</string>
   <string name="station_coords">L %1$.2f | N %2$.2f | Z %3$.2f</string>
+  <string name="station_not_saved">Base não gravada</string>
+  <string name="station_name_conflict">Nomes conflitantes. Continuar mesmo assim?</string>
   <string name="shot_not_found">Medida não encontrada</string>
   <string name="shot_not_saved">Visada não gravada</string>
   <string name="bad_sibling">Visada irmã inválida</string>
   <string name="bad_station">Base ruim: %1$s</string>
   <string name="bad_station_name">Nome de base não suportado</string>
+    <!-- TODO string name="equal_station_names">Equal station names</string -->
+  <string name="invalid_name">Nome inválido</string>
   <!-- UNUSED string name="missing_area">ÁREA</string -->
   <!-- UNUSED string name="missing_hint">Habilite ou instale os símbolos que estão faltando</string -->
   <!-- UNUSED string name="missing_line">LINHA</string -->
@@ -102,6 +119,8 @@ no campo abaixo e aperte o botão.
   <string name="failed_snap_to_point">Nenhum ponto de fechamento ao qual juntar o ponto</string>
   <string name="failed_snap_to_splays">Nenhuma medida auxiliar próxima a qual juntar a linha</string>
   <string name="failed_append_to_line">Falha ao conectar a outra linha</string>
+  <string name="failed_zoomfit">Falha ao ajustar à tela</string>
+    <!-- TODO string name="fail_forget_device">Android failed to forget BT device</string -->
   <string name="bric_device">Dispositivo %1$s</string>
   <string name="bric_ble">BLE %1$s</string>
   <string name="bric_fw">Firmware %1$s</string>
@@ -139,6 +158,8 @@ no campo abaixo e aperte o botão.
   <!-- UNUSED string name="connect_failed">Falha de conexão</string -->
   <!-- UNUSED string name="data">Dados</string -->
   <string name="using">Usando %1$s</string>
+    <!-- TODO string name="cali_err">error: average %1$.2f&#xb0;, stddev %2$.2f&#xb0;. max. %3$.2f&#xb0;</string -->
+    <!-- TODO string name="cali_time">Calibration: %1$s</string -->
   <string name="calib_error">Erro médio: %1$.2f ° (Delta BH %2$.3f)</string>
   <string name="calib_validate_error">Erro médio: %1$.2f °</string>
   <string name="calib_stddev">Desvio padrão do erro: %1$.2f °</string>
@@ -150,10 +171,18 @@ no campo abaixo e aperte o botão.
   <string name="calib_roll">Mergulho mag. (rotação): %1$.2f °</string>
   <string name="calib_reset">Reiniciar a calibração da DistoX?</string>
   <string name="calib_min_error">Erro mínimo</string>
-    <!-- TODO string name="calib_delta_dir">Dir. diff.: %1$.2f ± %2$.2f (max %3$.2f)</string -->
+  <string name="calib_delta_dir">Dif. dir.: %1$.2f ± %2$.2f (max %3$.2f)</string>
+    <!-- TODO string name="calib_acc_thr">Accel. [&#x25;]</string -->
+    <!-- TODO string name="calib_mag_thr">Magn. [&#x25;]</string -->
+    <!-- TODO string name="calib_dip_thr">Dip [&#xb0;]</string -->
   <string name="magn_dip">Inclinação mag. …</string>
   <string name="auto_calib" copyable="pt">Auto Calib</string>
   <string name="autocalib_not_supported">Cálculo obrigatório de calibração</string>
+  <!-- lint: unused -->
+  <string name="recalibrate_with">Recalcular medidas com %1$s</string>
+  <string name="recalibrate_none">Nenhuma calibração selecionada</string>
+  <string name="recalibrate_no_cavway">Não é uma calibração Cavway</string>
+  <string name="recalibrate_no_coeff">Sem coeficientes de calibração</string>
   <string name="algorithm">Algoritmo:</string>
   <string name="auto">auto</string>
   <string name="linear">linear</string>
@@ -188,6 +217,7 @@ no campo abaixo e aperte o botão.
   <string name="device_status_silent_on">Silencioso: on</string>
   <string name="device_status_silent_off">Silencioso: off</string>
   <string name="bt_reset">Reiniciar conexão Bluetooth</string>
+  <!-- UNUSED string name="bt_busy">Bluetooth ocupado</string -->
   <string name="save_as">Gravar como</string>
   <string name="nickname">Apelido</string>
   <string name="unknown_device_type">Tipo dispositivo desconhecido %1$d</string>
@@ -206,13 +236,14 @@ no campo abaixo e aperte o botão.
   <!-- UNUSED string name="external_prompt">Inserir medição</string -->
   <string name="splay_at_to">Dados EDTC na base PARA</string>
   <string name="lrud">EDTC</string>
-  <!-- CHANGED string name="strike_dip">Direção %1$.0f — Mergulho %2$.0f</string -->
   <string name="strike_dip">Mergulho: direção %1$.0f — inclinação %2$.0f</string>
+  <string name="few_points">Poucos pontos</string>
   <string name="few_data">Não há dados suficientes</string>
   <string name="few_iter">Falha: excesso de iterações</string>
   <string name="few_groups">Não há dados suficientes para os grupos</string>
   <!-- UNUSED string name="found_groups">Encontrados %1$d grupos</string -->
   <string name="regroup">Não reagrupar</string>
+  <!-- lint: unued -->
   <!-- UNUSED string name="few_plots">Esboços não suficientes</string -->
   <string name="few_calibs">Quantidade de calibrações insuficiente</string>
   <string name="getting_info">Obtendo info DistoX …</string>
@@ -274,8 +305,10 @@ no campo abaixo e aperte o botão.
   <string name="geocode_title">Código geomorfológico</string>
   <string name="photo_title">FOTO</string>
   <string name="photo_text">Entre comentário para foto</string>
-  <string name="photo_failed">Foto falhou</string>
+  <!-- UNUSED string name="photo_failed">Foto falhou</string -->
+  <string name="photo_not_ready">Foto não está pronta. Aguarde …</string>
   <string name="photo_max_captures">Limite máximo de captura atingido</string>
+  <string name="photo_many_pictures">Quantidade excessiva de fotos</string>
   <string name="label_title">Rótulo</string>
   <string name="label_text">Inserir o texto do rótulo</string>
   <!-- UNUSED string name="altitude">Alt. </string -->
@@ -299,7 +332,9 @@ no campo abaixo e aperte o botão.
   <string name="fmt_h_geoid">Erro (geóide): %1$.0f m</string>
   <!-- UNUSED string name="fmt_h_ellipsoid">Erro (elipsóide): %1$.0f m</string -->
   <string name="location_start_fine">Posição de início adequada</string>
+  <string name="location_enabled">Garanta que o serviço LOCALIZAÇÃO está habilitado</string>
   <!-- UNUSED string name="depth_error">Waring. Data depth error</string -->
+    <!-- TODO string name="discovery_error">BT discovery error: %1$s</string -->
   <string name="error_azimuth_required">Azimute exigido</string>
   <string name="error_length_required">Comprimento exigido</string>
   <string name="error_depth_required">Profundidade exigida</string>
@@ -323,7 +358,7 @@ no campo abaixo e aperte o botão.
   <string name="error_name_required">Nome exigido</string>
   <!-- UNUSED string name="error_text_required">Text required</string -->
   <string name="error_station_number">Quantidade incorreta de bases</string>
-  <string name="error_name_duplicate">Nome duplicado</string>
+  <!-- UNUSED string name="error_name_duplicate">Nome duplicado</string -->
   <string name="error_no_section_in_section">Corte dentro de corte não suportado</string>
   <string name="error_profile_slant_section">Corte inclinado não habilitado na visualização de perfil</string>
   <string name="error_team_required">Equipe exigida</string>
@@ -338,6 +373,7 @@ no campo abaixo e aperte o botão.
   <string name="error_value_required">Valor exigido</string>
   <string name="error_bad_fixes">Ponto fixos não estão na topo</string>
   <string name="error_bad_name">Nome do arquivo alterado</string>
+    <!-- TODO string name="error_question">Please, enter a question</string -->
   <string name="group_title">Grupos dados calibração</string>
   <!-- UNUSED string name="group_policy_four">Regra: agrupar 4 a 4</string -->
   <!-- UNUSED string name="group_policy_sixteen">Regra: 4 grupos de 4, o restante isolados</string -->
@@ -392,7 +428,7 @@ no campo abaixo e aperte o botão.
   <string name="no_device_window">Tela Dispositivos não disponível durante download</string>
   <!-- UNUSED string name="no_device_found">Nenhum dispositivo encontrado</string -->
   <string name="no_feature_audio">Sem suporte para áudio</string>
-  <string name="no_feature_pdf">PDF não suportado</string>
+  <!-- UNUSED string name="no_feature_pdf">PDF não suportado</string -->
   <string name="no_gms">Calibração sem dados.\nUse o botão de Download</string>
   <string name="no_geo_station">Falha: nenhuma base geolocalizada</string>
   <!-- UNUSED string name="no_geopoint_app">No GNSS app</string -->
@@ -406,6 +442,7 @@ no campo abaixo e aperte o botão.
   <string name="no_profile_overview">Nenhuma panorâmica para as projeções</string>
   <string name="no_proj4">Proj4 não instalado</string>
   <string name="no_sensors">Topo sem informações de sensores externos</string>
+  <string name="no_stations">Topo não tem nenhuma base</string>
   <!-- UNUSED string name="no_shots">Nenhuma medida registrada na topo.\nUsar o botão Download para baixar algumas</string -->
   <string name="no_search_result">Nenhum resultado na pesquisa.</string>
   <string name="no_survey">Nenhuma topo selecionada.</string>
@@ -416,6 +453,7 @@ no campo abaixo e aperte o botão.
   <string name="no_undelete_paste">Nenhum item a restaurar/colar</string>
   <string name="format_measure_plan">D %1$.2f %2$.2f X %3$.2f Y %4$.2f Az %5$.1f</string>
   <string name="format_measure_profile">D %1$.2f %2$.2f X %3$.2f Y %4$.2f Clino %5$.1f</string>
+    <!-- TODO string name="format_setting">Setting %1$s to %2$s ?</string -->
   <string name="menu_3d">3D</string>
   <string name="menu_about">SOBRE</string>
   <string name="menu_area">ÁREA</string>
@@ -438,12 +476,13 @@ no campo abaixo e aperte o botão.
   <string name="menu_device_add">INCLUIR DISPOSITIVO</string>
   <!-- KEEP -->
   <string name="menu_export">EXPORTAR</string>
+  <string name="menu_exit">SAIR</string>
   <string name="menu_firmware">FIRMWARE</string>
   <string name="menu_geopoint_app">APP GNSS</string>
   <string name="menu_recover">RESTAURAR</string>
   <string name="menu_recover_paste">RESTAURAR/COLAR</string>
   <string name="menu_reload">RECARREGAR</string>
-  <string name="menu_rename_delete">RENOMEAR/APAGAR</string>
+  <string name="menu_rename_delete">OPERAÇÕES</string>
   <string name="menu_rename">RENOMEAR</string>
   <string name="menu_plot_scrap">DESENHOS</string>
   <string name="menu_switch">MUDAR/FECHAR</string>
@@ -455,12 +494,14 @@ no campo abaixo e aperte o botão.
   <string name="menu_overview">VISÃO GERAL</string>
   <string name="menu_packets">LOG PACOTES</string>
   <string name="menu_calib_auto" copyable="pt">AUTO-CALIB</string>
+  <!-- lint: unused -->
   <!-- UNUSED string name="menu_pair">PAREAR</string -->
   <string name="menu_palette">PALETA</string>
   <string name="menu_photo">FOTO</string>
+  <string name="menu_stations">BASES</string>
   <string name="menu_sections">CORTES</string>
   <string name="menu_sensor">SENSOR</string>
-  <!-- UNUSED string name="menu_scan">PROCURAR</string -->
+  <string name="menu_scan">PROCURAR</string>
   <!-- UNUSED string name="menu_scan_ble">PROCURAR DISPOSITIVOS BLE</string -->
   <!-- UNUSED string name="menu_station">BASES</string -->
   <string name="menu_stats">ESTATÍSTICAS</string>
@@ -470,10 +511,14 @@ no campo abaixo e aperte o botão.
   <!-- UPDATES string name="menu_updates">CHECK UPDATES</string -->
   <string name="menu_validate">VALIDAR</string>
   <string name="menu_zoom_fit">ZOOM GERAL</string>
+  <string name="menu_plot_search">BUSCA BASE</string>
   <!-- FIXED_ZOOM -->
   <string name="zoom_fixed">Papel milimetrado</string>
   <!-- UNUSED string name="start_scan">Começar varredura</string -->
   <!-- UNUSED string name="stop_scan">Parar varredura</string -->
+  <!-- UNUSED string name="scan_started">Busca iniciada</string -->
+  <!-- UNUSED string name="scan_finished">Busca finalizada</string -->
+  <string name="scanning">Busca em andamento &#8230; Por favor espere</string>
   <!-- UNUSED string name="title_scan">Varredura BLE</string -->
   <!-- UNUSED string name="ble_scan_failed">Busca por dispositivos BLE falhou</string -->
   <!-- UNUSED string name="ble_gatt_failure">Falha no dispositivo BLE</string -->
@@ -527,7 +572,7 @@ no campo abaixo e aperte o botão.
   <!-- UNUSED string name="not_implemented">Não implementado</string -->
   <string name="null_bitmap">Impossível criar imagem [OOM error]</string>
   <string name="photo">foto</string>
-  <string name="photo_camera">Câmera do TopoDroidX</string>
+  <!-- UNUSED string name="photo_camera">Câmera do TopoDroidX</string -->
   <string name="photo_comment_prompt">Inserir comentário para a foto</string>
   <string name="photo_azimuth_clino">Azimute: %1$.1f Inclinação %2$.1f</string>
   <!-- UNUSED string name="photo_name">base/nome</string -->
@@ -604,6 +649,8 @@ no campo abaixo e aperte o botão.
   <string name="shot_note">comentário</string>
   <!-- UNUSED string name="shot_reverse">inverter</string -->
   <string name="shot_to">Para</string>
+  <string name="shot_refreshed">Atualizar lista de medidas</string>
+    <!-- TODO string name="scan_type">Scan type</string -->
   <string name="station">Base referência</string>
   <string name="station_ask">Inserir base no arquivo th2 exportado?</string>
   <string name="station_del">Remover base do arquivo th2 exportado?</string>
@@ -616,6 +663,8 @@ no campo abaixo e aperte o botão.
   <!-- UNUSED string name="survey_date">aaaa.mm.dd</string -->
   <string name="survey_delete">Apagar a topo?</string>
   <string name="survey_move">Mover medidas para topo %1$s ?</string>
+  <string name="survey_copy_all_flags">Medidas só podem ser copiadas se todas estiverem sendo apresentadas</string>
+  <string name="survey_copy_only_tail">Somente o segmento final das medidas pode ser copiado</string>
   <string name="survey_split">Dividir a topo?</string>
   <string name="survey_not_attached">ALERTA: visadas desconectadas</string>
   <string name="survey_not_extend">ALERTA: visadas sem medidas auxiliares</string>
@@ -670,6 +719,8 @@ no campo abaixo e aperte o botão.
   <string name="zip_saved">Gravado</string>
   <string name="zip_failed">Falha na compressão da topo</string>
   <string name="zip_share_failed">Falha ao compartilhar arquivo zip</string>
+  <string name="file_share_failed">Falha ao compartilhar arquivo</string>
+  <string name="file_share_no_app">Nenhum app de compartilhamento de arquivo encontrado</string>
   <string name="unzip_fail">Falha na decompressão da topo</string>
   <string name="unzip_fail_sqlite">SQL falhou: apague a topo e tente novamente</string>
   <string name="unzip_fail_survey">Falha: nome da topo diferente do nome do arquivo ZIP</string>
@@ -683,7 +734,6 @@ no campo abaixo e aperte o botão.
   <string name="trilateration_failure">Trilateração falhou %1$d / %2$d </string>
   <!-- UNUSED string name="trilateration_error">Trilateration error %1$.2f</string -->
   <!-- UNUSED string name="trilateration_succeeded">Trilateração finalizada com sucesso: erro residual %1$.2f</string -->
-  <string name="trilateration_success">Trilateração finalizada com sucesso: %1$d blocos</string>
   <string name="survey_info">Estatísticas da topo</string>
   <string name="stat_dates">De %1$s até %2$s</string>
   <string name="stat_devices">Dispositivos - %1$d: %2$s</string>
@@ -709,6 +759,7 @@ no campo abaixo e aperte o botão.
   <string name="stat_surface">Visadas de superfície - Qt: %1$d # %2$d Ext: %3$.1f %4$s</string>
   <!-- UNUSED string name="stat_surface_z">Desnível superfície %1$.1f %2$.1f %3$s</string -->
   <string name="stat_survey_z">Desnível cavidade - topo: %1$.1f %3$s | base: %2$.1f %3$s</string>
+  <string name="stat_survey_length">Comprimento da topo %1$.1f %2$s</string>
   <string name="stat_wens">Oeste: %1$.0f %5$s | Leste: %2$.0f %5$s | Norte: %3$.0f %5$s | Sul: %4$.0f %5$s</string>
   <string name="stat_angle_error">Erro médio azimute visadas: %1$.2f° ± %2$.2f°</string>
   <string name="shot_title">MEDIDA %1$s - %2$s</string>
@@ -737,6 +788,7 @@ no campo abaixo e aperte o botão.
   <!-- UNUSED string name="h_section">CORTE H</string -->
   <!-- UNUSED string name="landscape">paisagem</string -->
   <string name="display_view">Mostrar em</string>
+  <string name="display_refresh">Exibição atualizada</string>
   <string name="plan_view">planta baixa</string>
   <string name="profile_view">perfil</string>
   <string name="distox_err_ok">OK</string>
@@ -750,10 +802,13 @@ no campo abaixo e aperte o botão.
   <string name="ask_gps_service">Configurar o serviço GPS?</string>
   <!-- UNUSED string name="ask_backups_clear">Apagar backups dos croquis?</string -->
   <string name="ask_manual_update">Atualizar tradução do manual do usuário?\nVersão disponível %1$d Versão instalada %2$d</string>
+  <string name="ask_clear_equates">Remover todos os equates?</string>
+    <!-- TODO string name="ask_forget_device">Forget device %1$s?</string -->
   <string name="button_add">Novo</string>
   <string name="button_apply">Aplicar</string>
   <string name="button_back">Voltar</string>
   <string name="button_cancel">Cancelar</string>
+    <!-- TODO string name="button_forget"    >Forget</string -->
   <string name="button_geocode">Geocódigo</string>
   <!-- UNUSED string name="button_change">Alterar</string -->
   <string name="button_clipboard">Colar</string>
@@ -767,6 +822,7 @@ no campo abaixo e aperte o botão.
   <string name="button_current">Selecionar</string>
   <string name="button_delete">Apagar     </string>
   <string name="button_duplicate">Duplicadas</string>
+    <!-- TODO string name="button_settime"   >Set time</string -->
   <string name="button_surface">Superfície</string>
   <string name="button_no_extend">Fora perfil</string>
   <string name="button_eval">Brutos</string>
@@ -779,7 +835,7 @@ no campo abaixo e aperte o botão.
   <!-- UNUSED INCLINED_LEG string name="button_leg">Proj</string -->
   <string name="button_manual">Manual do Usuário</string>
   <!-- UNUSED string name="button_measure"   >Medir   </string -->
-  <!-- UNUSED string name="button_photo"   >Foto</string -->
+  <string name="button_photo">Foto</string>
   <!-- UNUSED string name="button_sensor"  >Sensores</string -->
   <!-- UNUSED string name="button_direction">Azimute/Clinômetro</string -->
   <!-- UNUSED string name="button_azimuth">Azimute</string -->
@@ -791,14 +847,18 @@ no campo abaixo e aperte o botão.
   <string name="button_prev">Anterior</string>
   <string name="button_new">Novo trecho</string>
   <string name="button_rename">Renomear</string>
+  <string name="button_retake">Repetir foto</string>
   <string name="button_prefix">Prefixo</string>
   <string name="button_skip">Ignorar</string>
   <string name="button_done">Fim</string>
   <string name="button_lrud">Incluir EDTC</string>
+  <!-- lint: unused -->
+  <string name="button_no">NÃO</string>
   <string name="button_ok" copyable="all">OK</string>
   <string name="button_off">não</string>
   <string name="button_on">sim</string>
   <string name="button_open">Abrir     </string>
+  <string name="button_offset">Deslocamento</string>
   <string name="button_read">Ler       </string>
   <string name="button_recover">Recuperar</string>
   <string name="button_reverse">Invertidas</string>
@@ -812,11 +872,13 @@ no campo abaixo e aperte o botão.
   <string name="button_left">ESQUERDA</string>
   <string name="button_right">DIREITA</string>
   <string name="button_clear">Limpar    </string>
+  <string name="button_clear_all">Limpar tudo</string>
   <string name="button_clear_day">Limpar 1 dia</string>
   <string name="button_clear_week">Limpar 7 dias</string>
   <string name="button_clear_memory">Limpar memória</string>
   <string name="button_save">Gravar    </string>
-  <!-- UNUSED string name="button_select"    >Selecionar    </string -->
+  <string name="button_select">Selecionar    </string>
+    <!-- TODO string name="button_submit"    >Submit</string -->
   <string name="button_leg_station">Visadas</string>
   <string name="button_all_station">Todas</string>
   <string name="button_leg_search">Visadas 2 bases</string>
@@ -825,6 +887,9 @@ no campo abaixo e aperte o botão.
   <string name="button_saved">Gravar base</string>
   <string name="button_scrap">Contornos</string>
   <string name="button_split">Dividir   </string>
+  <string name="button_to_sketch">Para croqui</string>
+  <string name="button_to_scrap">Para trecho</string>
+  <string name="button_to_buffer">Para armazenamento temporário</string>
   <string name="button_station">Centralizar</string>
   <string name="button_store">Armazenar </string>
   <string name="button_swap">Inverter      </string>
@@ -841,6 +906,7 @@ no campo abaixo e aperte o botão.
   <string name="button_write">Enviar</string>
   <string name="button_xsection">Corte</string>
   <string name="xsection">Corte</string>
+  <string name="buffer">Armazenamento temporário</string>
   <string name="buffer_size">Buffer: %1$d dados</string>
   <string name="buffer_sorted">ordenado</string>
   <!-- UNUSED string name="buffer_unsorted">desordenado</string -->
@@ -850,6 +916,7 @@ no campo abaixo e aperte o botão.
   <string name="mode_station">Bases</string>
   <string name="mode_grid">Grade</string>
   <string name="mode_fixed">Deslocar croqui X linha de trena (CUIDADO!)</string>
+  <string name="mode_scrap">Somente trecho atual</string>
   <string name="mode_outline">Contorno</string>
   <string name="mode_scale_ref">Escala</string>
   <string name="mode_sections">Cortes</string>
@@ -871,7 +938,7 @@ no campo abaixo e aperte o botão.
   <string name="popup_do_splay">Medida auxiliar</string>
   <string name="popup_do_leg">Visada</string>
   <string name="popup_do_gm_data">Medida de calibração</string>
-  <string name="popup_do_gm_group">Grupo calib</string>
+  <!-- UNUSED string name="popup_do_gm_group">Grupo calib</string -->
   <string name="popup_do_laser">Laser</string>
   <string name="popup_do_scan">Varrer</string>
   <string name="popup_do_shot">Medir</string>
@@ -896,11 +963,12 @@ no campo abaixo e aperte o botão.
   <!-- UNUSED string name="azimuth">Azimute [deg]</string -->
   <!-- UNUSED string name="clino">Inclinação [deg]</string -->
   <string name="bt_alias_title">ID Bluetooth</string>
+    <!-- TODO string name="hint_api_key">API key</string -->
   <string name="hint_bt_alias">ID BT</string>
   <string name="hint_bt_code">Código do dispositivo</string>
   <string name="bt_alias_missing">ID BT faltando</string>
   <string name="bt_code_missing">Código do dispositivo faltando</string>
-    <!-- TODO string name="bt_alias_delete">Remove bluetooth alias?</string -->
+  <string name="bt_alias_delete">Remover alias Bluetooth?</string>
   <string name="hint_cellsize">tamanho célula</string>
   <string name="hint_cwd">pasta de trabalho</string>
   <string name="hint_distance">distância</string>
@@ -911,11 +979,9 @@ no campo abaixo e aperte o botão.
   <string name="hint_textsize">tamanho texto</string>
   <string name="hint_units">unidades símbolos</string>
   <string name="hint_value">valor</string>
-
   <string name="calib_measurement_id">Medida %1$d</string>
   <string name="calib_measurement_error">Erro %1$.4f</string>
   <string name="calib_measurement_group">Grupo: </string>
-
   <string name="hint_notes">observações</string>
   <string name="hint_label">Texto do rótulo</string>
   <string name="hint_comment">comentário</string>
@@ -948,7 +1014,9 @@ no campo abaixo e aperte o botão.
   <string name="btn_horizontal">Horizontal</string>
   <string name="split_nothing">Nada a ser dividido</string>
   <string name="flip_shots">Virar medidas</string>
+  <string name="move_items">Mover</string>
   <string name="copy_items">Copiar itens</string>
+  <string name="paste_items">Colar itens</string>
   <string name="current_station_format">L %1$.1f | N %2$.1f | A %3$.1f</string>
   <string name="man_preface">Prefácio</string>
   <string name="man_intro">1. Introdução</string>
@@ -990,7 +1058,7 @@ no campo abaixo e aperte o botão.
   <string name="help_refresh">Redesenhar tela</string>
   <string name="help_device">Editar dispositivo em uso</string>
   <string name="help_device_add">Incluir um dispositivo</string>
-  <!-- KEEP -->
+  <!-- lint: unused - KEEP -->
   <string name="help_add_topodroid">Nova topo</string>
   <string name="help_import">Importar arquivo zip ou arquivo de topo</string>
   <string name="help_geopoint_app">Apps GNSS externas</string>
@@ -1021,6 +1089,7 @@ no campo abaixo e aperte o botão.
   <!-- UPDATES string name="help_updates">Check for app version updates</string -->
   <string name="help_photo">Fotos</string>
   <string name="help_sensor">Sensores externos</string>
+  <string name="help_stations">Bases</string>
   <string name="help_3d">App de visualização 3D (Cave3D)</string>
   <!-- UNUSED string name="help_move">Modo mover/zoom</string -->
   <string name="help_draw">Modo DESENHAR</string>
@@ -1032,6 +1101,7 @@ no campo abaixo e aperte o botão.
   <string name="help_plot_delete">Apagar croqui</string>
   <string name="help_plot_rename">Renomear/apagar croqui</string>
   <string name="help_plot_scrap">Trechos croqui</string>
+  <string name="help_plot_search">Buscar bases</string>
   <string name="help_plot_switch">Mudar para outro trecho</string>
   <string name="help_search">Pesquisar base</string>
   <string name="help_stats">Estatísticas croqui</string>
@@ -1070,6 +1140,7 @@ no campo abaixo e aperte o botão.
   <!-- UNUSED string name="help_save">Gravar mudanças nas informações da topo</string -->
   <string name="help_save_calib">Gravar alterações nas informações de calibração</string>
   <string name="help_export_survey">Exportar Topo</string>
+  <string name="help_export_surveys">Exportar todas as topos</string>
   <string name="help_loc">Coordenada GPS</string>
   <string name="help_delete_survey">Apagar topo</string>
   <string name="help_delete_calib">Apagar calibração</string>
@@ -1079,7 +1150,7 @@ no campo abaixo e aperte o botão.
   <string name="help_sdcard">Funções de memória da DistoX e do BRIC4</string>
   <string name="help_read">Ler e mostrar os coeficientes de calibração da DistoX</string>
   <string name="help_info_device">Informações do dispositivo</string>
-  <!-- UNUSED string name="help_scan">Procurar por novos dispositivos DistoX</string -->
+  <string name="help_scan">Procurar por novos dispositivos DistoX</string>
   <!-- UNUSED string name="help_scan_ble">Procurar por dispositivos BLE</string -->
   <!-- UNUSED string name="help_pair">Parear o dispositivo DistoX selecionado</string -->
   <string name="help_open_calib">Abrir calibração</string>
@@ -1092,12 +1163,14 @@ no campo abaixo e aperte o botão.
   <string name="help_add_project">Adicionar projeto</string>
   <string name="help_add_surveys">Adicionar topos</string>
   <string name="help_drop_surveys">Remover topos</string>
+  <string name="help_color_surveys">Mudar a cor das topos</string>
   <string name="help_view_surveys">Mostrar topos</string>
-  <string name="help_view_equates">Listar \'equates\'</string>
+  <string name="help_view_equates">Listar equates</string>
   <string name="help_export_config">Exportar projeto</string>
   <string name="help_delete_config">Apagar projeto</string>
-  <string name="help_add_equate">Adicionar \'equates\' das topos</string>
-  <string name="help_equates">Listar \'equates\' das topos</string>
+  <string name="help_add_equate">Adicionar equates das topos</string>
+  <string name="help_all_equates">Todos os equates possíveis</string>
+  <string name="help_equates">Listar equates das topos</string>
   <string name="help_stations_minus">Mostrar menos bases</string>
   <string name="help_stations_plus">Mostrar mais bases</string>
   <!-- UNUSED string name="export_bgcolor">Cor de fundo</string -->
@@ -1113,9 +1186,12 @@ no campo abaixo e aperte o botão.
   <string name="export_lrud">EDTC</string>
   <string name="export_lrud_from">EDTC na base DE</string>
   <string name="export_maps">Mapas antes dos dados</string>
+  <string name="export_uncommented_maps">Mapas não comentados</string>
   <string name="export_prefix">Prefixo da caverna nos nomes das bases</string>
   <string name="export_prefix_hint">prefixo</string>
-    <!-- TODO string name="export_media">media items</string -->
+  <string name="export_prefix_set">Definir</string>
+  <string name="export_prefix_reset">Reinicializar</string>
+  <string name="export_media">itens de mídia</string>
   <!-- UNUSED string name="export_suffix_hint">sufixo</string -->
   <string name="export_series_hint">séries</string>
   <string name="export_roundtrip">Circuito</string>
@@ -1134,6 +1210,7 @@ no campo abaixo e aperte o botão.
   <string name="export_xvi">Images XVI</string>
   <string name="export_with_xsections">Incluir cortes</string>
   <string name="export_grouped">Agrupar elementos em camadas por tipos</string>
+  <string name="export_origin">Base de origem</string>
   <string name="export_with_reference">Incluir referência XY</string>
   <!-- UNUSED string name="export_linedir_stroke">Line dir stroke</string -->
   <!-- UNUSED string name="export_station_stroke">Station stroke</string -->
@@ -1150,15 +1227,18 @@ no campo abaixo e aperte o botão.
   <string name="audio_delete">Apagar?</string>
   <string name="audio_overwrite">Sobreescrever?</string>
   <!-- UNUSED string name="playing">Playing %1$s</string -->
-  <string name="import_functional">Importar somente configurações funcionais</string>
   <string name="import_trox">Formato de arquivo Trox</string>
   <string name="import_lrud">Importar EDTC</string>
   <string name="import_leg_first">Visada antes de EDTC</string>
   <string name="import_diving_datamode">Modo de dados \'mergulho\'</string>
   <string name="import_therion_path">Com hierarquia de topos</string>
+    <!-- TODO string name="title_gemini">Enter your AI API key</string -->
+    <!-- TODO string name="title_ai_dialog">AI helper</string -->
+    <!-- TODO string name="title_ai_dialog_pref">AI configuration help</string -->
   <string name="title_azimut">Direção perfil retificado</string>
   <string name="title_audio">Áudiocomentário</string>
   <string name="title_audio_list">Áudios</string>
+  <string name="title_recalibrate">Calibrações</string>
   <string name="title_calib">Calibrações</string>
   <string name="title_calib_check">Medidas de verificação de calibração</string>
   <!-- UNUSED string name="title_check">Calibration-check</string -->
@@ -1169,8 +1249,11 @@ no campo abaixo e aperte o botão.
   <!-- UNUSED string name="title_contour">Contorno</string -->
   <!-- UNUSED string name="title_coord">Inserir as coordenadas do ponto:</string -->
   <string name="title_current_station">Bases gravadas</string>
+    <!-- TODO string name="title_scan_shot">Scan shots</string -->
   <string name="title_search">Pesquisa bases e medidas</string>
-    <!-- TODO string name="title_pref_search">Settings search</string -->
+  <string name="title_stations">Bases</string>
+  <string name="title_plot_search">Busca por base</string>
+  <string name="title_pref_search">Busca por configuração</string>
   <string name="title_gm_search">Pesquisa dados calibração</string>
   <string name="title_dangling">Medidas desconectadas</string>
   <string name="title_device">Dispositivos DistoX</string>
@@ -1218,7 +1301,7 @@ no campo abaixo e aperte o botão.
   <string name="title_scraps">Croquis</string>
   <string name="title_scraps_outline">Contorno desenhos</string>
   <!-- UNUSED string name="title_select">Selecionar</string -->
-    <!-- TODO string name="setting" >setting</string -->
+  <string name="setting">configuração</string>
   <string name="title_settings_main">Config principais</string>
   <string name="title_settings_export">Config importação/exportação</string>
   <string name="title_settings_export_enable">Config habilitar export dados</string>
@@ -1236,6 +1319,7 @@ no campo abaixo e aperte o botão.
   <string name="title_settings_gpx">Config export GPX</string>
   <string name="title_settings_kml">Config export KML/GeoJSON/ShapeFile</string>
   <string name="title_settings_srv">Config export Walls</string>
+  <string name="title_settings_ply">Configurações de exportação de polígonos</string>
   <string name="title_settings_sketch">Config croquis 3D</string>
   <string name="title_settings_survey">Config topo</string>
   <!-- UNUSED string name="title_settings_splay">Config medidas auxiliares</string -->
@@ -1275,11 +1359,13 @@ no campo abaixo e aperte o botão.
   <string name="title_survey_new">Nova topo</string>
   <string name="title_survey_export">Exportar topo</string>
   <string name="title_survey_rename">Renomear topo</string>
+  <string name="title_station_photo">Foto da base</string>
   <string name="title_team_dialog">Nomes integrantes equipe</string>
-  <string name="title_plot_rename">Renomear croqui</string>
+  <string name="title_plot_rename">Operações em croquis</string>
   <string name="title_plot_zoomfit">Zoom / Orientação</string>
   <string name="title_calib_export">Exportar calibração</string>
   <!-- UNUSED string name="title_zoom">Zoom</string -->
+  <string name="title_read_names">Mapa de nomes de bases</string>
   <string name="title_import_shot">Importar topo</string>
   <string name="title_import_gps">Importar ponto GPS</string>
   <string name="title_import_th2">Arquivo th2 Therion</string>
@@ -1292,6 +1378,8 @@ no campo abaixo e aperte o botão.
   <string name="export_settings_failed">Falha ao exportar configurações</string>
   <string name="pref_export_settings">IMPORT/EXPORT CONFIGURAÇÕES</string>
   <!-- UNUSED string name="pref_tcsx">Exportar cSurvey-1.20 transfer-csx</string -->
+  <string name="pref_bulk_export_title">Exportação de dados brutos</string>
+  <string name="pref_bulk_export_summary">Exportação de dados brutos de todas as topos</string>
   <string name="pref_export_plot_title">Form export croqui</string>
   <string name="pref_export_plot_summary">Formato padrão de exportação de croqui</string>
   <string name="pref_export_shots_title">Form export dados</string>
@@ -1316,12 +1404,14 @@ no campo abaixo e aperte o botão.
   <!-- UNUSED string name="pref_cat_log">LOGS</string -->
   <string name="pref_locale_title">Idioma app</string>
   <string name="pref_locale_summary">Idioma do aplicativo</string>
+  <!-- TODO string name="pref_gemini_title">AI key</string -->
+  <!-- TODO string name="pref_gemini_summary">Gemini API key</string -->
   <string name="pref_orientation_title">Orient tela</string>
   <string name="pref_orientation_summary">Orientação da tela do aplicativo</string>
   <string name="pref_single_back_title">\u0022Voltar\u0022 único</string>
   <string name="pref_single_back_summary">fechar janelas com um único clique no botão \u0022Voltar\u0022 do dispositivo Android</string>
-  <!-- TODO string name="pref_hide_navbar_title">Navigation bar</string -->
-  <!-- TODO string name="pref_hide_navbar_summary">Hidden. Shown sliding up</string -->
+  <string name="pref_hide_navbar_title">Barra navegação</string>
+  <string name="pref_hide_navbar_summary">Ocultar. Mostre deslizando para cima.</string>
   <string name="pref_raw_data_title">Dado bruto</string>
   <string name="pref_raw_data_summary">Exibir dados brutos</string>
   <string name="pref_calib_shot_download_title">Download dado remoto</string>
@@ -1386,12 +1476,16 @@ no campo abaixo e aperte o botão.
   <!-- KEEP -->
   <string name="pref_station_prefix_title">Pref base</string>
   <string name="pref_station_prefix_summary">Incluir prefixo nos nomes das bases na exportação Compass/cSurvey/WinKarst</string>
-  <!-- TODO string name="pref_with_media_title">Media export</string -->
-  <!-- TODO string name="pref_with_media_summary">Include media in export [cSurvey]</string -->
+  <string name="pref_with_media_title">Exportar mídia</string>
+  <string name="pref_with_media_summary">Incluir mídias na exportação [cSurvey]</string>
   <string name="pref_compass_splays_title">Aux Compass/Walls</string>
   <string name="pref_compass_splays_summary">Exportar medidas auxiliares em arquivos Compass/Walls como "12 12–1" ou como "12 –".</string>
   <string name="pref_walls_splays_title">Med aux Walls</string>
   <string name="pref_walls_splays_summary">Incluir medidas auxiliares nos arquivos Walls exportados</string>
+  <string name="pref_ply_lrud_title">Polígono EDTC</string>
+  <string name="pref_ply_lrud_summary">Polígono EDTC</string>
+  <string name="pref_ply_minus_title">Polígono exceto</string>
+  <string name="pref_ply_minus_summary">Polígono exceto</string>
   <string name="pref_vtopo_splays_title">Aux VisualTopo</string>
   <string name="pref_vtopo_splays_summary">Incluir medidas auxiliares em arquivos VisualTopo</string>
   <string name="pref_vtopo_lrud_title">EDTC em DE</string>
@@ -1523,6 +1617,10 @@ no campo abaixo e aperte o botão.
   <string name="pref_pt_color_map_summary">Mapa de cores do PocketTopo (importação PocketTopo)</string>
   <string name="pref_text_size_title">Tam texto</string>
   <string name="pref_text_size_summary">Tamanho do texto dos itens de lista</string>
+  <string name="pref_symbol_size_title">Tam símbolo</string>
+  <string name="pref_symbol_size_summary">Tamanho dos símbolos na barra inferior</string>
+  <!-- TODO string name="pref_toolbar_update_title">Toolbar update</string -->
+  <!-- TODO string name="pref_toolbar_update_summary">How to insert symbols in bottom bar</string -->
   <string name="pref_closeness_title">Raio seleção</string>
   <string name="pref_closeness_message">Raio da ferramenta de seleção do croqui</string>
   <string name="pref_eraseness_title">Tam borracha</string>
@@ -1547,8 +1645,8 @@ no campo abaixo e aperte o botão.
   <string name="pref_splay_latest_color_summary">Cor das medidas auxiliares recentes</string>
   <!-- UNUSED string name="pref_data_backup_title">Exportação automática</string -->
   <!-- UNUSED string name="pref_data_backup_summary">Exportação automática de dados (exige definição de formato padrão)</string -->
-  <string name="pref_editable_stations_title">Base editável</string>
-  <string name="pref_editable_stations_summary">Nomes de bases editáveis na lista de medidas</string>
+  <!-- UNUSED string name="pref_editable_stations_title">Base editável</string -->
+  <!-- UNUSED string name="pref_editable_stations_summary">Nomes de bases editáveis na lista de medidas</string -->
   <string name="pref_zipped_symbols_title">Símbolos zip em arquivos</string>
   <string name="pref_zipped_symbols_summary">Armazenar e carregar arquivos de símbolos em/de arquivo zip</string>
   <string name="pref_fixed_origin_title">Origem fixa croqui</string>
@@ -1625,6 +1723,8 @@ no campo abaixo e aperte o botão.
   <string name="pref_shot_timer_summary">Tempo de espera antes de capturar uma medida através de comandos enviados pelo TopoDroidX para a trena</string>
   <string name="pref_beep_volume_title">Volume bip temporizador</string>
   <string name="pref_beep_volume_summary">Nível  de volume do bip do temporizador de captura de medida</string>
+  <!-- TODO string name="pref_beep_length_title">Timer-beep length</string -->
+  <!-- TODO string name="pref_beep_length_summary">Duration of beep [msec]</string -->
   <string name="pref_extend_frac_title">Proj vis escala</string>
   <string name="pref_extend_frac_summary">Define se as visadas poderão ser escalonadas ao serem projetadas nos perfis retificados</string>
   <string name="pref_recent_shot_title">Aux recentes</string>
@@ -1669,6 +1769,10 @@ no campo abaixo e aperte o botão.
   <string name="pref_label_size_summary">Tamanho dos textos dos rótulos</string>
   <string name="pref_scalable_label_title">Escalonar rótulos</string>
   <string name="pref_scalable_label_summary">Escalonar rótulos ao dar zoom no croqui</string>
+  <string name="pref_xsection_offset_title">Deslocamento corte</string>
+  <string name="pref_xsection_offset_summary">Deslocamento dos pontos do corte</string>
+  <string name="pref_plot_cache_title">Cache croqui</string>
+  <string name="pref_plot_cache_summary">Habilitar cache de croquis em memória</string>
   <string name="pref_slope_lside_title">Tam desnível</string>
   <string name="pref_slope_lside_summary">Tamanho padrão do desnível em linhas tipo desnível</string>
   <string name="pref_arrow_length_title">Tam marca corte</string>
@@ -1701,6 +1805,8 @@ no campo abaixo e aperte o botão.
   <string name="pref_stylus_size_summary">Tamanho da caneta para permitir que a mão toque a tela ao desenhar somente com caneta [0: ignorar]</string>
   <string name="pref_line_ends_title">Cortar fim linha</string>
   <string name="pref_line_ends_summary">Quantidade de pontos a serem desprezados nas extremidades das linhas ao usar recurso "Tam caneta" maior do que zero [0]</string>
+  <!-- UNUSED string name="pref_zoom_lower_bound_title">Zoom bound</string -->
+  <!-- UNUSED string name="pref_zoom_lower_bound_summary">Zoom-fit minimum scale [0.1]</string -->
   <string name="pref_fixed_thickness_title">Espessura linha</string>
   <string name="pref_fixed_thickness_summary">Espessura das linhas (visadas e medidas auxiliares)</string>
   <!-- UNUSED string name="pref_device_title">Dispositivo</string -->
@@ -1735,8 +1841,8 @@ no campo abaixo e aperte o botão.
   <string name="pref_saved_stations_summary">Apresentar bases gravadas em laranja</string>
   <string name="pref_legonly_update_title">Só visada redesenha</string>
   <string name="pref_legonly_update_summary">Somente recalcular e redesenhar linha de trena quando receber uma nova visada (para modo de download contínuo de dados)</string>
-  <string name="pref_full_affine_title">Transformação afim</string>
-  <string name="pref_full_affine_summary">Habilitar transformação afim em croquis (permite distorcer alterando proporções e posição)</string>
+  <string name="pref_full_affine_title">Transformação a fim</string>
+  <string name="pref_full_affine_summary">Habilitar transformação a fim em croquis (permite distorcer alterando proporções e posição)</string>
   <string name="pref_loopClosure_title">Fech poligonal</string>
   <string name="pref_loopClosure_summary">Compensação de erro de fechamento de poligonais</string>
   <string name="pref_loop_thr_title">Lim poligonal</string>
@@ -1749,6 +1855,8 @@ no campo abaixo e aperte o botão.
   <string name="pref_LRExtend_summary">Estimar referência para retificação do perfil (importação Compass/VisualTopo)</string>
   <string name="pref_diving_mode_title">Modo mergulho</string>
   <string name="pref_diving_mode_summary">Habilitar modo mergulho</string>
+  <string name="pref_shot_tampering_title">Edição medidas</string>
+  <string name="pref_shot_tampering_summary">Permite a edição de medidas baixadas</string>
   <string name="pref_splay_classes_title">Classes aux</string>
   <string name="pref_splay_classes_summary">Habilitar classes de medidas auxiliares</string>
   <string name="pref_splay_color_title">Cores aux</string>
@@ -1914,7 +2022,7 @@ no campo abaixo e aperte o botão.
   <string name="no_editor">Editor não encontrado</string>
   <string name="no_file">Arquivo não encontrado</string>
   <string name="no_path">Caminho para arquivo inexistente</string>
-  <string name="no_equate">Nenhum \'equate\'</string>
+  <string name="no_equate">Nenhum equate</string>
   <string name="no_surveys">Nenhuma topo</string>
   <string name="no_tdconfig">Arquivo TdConfig inexistente</string>
   <string name="no_th_file">Nenhum arquivo Therion</string>
@@ -1922,7 +2030,7 @@ no campo abaixo e aperte o botão.
   <!-- UNUSED string name="file_create_fail">Falha na criação de arquivo</string -->
   <!-- UNUSED string name="oom">Alerta: memória cheia.</string -->
   <string name="ask_delete_tdconfig">Apagar arquivo TdConfig</string>
-  <string name="ask_remove_equate">Remover \'equate\' %1$s ?</string>
+  <string name="ask_remove_equate">Remover equate %1$s ?</string>
   <!-- UNUSED string name="equate_no_station">Nenhuma base selecionada</string -->
   <string name="equate_no_stations">Poucas bases</string>
   <string name="equate_no_nearby">Nenhuma base próxima</string>
@@ -1934,9 +2042,15 @@ no campo abaixo e aperte o botão.
   <!-- UNUSED string name="overwrite">sobreescrever</string -->
   <string name="title_export_settings">Configurações de importação/exportação</string>
   <string name="title_export">Exportar projeto como …</string>
-  <string name="title_equates">\'Equates\' do projeto</string>
-  <string name="title_equate_new">Incluir \'equate\' …</string>
-  <string name="title_equate_with">\'Equate\' %1$s e %2$s</string>
+  <string name="title_equates">Equates do projeto</string>
+  <string name="title_equate_new">Incluir equate …</string>
+  <string name="button_equate_all">Todos</string>
+  <!-- HB EQ all-->
+  <string name="button_equate_one">Um</string>
+  <!-- HB EQ one-->
+  <string name="button_equate_search">Busca</string>
+  <!-- HB EQ all-->
+  <string name="title_equate_with">Equate %1$s e %2$s</string>
   <!-- UNUSED string name="title_cwd">Current Work Directory</string -->
   <string name="title_drop">Excluir topos?</string>
   <string name="title_tdconfig">Insira nome do projeto</string>
@@ -2003,6 +2117,7 @@ no campo abaixo e aperte o botão.
   <string name="legs_surface">Superfície</string>
   <string name="legs_duplicate">Duplicadas</string>
   <string name="legs_commented">Comentadas</string>
+  <string name="legs_backshot">Contravisada</string>
   <string name="proj_perspective">Projeção em perspectiva</string>
   <string name="proj_orthographic">Projeção ortográfica</string>
   <string name="proj_focal">Focal</string>
@@ -2127,6 +2242,10 @@ no campo abaixo e aperte o botão.
   <string name="warning_no_csv_type">Tipo de CSV não definido</string>
   <string name="warning_cavway_info">Falha ao obter informações sobre Cavway</string>
   <string name="no_permissions">O app não pode funcionar sem as permissões necessárias</string>
+    <!-- TODO string name="cavway_sync_failed">Failed to synchronize Cavway time</string -->
+    <!-- TODO string name="cavway_synchronized">Synchronized Cavway time</string -->
+    <!-- TODO string name="cavway_sync_ok">Cavway time synchronized</string -->
+    <!-- TODO string name="cavway_sync_offset">Cavway time offset: %1$d [min]</string -->
   <string name="done_convexhull">Paredes dos planos convexos prontas</string>
   <string name="fail_convexhull">Falha nas paredes dos planos convexos</string>
   <string name="done_powercrust">Paredes do powercrust prontas</string>
@@ -2166,8 +2285,8 @@ no campo abaixo e aperte o botão.
   <string name="cpref_grid_above_summary">Apresentar grade sobre o modelo</string>
   <string name="cpref_grid_extent_title">Extensão grade</string>
   <string name="cpref_grid_extent_summary">Tamanho da extensão da grade ao redor da planta baixa</string>
-    <!-- TODO string name="cpref_names_visibility_title">Names visibility</string -->
-    <!-- TODO string name="cpref_names_visibility_summary">Station names always visible</string -->
+  <string name="cpref_names_visibility_title">Visibilidade dos nomes</string>
+  <string name="cpref_names_visibility_summary">Nomes das bases sempre visíveis</string>
   <string name="cpref_neg_clino_title">Visão abaixo horizonte</string>
   <string name="cpref_neg_clino_summary">Permitir pontos de vista abaixo do horizonte</string>
   <string name="cpref_dem_buffer_title">Buffer DEM</string>
@@ -2176,8 +2295,8 @@ no campo abaixo e aperte o botão.
   <string name="cpref_dem_maxsize_summary">Tamanho máximo da superfície DEM em cada direção</string>
   <string name="cpref_dem_reduce_title">Redução DEM</string>
   <string name="cpref_dem_reduce_summary">Modo de redução DEM</string>
-    <!-- TODO string name="cpref_texture_root_title">Texture root</string -->
-    <!-- TODO string name="cpref_texture_root_summary">Texture root pathname [/sdcard/]</string -->
+  <string name="cpref_texture_root_title">Caminho textura</string>
+  <string name="cpref_texture_root_summary">Caminho diretório raiz para textura [/sdcard/]</string>
   <string name="cpref_all_splay_title">Todas aux</string>
   <string name="cpref_all_splay_summary">Usar todas as medidas auxiliares na modelagem de paredes</string>
   <string name="cpref_splay_use_title">Uso aux</string>
@@ -2219,7 +2338,7 @@ no campo abaixo e aperte o botão.
   <string name="help_alpha_3d">Superfície DEM</string>
   <string name="help_wall_3d">Modelo 3D</string>
   <!-- UNUSED string name="help_temperature">Tempertaure</string -->
-  <string name="help_sketch_3d">Elevação croqui 3D</string>
+  <!-- UNUSED string name="help_sketch_3d">Elevação croqui 3D</string -->
   <!-- UNUSED string name="help_fractal" translatable="false">Fractal analysis</string -->
   <string name="help_light_3d">Giro e luz</string>
   <string name="help_projection_3d">Projeção 3D</string>

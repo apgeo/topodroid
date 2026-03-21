@@ -15,10 +15,12 @@ import com.topodroid.utils.TDMath;
 import com.topodroid.utils.TDLog;
 import com.topodroid.utils.TDString;
 import com.topodroid.utils.TDColor;
+import com.topodroid.utils.TDUtil;
 import com.topodroid.math.TDMatrix;
 import com.topodroid.math.TDVector;
 import com.topodroid.ui.MyDialog;
 // import com.topodroid.prefs.TDSetting;
+import com.topodroid.dev.cavway.CavwayCalibInfo;
 import com.topodroid.TDX.R;
 import com.topodroid.TDX.GMActivity;
 
@@ -51,16 +53,16 @@ public class CalibCoeffDialog extends MyDialog
   // private Button mButtonBack;
   private boolean mSecondState = false; // dialog start with first coeff 
 
-  private String delta0;
-  private String delta02;
-  private String error0;
-  private String iter0;
-  private String dip0;
-  private String roll0; // FIXME ROLL_DIFFERENCE
+  private String mAveErrStr;
+  private String mStdErrStr;
+  private String mMaxErrStr;
+  private String mIterStr;
+  private String mDipStr;
+  private String mRollStr; // FIXME ROLL_DIFFERENCE
   private String deltaDir = null;
   private final byte[]  mCoeff; // caibration coeffs, 52 or 104 bytes
   private final float[] mErrors;
-  private float   mDelta;
+  private float   mAveErr;
   private boolean mTwoSensors = false;
   private boolean mWithResult = false;
   // private boolean mSaturated;
@@ -78,18 +80,28 @@ public class CalibCoeffDialog extends MyDialog
   private TextView textAMz;
   private TextView textNL;
 
+  private byte[] mCaliInfo = null;
+
   /** cstr
    * @param context    context
    * @param coeffs     coefficients byte array, either 52 bytes or 104 bytes
+   * @param cali_info  callibration info (or null)
    */
-  public CalibCoeffDialog( Context context, byte[] coeffs )
+  public CalibCoeffDialog( Context context, byte[] coeffs, byte[] cali_info )
   {
     super( context, null, R.string.CalibCoeffDialog ); // null app
     mParent = null;
     mCoeff  = null; // prevent dialog from coeff-upload
     mErrors = null;
-    mWithResult = false;
     makeVectorsAndMatricex( coeffs );
+    // mCaliInfo = cali_info;
+    if ( cali_info != null ) {
+      float aveErr  = CavwayCalibInfo.averageError( cali_info );
+      float stdErr = CavwayCalibInfo.stddevError( cali_info );
+      float maxErr = CavwayCalibInfo.maxError( cali_info );
+      float dip    = CavwayCalibInfo.dip( cali_info );
+      setResult( 0, aveErr, stdErr, maxErr, 0, dip, 0 );
+    }
 
     // mSaturated = saturated;
   }
@@ -99,49 +111,52 @@ public class CalibCoeffDialog extends MyDialog
    * @param parent     parent G-M activity
    * @param errors     calib data residual errors [radians]
    * @param coeff      calibration coefficients, 52 bytes for one sensor-pair, 104 bytes for two sensor pairs
+   * @param seconds    calibration datetime [seconds since the epoch]
    * @param delta_bh   B. Heeb delta
-   * @param delta      average error [degrees]
-   * @param delta2     error std-dev [degrees]
-   * @param error      max error [degrees]
+   * @param aveErr     average error [degrees]
+   * @param stdErr     error std-dev [degrees]
+   * @param maxErr     max error [degrees]
    * @param iter       number of iterations
    * @param dip        M dip (topodroid dip)
    * @param roll       roll ???
    */
   public CalibCoeffDialog( Context context, GMActivity parent, float[] errors, byte[] coeff,
-                    float delta_bh, float delta, float delta2, float error, long iter, float dip, float roll /*, boolean saturated */ )
+                    long seconds, float delta_bh, float aveErr, float stdErr, float maxErr, long iter, float dip, float roll /*, boolean saturated */ )
   {
     super( context, null, R.string.CalibCoeffDialog ); // null app
     mParent = new WeakReference<GMActivity>( parent );
     mCoeff  = coeff;
     mErrors = errors;
-    mWithResult = true;
     makeVectorsAndMatricex( coeff );
 
-    setResult( delta_bh, delta, delta2, error, iter, dip, roll );
+    setResult( delta_bh, aveErr, stdErr, maxErr, iter, dip, roll );
+    if ( seconds == 0 ) seconds = TDUtil.getSeconds();
+    mCaliInfo = CavwayCalibInfo.makeCaliInfo( seconds, aveErr, stdErr, maxErr, dip );
 
     if ( errors != null ) {
       mBitmap = makeHistogramBitmap( errors, WIDTH, HEIGHT, 20, 5, TDColor.BLUE );
     }
   }
  
-  /** set the strings for the result text fields
+  /** set the strings for the result text fields (and prepare the Cavway CaliInfo)
    * @param delta_bh   B. Heeb delta
-   * @param delta      average error [degrees]
-   * @param delta2     error std-dev [degrees]
-   * @param error      max error [degrees]
+   * @param aveErr     average error [degrees]
+   * @param stdErr     error std-dev [degrees]
+   * @param maxErr     max error [degrees]
    * @param iter       number of iterations
    * @param dip        M dip (topodroid dip)
    * @param roll       roll ???
    */
-  private void setResult( float delta_bh, float delta, float delta2, float error, long iter, float dip, float roll )
+  private void setResult( float delta_bh, float aveErr, float stdErr, float maxErr, long iter, float dip, float roll )
   {
-    mDelta = delta;
-    delta0  = String.format( mContext.getResources().getString( R.string.calib_error ), delta, delta_bh );
-    delta02 = String.format( mContext.getResources().getString( R.string.calib_stddev ), delta2 );
-    error0  = String.format( mContext.getResources().getString( R.string.calib_max_error ), error );
-    iter0   = String.format( mContext.getResources().getString( R.string.calib_iter ), iter );
-    dip0    = String.format( mContext.getResources().getString( R.string.calib_dip ), dip );
-    roll0   = String.format( mContext.getResources().getString( R.string.calib_roll ), roll );
+    mAveErr    = aveErr;
+    mAveErrStr = String.format( mContext.getResources().getString( R.string.calib_error ), aveErr, delta_bh );
+    mStdErrStr = String.format( mContext.getResources().getString( R.string.calib_stddev ), stdErr );
+    mMaxErrStr = String.format( mContext.getResources().getString( R.string.calib_max_error ), maxErr );
+    mIterStr   = String.format( mContext.getResources().getString( R.string.calib_iter ), iter );
+    mDipStr    = String.format( mContext.getResources().getString( R.string.calib_dip ), dip );
+    mRollStr   = String.format( mContext.getResources().getString( R.string.calib_roll ), roll );
+    mWithResult = true;
   }
 
   /** make the text string for the stat of the device direction differences
@@ -257,14 +272,14 @@ public class CalibCoeffDialog extends MyDialog
     textAMz = (TextView) findViewById(R.id.coeff_amz);
     textNL  = (TextView) findViewById(R.id.coeff_nl);
 
-    ImageView image        = (ImageView) findViewById( R.id.histogram );
-    TextView textDelta    = (TextView) findViewById(R.id.coeff_delta);
-    TextView textDelta2   = (TextView) findViewById(R.id.coeff_delta2);
-    TextView textMaxError = (TextView) findViewById(R.id.coeff_max_error);
-    TextView textIter     = (TextView) findViewById(R.id.coeff_iter);
-    TextView textDip      = (TextView) findViewById(R.id.coeff_dip);
-    TextView textRoll     = (TextView) findViewById(R.id.coeff_roll);
-    TextView textDir      = (TextView) findViewById(R.id.coeff_delta_dir);
+    ImageView image     = (ImageView) findViewById( R.id.histogram );
+    TextView textAveErr = (TextView) findViewById(R.id.coeff_delta);
+    TextView textStdErr = (TextView) findViewById(R.id.coeff_delta2);
+    TextView textMaxErr = (TextView) findViewById(R.id.coeff_max_error);
+    TextView textIter   = (TextView) findViewById(R.id.coeff_iter);
+    TextView textDip    = (TextView) findViewById(R.id.coeff_dip);
+    TextView textRoll   = (TextView) findViewById(R.id.coeff_roll);
+    TextView textDir    = (TextView) findViewById(R.id.coeff_delta_dir);
     mButtonWrite   = (Button) findViewById( R.id.button_coeff_write );
     mButtonSecond  = (Button) findViewById( R.id.button_coeff_second );
     Button button_back  = (Button) findViewById( R.id.button_coeff_back );
@@ -279,21 +294,21 @@ public class CalibCoeffDialog extends MyDialog
     }
 
     if ( mWithResult ) {
-      textDelta.setText( delta0 );
-      textDelta2.setText( delta02 );
-      textMaxError.setText( error0 );
-      textIter.setText( iter0 );
-      textDip.setText( dip0 );
-      textRoll.setText( roll0 ); // FIXME ROLL_DIFFERENCE
+      textAveErr.setText( mAveErrStr );
+      textStdErr.setText( mStdErrStr );
+      textMaxErr.setText( mMaxErrStr );
+      textIter.setText( mIterStr );
+      textDip.setText( mDipStr );
+      textRoll.setText( mRollStr ); // FIXME ROLL_DIFFERENCE
       if ( ! setDeltaDir() ) {
         textDir.setVisibility( View.GONE );
       } else {
         textDir.setText( deltaDir );
       }
     } else {
-      textDelta.setVisibility( View.GONE );
-      textDelta2.setVisibility( View.GONE );
-      textMaxError.setVisibility( View.GONE );
+      textAveErr.setVisibility( View.GONE );
+      textStdErr.setVisibility( View.GONE );
+      textMaxErr.setVisibility( View.GONE );
       textIter.setVisibility( View.GONE );
       textDip.setVisibility( View.GONE );
       textRoll.setVisibility( View.GONE ); // FIXME ROLL_DIFFERENCE
@@ -326,7 +341,7 @@ public class CalibCoeffDialog extends MyDialog
       if ( mParent != null ) {
         GMActivity parent = mParent.get();
         if ( parent != null ) {
-          if ( mCoeff != null ) parent.uploadCoefficients( mDelta, mCoeff, true, mButtonWrite ); // 20250123 dropped false (second)
+          if ( mCoeff != null ) parent.uploadCoefficients( mAveErr, mCoeff, true, mButtonWrite, mCaliInfo ); // 20250123 dropped false (second)
         } else {
           TDLog.e("Calib Coeff Dialog null parent");
         }

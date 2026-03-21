@@ -26,8 +26,8 @@ import com.topodroid.ui.MyColorPicker;
 import com.topodroid.ui.MyDialog;
 import com.topodroid.ui.TDLayout;
 import com.topodroid.prefs.TDSetting;
-import com.topodroid.common.LegType;
-import com.topodroid.common.ExtendType;
+import com.topodroid.types.LegType;
+import com.topodroid.types.ExtendType;
 
 
 
@@ -40,7 +40,6 @@ import android.view.View;
 
 // import android.app.Dialog;
 import android.os.Bundle;
-// import android.widget.RadioButton;
 
 import android.text.method.KeyListener;
 import android.text.InputType;
@@ -48,7 +47,7 @@ import android.text.InputType;
 import android.content.Context;
 // import android.content.res.Resources;
 import android.content.DialogInterface;
-import android.inputmethodservice.KeyboardView;
+// import android.inputmethodservice.KeyboardView;
 
 import android.widget.TextView;
 import android.widget.EditText;
@@ -80,13 +79,14 @@ class ShotEditDialog extends MyDialog
   private TextView mTVextra;    // Magn Acc Dip
   private TextView mTVshotTime;
 
-  private EditText mETfrom;
+  private EditText mETfrom; // stations
   private EditText mETto;
-  private EditText mETcomment;
+  private EditText mETcomment; // comment
   
   private MyCheckBox mRBdup   = null;
   private MyCheckBox mRBsurf  = null;
   private MyCheckBox mRBcmtd  = null;  // FIXME_COMMENTED 
+  private MyCheckBox mRBbcks  = null;  // BACKSHOT 
   private MyStateBox mRBsplay = null;  // inhibit splay plan/profile display
 
   private MyCheckBox mCBlegPrev;  // adjoin to previous leg shot
@@ -108,7 +108,7 @@ class ShotEditDialog extends MyDialog
   private Button   mButtonMore;
   private Button   mButtonBack;
 
-  private Button   mButtonPrev;
+  private Button   mButtonPrev; // navigation buttons
   private Button   mButtonNext;
   private Button mButtonReverse;
 
@@ -117,12 +117,14 @@ class ShotEditDialog extends MyDialog
   private String shot_distance;  // distance - depth
   private String shot_bearing;   // bearing
   private String shot_clino;     // clino    - distance
-  private boolean shot_manual;
+  // private boolean shot_manual;
+  private boolean editable;      // whether the shot data are editable
   private float shot_stretch; // FIXME_STRETCH
 
   private String shot_extra;
   private int  shot_extend;
   private long shot_flag;
+  private int  shot_mark; // cavway flag
   private String shot_time;
   private String shot_comment;
 
@@ -142,31 +144,38 @@ class ShotEditDialog extends MyDialog
 
   private boolean hasMore = false;
 
+  // @note used also by DrawingShohtDialog
+  // 0: no_mark, ...
+  final static int[] mShotMark= { R.string.mark_no_mark, R.string.mark_no_mark, R.string.mark_no_mark, R.string.mark_no_mark,
+                                  R.string.mark_generic, R.string.mark_backsight, R.string.mark_ridge, R.string.mark_feature,
+                                  R.string.mark_unknown };
+
   // MORE -------------------------------------------
   private LinearLayout mLayoutMore;
-  private RadioButton mRBfrom = null;
-  private RadioButton mRBto   = null;
-  private RadioButton mRBat   = null;
-  private EditText mETat;
-  private EditText mETleft;
-  private EditText mETright;
-  private EditText mETup;
-  private EditText mETdown;
-  private Button mBTlrud  = null;
+  // private RadioButton mRBfrom = null; // INTERMEDIATE_DATA
+  // private RadioButton mRBto   = null;
+  // private RadioButton mRBat   = null;
+  // private EditText mETat;
+  // private EditText mETleft;
+  // private EditText mETright;
+  // private EditText mETup;
+  // private EditText mETdown;
+  // private Button mBTlrud  = null;
+  // private boolean mHasLRUD = false; // could be replaced by (mBTlrud != null)
   private CheckBox mCBleg = null;
-  private boolean mHasLRUD = false; // could be replaced by (mBTlrud != null)
 
   // private MyCheckBox mButtonPlot;
   private MyCheckBox mButtonPhoto  = null;
   private MyCheckBox mButtonAudio  = null;
   private MyCheckBox mButtonSensor = null;
-  private MyCheckBox mButtonShot   = null;
+  // private MyCheckBox mButtonShot   = null; // INTERMEDIATE_DATA
   private MyCheckBox mButtonSurvey = null;
 
   private MyCheckBox mButtonDelete = null;
   private MyCheckBox mButtonCheck  = null;
 
   private Button mBtnColor = null;  // user-set color (tester level)
+  private Button mBtnRecalibrate = null; // recalibrate survey data from this shot onwards
 
   private int mColor;    // block color
   private boolean hideColorBtn = true;
@@ -174,8 +183,7 @@ class ShotEditDialog extends MyDialog
 
   /** cstr
    */
-  ShotEditDialog( Context context, ShotWindow parent, int pos, DBlock blk,
-              DBlock prev, DBlock next
+  ShotEditDialog( Context context, ShotWindow parent, int pos, DBlock blk, DBlock prev, DBlock next
             )
   {
     super( context, null, R.string.ShotEditDialog ); // null app
@@ -186,7 +194,8 @@ class ShotEditDialog extends MyDialog
     mNextBlk     = next;
     mBlk         = blk;
     // loadDBlock( blk, prev, next );
-    // TDLog.Log( TDLog.LOG_SHOT, "Shot Dialog " + blk.toString(true) );
+    // TDLog.v("Shot edit dialog. Blk " + blk.mId + " roll " + blk.mRoll ); // mRoll is not set
+    // TDLog.v( "Shot Dialog " + blk.toStringNormal(true) + " flag " + blk.getFlag() );
     if ( /* TDLevel.overAdvanced && */  mBlk.isSplay() ) {
       if ( mBlk.isXSplay() ) {
         splay_type = LegType.XSPLAY;
@@ -205,6 +214,11 @@ class ShotEditDialog extends MyDialog
     hasAudio = TDandroid.checkMicrophone( mContext );
   }
 
+  /** load a shot and fill the fields of the interface
+   * @param blk   shot to load
+   * @param prev  previous shot
+   * @param next  next shot
+   */
   private void loadDBlock( DBlock blk, DBlock prev, DBlock next )
   {
     mPrevBlk     = prev;
@@ -247,15 +261,16 @@ class ShotEditDialog extends MyDialog
       shot_bearing  = blk.bearingString();
       shot_clino    = blk.clinoString();
     }
-    shot_manual   = blk.isManual();
-
-    // TDLog.v( "shot is manual " + shot_manual + " length " + shot_distance );
+    // shot_manual = blk.isManual();
+    editable    = blk.isManual() || TDSetting.mEditableShots;
+    // TDLog.v( "shot " + blk.mId + " is editable " + editable + " length " + shot_distance );
 
     // shot_extra   = blk.extraString( mParent.mSurveyAccuracy );
     shot_extra   = mParent.getBlockExtraString( blk );
     shot_extend  = blk.getIntExtend();
     shot_stretch = blk.getStretch(); // FIXME_STRETCH
-    shot_flag    = blk.getFlag();
+    shot_flag    = blk.getFlag();    // no cavway bits - not needed
+    shot_mark    = blk.cavwayFlag(); // cavway flag
     shot_comment = blk.mComment;
     shot_time    = TDUtil.timestampToDateTime( blk.mTime );
 
@@ -267,6 +282,8 @@ class ShotEditDialog extends MyDialog
     updateView();
   }
 
+  /** update the interface
+   */
   private void updateView()
   {
     mETdistance.setText( shot_distance );
@@ -296,9 +313,11 @@ class ShotEditDialog extends MyDialog
       mRBdup.setState(  false );
       mRBsurf.setState( false );
       mRBcmtd.setState( false ); // FIXME_COMMENTED
+      mRBbcks.setState( false ); // BACKSHOT
       if ( DBlock.isDuplicate(shot_flag) )      { mRBdup.setState(  true ); }
       else if ( DBlock.isSurface(shot_flag) )   { mRBsurf.setState( true ); }
       else if ( DBlock.isCommented(shot_flag) ) { mRBcmtd.setState( true ); } // FIXME_COMMENTED
+      else if ( DBlock.isBackshot(shot_flag) )  { mRBbcks.setState( true ); } // BACKSHOT
       else if ( mRBsplay != null ) {
         if ( DBlock.isNoPlan(shot_flag) && DBlock.isNoProfile(shot_flag) ) { mRBsplay.setState( 3 ); }
         else if ( DBlock.isNoPlan(shot_flag) )        { mRBsplay.setState( 2 ); }
@@ -333,17 +352,25 @@ class ShotEditDialog extends MyDialog
 
     // do at the very end
     if ( TDInstance.datamode == SurveyInfo.DATAMODE_DIVING ) {
-      MyKeyboard.setEditable( mETdistance, mKeyboard, mKLdistance, shot_manual, flagDepth );
-      MyKeyboard.setEditable( mETbearing,  mKeyboard, mKLbearing,  shot_manual, flagBearing );
-      MyKeyboard.setEditable( mETclino,    mKeyboard, mKLclino,    shot_manual, flagDistance );
+      MyKeyboard.setEditable( mETdistance, mKeyboard, mKLdistance, editable, flagDepth );
+      MyKeyboard.setEditable( mETbearing,  mKeyboard, mKLbearing,  editable, flagBearing );
+      MyKeyboard.setEditable( mETclino,    mKeyboard, mKLclino,    editable, flagDistance );
     } else {
-      MyKeyboard.setEditable( mETdistance, mKeyboard, mKLdistance, shot_manual, flagDistance );
-      MyKeyboard.setEditable( mETbearing,  mKeyboard, mKLbearing,  shot_manual, flagBearing );
-      MyKeyboard.setEditable( mETclino,    mKeyboard, mKLclino,    shot_manual, flagClino );
+      MyKeyboard.setEditable( mETdistance, mKeyboard, mKLdistance, editable, flagDistance );
+      MyKeyboard.setEditable( mETbearing,  mKeyboard, mKLbearing,  editable, flagBearing );
+      MyKeyboard.setEditable( mETclino,    mKeyboard, mKLclino,    editable, flagClino );
     }
 
-    updateLayoutLRUD();
+    // updateLayoutLRUD(); // INTERMEDIATE_DATA
     updateDeleteCheckButtons();
+
+    TextView tv = (TextView)findViewById( R.id.shot_mark );
+    if ( shot_mark > 0 ) {
+      tv.setVisibility( View.VISIBLE );
+      tv.setText( mShotMark[ (shot_mark < 8)? shot_mark : 8 ] );
+    } else {
+      tv.setVisibility( View.GONE );
+    }
 
     mETcomment.requestFocus();
   }
@@ -424,8 +451,9 @@ class ShotEditDialog extends MyDialog
     // mCBdeleteLeg = (CheckBox) findViewById(R.id.delete_leg );
     // mButtonLRUD.setOnClickListener( this );
 
-    mKeyboard = new MyKeyboard( mContext, (KeyboardView)findViewById( R.id.keyboardview ),
-                                R.xml.my_keyboard_base_sign, R.xml.my_keyboard_qwerty );
+    // mKeyboard = new MyKeyboard( mContext, (KeyboardView)findViewById( R.id.keyboardview ), R.xml.my_keyboard_base_sign, R.xml.my_keyboard_qwerty );
+    mKeyboard = MyKeyboard.getMyKeyboard( mContext, findViewById( R.id.keyboardview ), R.xml.my_keyboard_base_sign, R.xml.my_keyboard_qwerty );
+
     if ( TDSetting.mKeyboard ) {
       int flag = MyKeyboard.FLAG_POINT_LCASE_2ND;
       if ( TDSetting.mStationNames == 1 ) flag = MyKeyboard.FLAG_POINT;
@@ -463,10 +491,12 @@ class ShotEditDialog extends MyDialog
       mRBdup  = new MyCheckBox( mContext, size, R.drawable.iz_dup_ok, R.drawable.iz_dup_no );
       mRBsurf = new MyCheckBox( mContext, size, R.drawable.iz_surface_ok, R.drawable.iz_surface_no );
       mRBcmtd = new MyCheckBox( mContext, size, R.drawable.iz_comment_ok, R.drawable.iz_comment_no );
+      mRBbcks = new MyCheckBox( mContext, size, R.drawable.iz_backsight_ok, R.drawable.iz_backsight_no );
       mRBdup.setOnClickListener( this );
       mRBsurf.setOnClickListener( this );
       mRBcmtd.setOnClickListener( this );
-      nr_buttons += 3;
+      mRBbcks.setOnClickListener( this );
+      nr_buttons += 4;
     }
 
     // FIXME_X2_SPLAY
@@ -505,6 +535,7 @@ class ShotEditDialog extends MyDialog
     if ( mRBdup  != null ) mButton[k++] = mRBdup;
     if ( mRBsurf != null ) mButton[k++] = mRBsurf;
     if ( mRBcmtd != null ) mButton[k++] = mRBcmtd;
+    if ( mRBbcks != null ) mButton[k++] = mRBbcks;
     mButton[k++] = mCBlegPrev;
     mButton[k++] = mCBlegNext;
     if ( mCBbackLeg != null ) mButton[k++] = mCBbackLeg;
@@ -566,7 +597,7 @@ class ShotEditDialog extends MyDialog
     mButtonOK.setOnClickListener( this );
     if ( TDLevel.overNormal ) {
       mButtonMore.setOnClickListener( this );
-      createLayoutLRUD( size );
+      // createLayoutLRUD( size ); // INTERMEDIATE_DATA
       createMoreButtons( size );
       createDeleteCheckButtons( size );
     } else {
@@ -589,11 +620,11 @@ class ShotEditDialog extends MyDialog
 
     // tv_stations = (TextView) findViewById( R.id.photo_shot_stations );
     // tv_data = (TextView) findViewById( R.id.photo_shot_data );
-    // tv_stations.setText( String.format( mContext.getResources().getString( R.string.shot_name ), mBlk.Name() ) );
+    // tv_stations.setText( String.format( resString( R.string.shot_name ), mBlk.Name() ) );
     // if ( TDInstance.datamode == SurveyInfo.DATAMODE_NORMAL ) {
-    //   tv_data.setText( mBlk.dataStringNormal( mContext.getResources().getString(R.string.shot_data) ) );
+    //   tv_data.setText( mBlk.dataStringNormal( resString(R.string.shot_data) ) );
     // } else { // SurveyInfo.DATAMODE_DIVING
-    //   tv_data.setText( mBlk.dataStringDiving( mContext.getResources().getString(R.string.shot_data) ) );
+    //   tv_data.setText( mBlk.dataStringDiving( resString(R.string.shot_data) ) );
     // }
 
   }
@@ -620,7 +651,7 @@ class ShotEditDialog extends MyDialog
     // }
     // TDLog.v("SAVE block");
 
-    boolean do_backleg = false;
+    boolean can_do_backleg = false;
     boolean backleg_val = mCBbackLeg != null && mCBbackLeg.isChecked();
     boolean all_splay = mCBallSplay.isChecked();
     // FIXME_X2_SPLAY
@@ -634,13 +665,14 @@ class ShotEditDialog extends MyDialog
     // boolean leg_next = false;
     // boolean shot_secleg = false;
     if ( mCBlegPrev.isChecked() ) {
+      // secondary leg shot have empty FROM, TO, ignore EXTEND, no STRETCH, survey FLAG, extra LEG_TYPE, no COMMENT
       mBlk.setTypeSecLeg();
       mParent.updateShotNameAndFlags( "", "", ExtendType.EXTEND_IGNORE, 0, 0, LegType.EXTRA, "", mBlk, false );
       return true;
       // shot_from = "";
       // shot_to   = "";
       // shot_secleg  = true;
-      // // do_backleg = false;
+      // // can_do_backleg = false;
       // all_splay = false;
       // set_xsplay = -1;
     } else if ( mCBlegNext.isChecked() ) {
@@ -654,35 +686,39 @@ class ShotEditDialog extends MyDialog
       // all_splay = false;
       // set_xsplay = -1;
     } else {
-      shot_from = TDUtil.toStationFromName( mETfrom.getText().toString() );
+      shot_from = TDUtil.toStationFromName( mETfrom.getText().toString() ); // NOSPACES this replaces all specials
       if ( ! TDUtil.isStationName( shot_from ) ) {
-        mETfrom.setError( mContext.getResources().getString( R.string.bad_station_name ) );
+        mETfrom.setError( resString( R.string.bad_station_name ) );
         return false;
       }
       // if ( shot_from == null ) { shot_from = ""; }
-      shot_to = TDUtil.toStationToName( mETto.getText().toString() );
+      shot_to = TDUtil.toStationToName( mETto.getText().toString() ); // NOSPACES this replaces all specials
       if ( ! TDUtil.isStationName( shot_to ) ) {
-        mETto.setError( mContext.getResources().getString( R.string.bad_station_name ) );
+        mETto.setError( resString( R.string.bad_station_name ) );
         return false;
       }
-      do_backleg = ( shot_from.length() > 0 ) && ( shot_to.length() > 0 );
+      can_do_backleg = ( shot_from.length() > 0 ) && ( shot_to.length() > 0 );
     }
-    // TDLog.v( "<" + shot_from + "-" + shot_to + "> do backleg " + do_backleg + " value " + backleg_val );
+    // TDLog.v( "<" + shot_from + "-" + shot_to + "> do backleg " + can_do_backleg + " value " + backleg_val );
 
-    shot_flag = DBlock.FLAG_SURVEY;
+    long flag = DBlock.FLAG_SURVEY;
     if ( TDLevel.overNormal ) {
-      if ( mRBdup.isChecked() )       { shot_flag = DBlock.FLAG_DUPLICATE; }
-      else if ( mRBsurf.isChecked() ) { shot_flag = DBlock.FLAG_SURFACE; }
-      else if ( mRBcmtd.isChecked() ) { shot_flag = DBlock.FLAG_COMMENTED; } // FIXME_COMMENTED
+      if ( mRBdup.isChecked() )       { flag = DBlock.FLAG_DUPLICATE; }
+      else if ( mRBsurf.isChecked() ) { flag = DBlock.FLAG_SURFACE; }
+      else if ( mRBcmtd.isChecked() ) { flag = DBlock.FLAG_COMMENTED; } // FIXME_COMMENTED
+      else if ( mRBbcks.isChecked() ) { flag = DBlock.FLAG_BACKSHOT; } // BACKSHOT
       else if ( mRBsplay != null ) {
-        if ( mRBsplay.getState() == 1 )      { shot_flag = DBlock.FLAG_NO_PROFILE; }
-        else if ( mRBsplay.getState() == 2 ) { shot_flag = DBlock.FLAG_NO_PLAN; }
-        else if ( mRBsplay.getState() == 3 ) { shot_flag = DBlock.FLAG_NO_PLAN | DBlock.FLAG_NO_PROFILE; }
+        if ( mRBsplay.getState() == 1 )      { flag = DBlock.FLAG_NO_PROFILE; }
+        else if ( mRBsplay.getState() == 2 ) { flag = DBlock.FLAG_NO_PLAN; }
+        else if ( mRBsplay.getState() == 3 ) { flag = DBlock.FLAG_NO_PLAN | DBlock.FLAG_NO_PROFILE; }
         // FIXME TODO add another state for both NO_PLAN and NO_PROFILE
       }
     }
-    // else if ( mRBback.isChecked() ) { shot_flag = DBlock.FLAG_BACKSHOT; }
-    // else                            { shot_flag = DBlock.FLAG_SURVEY; }
+    // else if ( mRBback.isChecked() ) { flag = DBlock.FLAG_BACKSHOT; } // old
+    // else                            { flag = DBlock.FLAG_SURVEY; }
+    if ( mBlk.isTampered() ) flag |= DBlock.FLAG_TAMPERED;
+    // flag |= mBlk.cavwayBits(); // cavway bits are restored by resetFlag()
+    shot_flag = mBlk.resetFlag( flag );
     // TDLog.v("shot flag " + shot_flag );
 
     shot_extend = mBlk.getIntExtend();
@@ -693,7 +729,7 @@ class ShotEditDialog extends MyDialog
 
     // TDLog.v("clr xsplay " + set_xsplay
     //                     + " all splay " + all_splay 
-    //                     + " do_backleg " + do_backleg
+    //                     + " can_do_backleg " + can_do_backleg
     //                     + " backleg val " + backleg_val 
     //                     + " leg_next " + leg_next
     //                     + " secleg " + shot_secleg
@@ -702,13 +738,12 @@ class ShotEditDialog extends MyDialog
     //                     + " flag " + shot_flag
     //                     + " extend " + shot_extend );
 
-    mBlk.resetFlag( shot_flag );
 
     // if ( shot_secleg ) {
     //   // TDLog.v( "block set sec-leg type ");
     //   mBlk.setTypeSecLeg();
     // } else if ( leg_next ) { // FIXME this can go immediately after the test of the checkbox
-    //   // do_backleg = false; // not necessary
+    //   // can_do_backleg = false; // not necessary
     //   long id = mParent.mergeToNextLeg( mBlk );
     //   if ( id >= 0 ) {
     //     shot_from = mBlk.mFrom;
@@ -729,7 +764,7 @@ class ShotEditDialog extends MyDialog
       }
     }
 
-    String comment = mETcomment.getText().toString();
+    String comment = mETcomment.getText().toString();  // COMMENT empty comment is OK
     if ( comment != null ) mBlk.mComment = comment.trim();
 
     boolean renumber  = false;
@@ -781,7 +816,7 @@ class ShotEditDialog extends MyDialog
         leg = set_xsplay;
       }
       // TDLog.v("[3] leg type " + leg + " " + set_xsplay );
-      if ( do_backleg && backleg_val ) {
+      if ( can_do_backleg && backleg_val ) {
         leg = LegType.BACK;
       }
       // TDLog.v( "Block is splay " + mBlk.isSplay() + " leg " + leg + " blk type " + mBlk.getBlockType() );
@@ -790,7 +825,7 @@ class ShotEditDialog extends MyDialog
     }
     // mParent.scrollTo( mPos );
 
-    if ( shot_manual ) {
+    if ( editable ) {
       try {
 	if ( TDInstance.datamode == SurveyInfo.DATAMODE_DIVING ) {
           float p = Float.parseFloat( mETdistance.getText().toString() ) / TDSetting.mUnitLength;
@@ -817,7 +852,6 @@ class ShotEditDialog extends MyDialog
     return true;
   }
 
-
   /** display the CutCopyPaste popup for the given edit text
    * @param v   edit text view
    * 
@@ -840,6 +874,10 @@ class ShotEditDialog extends MyDialog
     MyKeyboard.close( mKeyboard );
 
     Button b = (Button) v;
+    if ( b == mButtonBack ) {
+      CutNPaste.dismissPopup();
+      dismiss();
+    }
 
     if ( b == mRBleft ) {
       mRBvert.setChecked( false );
@@ -853,8 +891,46 @@ class ShotEditDialog extends MyDialog
       mRBleft.setChecked( false );
       mRBvert.setChecked( false );
       // shot_extend = mRBright.isChecked() ? ExtendType.EXTEND_RIGHT : ExtendType.EXTEND_IGNORE;
+    }
+    if ( b == mButtonPrev ) {
+      mCBallSplay.setVisibility( View.GONE );
+      setCBxSplay( -1 );
+      // shift:
+      //               prev -- blk -- next
+      // prevOfPrev -- prev -- blk
+      //
+      // saveDBlock();
+      if ( mPrevBlk != null ) {
+        DBlock prevBlock = mParent.getPreviousLegShot( mPrevBlk, true );
+        // TDLog.Log( TDLog.LOG_SHOT, "PREV " + mPrevBlk.toString(true ) );
+        loadDBlock( mPrevBlk, prevBlock, mBlk );
+        // updateView();
+      // } else {
+        // TDLog.v( "PREV is null" );
+      }
+    } else if ( b == mButtonNext ) {
+      mCBallSplay.setVisibility( View.GONE );
+      setCBxSplay( -1 );
+      // shift:
+      //        prev -- blk -- next
+      //                blk -- next -- nextOfNext
+      // saveDBlock();
+      if ( mNextBlk != null ) {
+        DBlock next = mParent.getNextLegShot( mNextBlk, true );
+        // TDLog.Log( TDLog.LOG_SHOT, "NEXT " + mNextBlk.toString(true ) );
+        loadDBlock( mNextBlk, mBlk, next );
+        // updateView();
+      // } else {
+        // TDLog.v( "NEXT is null" );
+      }
+    }
 
-    } else if ( b == mCBlegPrev ) {
+    if ( ! TDInstance.isSurveyMutable ) { // IMMUTABLE
+      TDToast.makeWarn("Immutable survey");
+      return;
+    }
+
+    if ( b == mCBlegPrev ) {
       // TDLog.v( "CB leg clicked ");
       if ( mCBlegPrev.toggleState() ) {
         mCBallSplay.setState( false );
@@ -886,18 +962,28 @@ class ShotEditDialog extends MyDialog
       if ( mRBdup.toggleState() ) {
         mRBsurf.setState( false );
         mRBcmtd.setState( false ); // FIXME_COMMENTED
+        mRBbcks.setState( false ); // BACKSHOT
         if ( mRBsplay != null ) mRBsplay.setState( 0 );
       }
     } else if ( mRBsurf != null  && b == mRBsurf ) {
       if ( mRBsurf.toggleState() ) {
         mRBdup.setState( false );
         mRBcmtd.setState( false ); // FIXME_COMMENTED
+        mRBbcks.setState( false ); // BACKSHOT
         if ( mRBsplay != null ) mRBsplay.setState( 0 );
       }
     } else if ( mRBcmtd != null  && b == mRBcmtd ) { // FIXME_COMMENTED
       if ( mRBcmtd.toggleState() ) {
         mRBdup.setState( false );
         mRBsurf.setState( false );
+        mRBbcks.setState( false ); // BACKSHOT
+        if ( mRBsplay != null ) mRBsplay.setState( 0 );
+      }
+    } else if ( mRBbcks != null  && b == mRBbcks ) { // BACKSHOT
+      if ( mRBbcks.toggleState() ) {
+        mRBdup.setState( false );
+        mRBsurf.setState( false );
+        mRBcmtd.setState( false ); // FIXME_COMMENTED
         if ( mRBsplay != null ) mRBsplay.setState( 0 );
       }
     } else if ( mRBsplay != null && b == mRBsplay ) {
@@ -906,11 +992,9 @@ class ShotEditDialog extends MyDialog
         mRBdup.setState( false );
         mRBsurf.setState( false );
         mRBcmtd.setState( false ); // FIXME_COMMENTED
+        mRBbcks.setState( false ); // BACKSHOT
       }
 
-    } else if ( b == mButtonBack ) {
-      CutNPaste.dismissPopup();
-      dismiss();
     } else if ( b == mButtonMore ) {
       CutNPaste.dismissPopup();
       // dismiss();
@@ -927,57 +1011,33 @@ class ShotEditDialog extends MyDialog
         }
       }
     } else if ( b == mButtonOK ) { // OK and SAVE close the keyboard
+      if ( sameString( mETfrom, mETto ) ) {
+        mETto.setError( resString( R.string.equal_station_names ) );
+        return;
+      }
       if ( saveDBlock() ) {
         dismiss();
       } else {
         TDLog.e("OK failed to save block");
       }
     } else if ( b == mButtonSave ) {
+      if ( sameString( mETfrom, mETto ) ) {
+        mETto.setError( resString( R.string.equal_station_names ) );
+        return;
+      }
       if ( ! saveDBlock() ) {
         TDToast.makeWarn( R.string.shot_not_saved );
-      }
-    } else if ( b == mButtonPrev ) {
-      mCBallSplay.setVisibility( View.GONE );
-      setCBxSplay( -1 );
-      // shift:
-      //               prev -- blk -- next
-      // prevOfPrev -- prev -- blk
-      //
-      // saveDBlock();
-      if ( mPrevBlk != null ) {
-        DBlock prevBlock = mParent.getPreviousLegShot( mPrevBlk, true );
-        // TDLog.Log( TDLog.LOG_SHOT, "PREV " + mPrevBlk.toString(true ) );
-        loadDBlock( mPrevBlk, prevBlock, mBlk );
-        // updateView();
-      // } else {
-        // TDLog.v( "PREV is null" );
-      }
-
-    } else if ( b == mButtonNext ) {
-      mCBallSplay.setVisibility( View.GONE );
-      setCBxSplay( -1 );
-      // shift:
-      //        prev -- blk -- next
-      //                blk -- next -- nextOfNext
-      // saveDBlock();
-      if ( mNextBlk != null ) {
-        DBlock next = mParent.getNextLegShot( mNextBlk, true );
-        // TDLog.Log( TDLog.LOG_SHOT, "NEXT " + mNextBlk.toString(true ) );
-        loadDBlock( mNextBlk, mBlk, next );
-        // updateView();
-      // } else {
-        // TDLog.v( "NEXT is null" );
       }
 
     } else if ( b == mButtonReverse ) {
       shot_from = TDUtil.toStationFromName( mETfrom.getText().toString() );
       if ( ! TDUtil.isStationName( shot_from ) ) {
-        mETfrom.setError( mContext.getResources().getString( R.string.bad_station_name ) );
+        mETfrom.setError( resString( R.string.bad_station_name ) );
         return;
       }
       shot_to = TDUtil.toStationToName( mETto.getText().toString() );
       if ( ! TDUtil.isStationName( shot_to ) ) {
-        mETto.setError( mContext.getResources().getString( R.string.bad_station_name ) );
+        mETto.setError( resString( R.string.bad_station_name ) );
         return;
       }
       if ( shot_to.length() > 0 && shot_from.length() > 0 ) { // TODO REVERSE SPLAY ?
@@ -1000,41 +1060,44 @@ class ShotEditDialog extends MyDialog
     } else if ( (! hideColorBtn) && mBtnColor != null && b == mBtnColor ) {
       new MyColorPicker( mContext, this, mColor ).show();
       return; // dismiss only after the color change
-    } else if ( mHasLRUD && b == mBTlrud ) { // AT-STATION LRUD
-      float d = -1;
-      long at = mBlk.mId;
-      String station = null;
-      String from = null;
-      if ( mRBto.isChecked() ) { // TO
-        station = mBlk.mTo;
-      } else if ( mRBfrom.isChecked() ) { // FROM
-        station = mBlk.mFrom;
-      } else { 
-	String dstr = mETat.getText().toString().replace(',','.');
-	try { d = Float.parseFloat( dstr ); } catch ( NumberFormatException e ) {
-          TDLog.e("Non-number value");
-        }
-        // add a duplicate leg d, mBlk.mBearing, mBlk.mClino
-	from = mBlk.mFrom;
-	station = from + "-" + dstr;
-        // at should be -1L in this case
-        at = -1L;
-      }
-      if ( station != null ) {
-        // try insert intermediate LRUD
-        if ( mParent.insertLRUDatStation( at, station, mBlk.mBearing, mBlk.mClino, 
-          mETleft.getText().toString().replace(',','.') ,
-          mETright.getText().toString().replace(',','.') ,
-          mETup.getText().toString().replace(',','.') ,
-          mETdown.getText().toString().replace(',','.') 
-          ) ) {
-          if ( from != null ) {
-            // TDLog.v("LRUD " + "insert dup leg from " + from + " station " + station ); 
-            mParent.insertDuplicateLeg( from, station, d, mBlk.mBearing, mBlk.mClino, mBlk.getIntExtend() );
-          }
-        }
-      }
+    } else if ( mBtnRecalibrate != null && b == mBtnRecalibrate ) { // RECALIBRATE
+      mParent.recalibrate( mBlk.mId );
       dismiss();
+    // } else if ( mHasLRUD && b == mBTlrud ) { // AT-STATION LRUD // INTERMEDIATE_DATA
+    //   float d = -1;
+    //   long at = mBlk.mId;
+    //   String station = null;
+    //   String from = null;
+    //   if ( mRBto.isChecked() ) { // TO
+    //     station = mBlk.mTo;
+    //   } else if ( mRBfrom.isChecked() ) { // FROM
+    //     station = mBlk.mFrom;
+    //   } else { 
+    //     String dstr = mETat.getText().toString().replace(',','.');
+    //     try { d = Float.parseFloat( dstr ); } catch ( NumberFormatException e ) {
+    //       TDLog.e("Non-number value");
+    //     }
+    //     // add a duplicate leg d, mBlk.mBearing, mBlk.mClino
+    //     from = mBlk.mFrom;
+    //     station = from + "-" + dstr;
+    //     // at should be -1L in this case
+    //     at = -1L;
+    //   }
+    //   if ( station != null ) {
+    //     // try insert intermediate LRUD
+    //     if ( mParent.insertLRUDatStation( at, station, mBlk.mBearing, mBlk.mClino, 
+    //       mETleft.getText().toString().replace(',','.') ,
+    //       mETright.getText().toString().replace(',','.') ,
+    //       mETup.getText().toString().replace(',','.') ,
+    //       mETdown.getText().toString().replace(',','.') 
+    //       ) ) {
+    //       if ( from != null ) {
+    //         // TDLog.v("LRUD " + "insert dup leg from " + from + " station " + station ); 
+    //         mParent.insertDuplicateLeg( from, station, d, mBlk.mBearing, mBlk.mClino, mBlk.getIntExtend() );
+    //       }
+    //     }
+    //   }
+    //   dismiss();
     // } else if ( b == mButtonPlot ) {       // PHOTO
     //   mParent.highlightBlock( mBlk );
     //   dismiss();
@@ -1049,9 +1112,9 @@ class ShotEditDialog extends MyDialog
       dismiss();
     // } else if ( b == mButtonExternal ) {
     //   mParent.askExternal( );
-    } else if ( b == mButtonShot ) {  // INSERT NEW SHOT
-      mParent.dialogInsertShotAt( mBlk );
-      dismiss();
+    // } else if ( b == mButtonShot ) {  // INSERT NEW SHOT // INTERMEDIATE_DATA
+    //   mParent.dialogInsertShotAt( mBlk );
+    //   dismiss();
     } else if ( mButtonSurvey != null && b == mButtonSurvey ) { // SPLIT
       if ( TDLevel.overExpert ) {
         mParent.doSplitOrMoveDialog( mBlk.mId );
@@ -1108,90 +1171,92 @@ class ShotEditDialog extends MyDialog
 
 // -------------------------------------------------------------------
 
-  private void createLayoutLRUD( int size )
-  {
-    mHasLRUD = true;
-    mRBfrom  = (RadioButton)findViewById( R.id.station_from );
-    mRBto    = (RadioButton)findViewById( R.id.station_to );
-    mRBat    = (RadioButton)findViewById( R.id.station_at );
-    mETat    = (EditText)findViewById( R.id.station_distance );
-    mETleft  = (EditText)findViewById( R.id.shot_left );
-    mETright = (EditText)findViewById( R.id.shot_right );
-    mETup    = (EditText)findViewById( R.id.shot_up );
-    mETdown  = (EditText)findViewById( R.id.shot_down );
-    mBTlrud  = (Button)findViewById( R.id.lrud_ok );
-  }
+  // private void createLayoutLRUD( int size ) // INTERMEDIATE_DATA
+  // {
+  //   mHasLRUD = true;
+  //   mRBfrom  = (RadioButton)findViewById( R.id.station_from );
+  //   mRBto    = (RadioButton)findViewById( R.id.station_to );
+  //   mRBat    = (RadioButton)findViewById( R.id.station_at );
+  //   mETat    = (EditText)findViewById( R.id.station_distance );
+  //   mETleft  = (EditText)findViewById( R.id.shot_left );
+  //   mETright = (EditText)findViewById( R.id.shot_right );
+  //   mETup    = (EditText)findViewById( R.id.shot_up );
+  //   mETdown  = (EditText)findViewById( R.id.shot_down );
+  //   mBTlrud  = (Button)findViewById( R.id.lrud_ok );
+  // }
 
-  private void updateLayoutLRUD()
-  {
-    boolean hide_lrud = true;
-    if ( mBlk.mFrom.length() > 0 ) {
-      if ( mBlk.mTo.length() > 0 ) {
-        hide_lrud = false;
-      // } else {
-      //   mRBto.setVisibility( View.GONE );
-      //   mRBat.setVisibility( View.GONE );
-      //   mETat.setVisibility( View.GONE );
-      }
-    } 
-    if ( hide_lrud ) {
-      ((LinearLayout)findViewById( R.id.layout_lrud )).setVisibility( View.GONE );
-      ((LinearLayout)findViewById( R.id.layout_lrud_data )).setVisibility( View.GONE );
-    } else if ( mHasLRUD ) {
-      mRBfrom.setText( mBlk.mFrom );
-      mRBfrom.setChecked( true );
-      mRBto.setText( mBlk.mTo );
-      mETat.setText( TDString.ZERO );
-      mBTlrud.setOnClickListener( this );
-    }
-  }
+  // private void updateLayoutLRUD() // INTERMEDIATE_DATA
+  // {
+  //   boolean hide_lrud = true;
+  //   if ( mBlk.mFrom.length() > 0 ) {
+  //     if ( mBlk.mTo.length() > 0 ) {
+  //       hide_lrud = false;
+  //     // } else {
+  //     //   mRBto.setVisibility( View.GONE );
+  //     //   mRBat.setVisibility( View.GONE );
+  //     //   mETat.setVisibility( View.GONE );
+  //     }
+  //   } 
+  //   if ( hide_lrud ) {
+  //     ((LinearLayout)findViewById( R.id.layout_lrud )).setVisibility( View.GONE );
+  //     ((LinearLayout)findViewById( R.id.layout_lrud_data )).setVisibility( View.GONE );
+  //   } else if ( mHasLRUD ) {
+  //     mRBfrom.setText( mBlk.mFrom );
+  //     mRBfrom.setChecked( true );
+  //     mRBto.setText( mBlk.mTo );
+  //     mETat.setText( TDString.ZERO );
+  //     mBTlrud.setOnClickListener( this );
+  //   }
+  // }
 
   private void createMoreButtons( int size )
   {
     int nr_buttons = 5; // ( mBlk.type() == DBlock.BLOCK_MAIN_LEG )? 7 : 6;
-    Button[] mButtonX = new Button[nr_buttons];
-    int pos = 0;
 
     // mButtonPlot   = new MyCheckBox( mContext, size, R.drawable.iz_plot, R.drawable.iz_plot ); 
     // mButtonPlot.setOnClickListener( this );
     
     // if ( photoCheck ) {
       mButtonPhoto  = new MyCheckBox( mContext, size, R.drawable.iz_camera, R.drawable.iz_camera ); 
-      mButtonX[pos++] = mButtonPhoto;
       mButtonPhoto.setOnClickListener( this );
     // } else {
+    //   mButtonPhoto = null;
     //   -- nr_buttons;
     // }
 
     if ( hasAudio ) {
       mButtonAudio = new MyCheckBox( mContext, size, R.drawable.iz_audio, R.drawable.iz_audio ); 
       mButtonAudio.setOnClickListener( this );
-      mButtonX[pos++] = mButtonAudio;
     } else {
+      mButtonAudio = null;
       -- nr_buttons;
     }
 
     if ( TDSetting.mWithSensors ) {
       mButtonSensor = new MyCheckBox( mContext, size, R.drawable.iz_sensor, R.drawable.iz_sensor ); 
       mButtonSensor.setOnClickListener( this );
-      mButtonX[pos++] = mButtonSensor;
     } else {
-      // mButtonSensor = null;
+      mButtonSensor = null;
       -- nr_buttons;
     }
 
-    mButtonShot   = new MyCheckBox( mContext, size, R.drawable.iz_add_leg, R.drawable.iz_add_leg );
-    mButtonShot.setOnClickListener( this );
-    mButtonX[pos++] = mButtonShot;
+    // mButtonShot   = new MyCheckBox( mContext, size, R.drawable.iz_add_leg, R.drawable.iz_add_leg ); // INTERMEDIATE_DATA
+    // mButtonShot.setOnClickListener( this );
 
     if ( TDLevel.overAdvanced ) {
       mButtonSurvey = new MyCheckBox( mContext, size, R.drawable.iz_split, R.drawable.iz_split );
       mButtonSurvey.setOnClickListener( this );
-      mButtonX[pos++] = mButtonSurvey;
     } else {
-      // mButtonSurvey = null;
+      mButtonSurvey = null;
       -- nr_buttons;
     }
+    Button[] mButtonX = new Button[nr_buttons];
+    int pos = 0;
+    if ( mButtonPhoto  != null ) mButtonX[pos++] = mButtonPhoto;
+    if ( mButtonAudio  != null ) mButtonX[pos++] = mButtonAudio;
+    if ( mButtonSensor != null ) mButtonX[pos++] = mButtonSensor;
+    // if ( mButtonShot   != null ) mButtonX[pos++] = mButtonShot; // INTERMEDIATE_DATA
+    if ( mButtonSurvey != null ) mButtonX[pos++] = mButtonSurvey;
 
     LinearLayout layout4x = (LinearLayout) findViewById( R.id.layout4x );
     layout4x.setMinimumHeight( size + 20 );
@@ -1215,6 +1280,13 @@ class ShotEditDialog extends MyDialog
     mButtonCheck.setOnClickListener( this );
     layout4b.addView( mButtonCheck );
     mButtonCheck.setLayoutParams( lp );
+
+    if ( ! TDInstance.isDivingMode() ) {
+      mBtnRecalibrate  = new MyCheckBox( mContext, size, R.drawable.iz_compute, R.drawable.iz_compute );
+      mBtnRecalibrate.setOnClickListener( this );
+      layout4b.addView( mBtnRecalibrate );
+      mBtnRecalibrate.setLayoutParams( lp );
+    }
 
     mButtonDelete = new MyCheckBox( mContext, size, R.drawable.iz_delete_transp, R.drawable.iz_delete_transp );
     mButtonDelete.setOnClickListener( this );
@@ -1282,7 +1354,7 @@ class ShotEditDialog extends MyDialog
       // mBtnColor.setBackgroundColor( mColor );
       dismiss();
     } else {
-      TDLog.v("color not changed");
+      // TDLog.v("color not changed");
     }
   }
 

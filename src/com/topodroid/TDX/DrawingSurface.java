@@ -13,9 +13,10 @@ package com.topodroid.TDX;
 
 import com.topodroid.utils.TDLog;
 import com.topodroid.utils.TDFile;
+import com.topodroid.utils.TDString;
 import com.topodroid.num.NumStation;
 import com.topodroid.prefs.TDSetting;
-import com.topodroid.common.PlotType;
+import com.topodroid.types.PlotType;
 
 import android.content.Context;
 
@@ -154,7 +155,7 @@ public class DrawingSurface extends SurfaceView // TH2EDIT was package
    */
   private static void addManagerToCache( String fullname ) 
   { 
-    if ( commandManager != null ) {
+    if ( TDSetting.mPlotCache && commandManager != null ) {
       // if ( mCache.get( fullname ) != null ) {
       //   TDLog.Log( TDLog.LOG_IO, "replace manager into cache " + fullname );
       // } else {
@@ -179,7 +180,7 @@ public class DrawingSurface extends SurfaceView // TH2EDIT was package
     // TDLog.v( "cache size " + mCache.size() );
 
     if ( mode == DRAWING_PLAN ) {
-      if ( fullname != null ) manager = mCache.get( fullname );
+      if ( TDSetting.mPlotCache && fullname != null ) manager = mCache.get( fullname );
       // TDLog.Log( TDLog.LOG_IO, "check out PLAN from cache " + fullname + " found: " + (manager!=null) );
       if ( manager == null ) {
         mCommandManager1 = new DrawingCommandManager( DRAWING_PLAN, fullname );
@@ -190,7 +191,7 @@ public class DrawingSurface extends SurfaceView // TH2EDIT was package
       }
       commandManager = mCommandManager1;
     } else if ( mode == DRAWING_PROFILE ) {
-      if ( fullname != null ) manager = mCache.get( fullname );
+      if ( TDSetting.mPlotCache && fullname != null ) manager = mCache.get( fullname );
       // TDLog.Log( TDLog.LOG_IO, "check out PROFILE from cache " + fullname + " found: " + (manager!=null) );
       if ( manager == null ) {
         mCommandManager2 = new DrawingCommandManager( DRAWING_PROFILE, fullname );
@@ -576,11 +577,12 @@ public class DrawingSurface extends SurfaceView // TH2EDIT was package
 
   /** flip the profile - only profile manager
    * @param z   ???
+   * @param scrap  whether ti flip only the current scrap
    */
-  void flipProfile( float z )
+  void flipProfile( float z, boolean scrap )
   {
     if ( mCommandManager2 == null ) return;
-    mCommandManager2.flipXAxis( z );
+    mCommandManager2.flipXAxis( z, scrap );
   }
 
   // static Handler previewDoneHandler = new Handler()
@@ -670,14 +672,14 @@ public class DrawingSurface extends SurfaceView // TH2EDIT was package
 
   // ----------------------------------------------------------
 
-  /** split the plot, in the current manager
+  /** split the drawing, in the current manager
    * @param border    splitting border
    * @param remove    whether to remove split items
    * @return the list of (a copy of the) split items
    */
-  List< DrawingPath > splitPlot( ArrayList< PointF > border, boolean remove )
+  List< DrawingPath > splitPaths( ArrayList< PointF > border, boolean remove )
   {
-    return commandManager.splitPlot( border, remove );
+    return commandManager.splitPaths( border, remove );
   }
 
   // TH2EDIT this method was commented
@@ -701,11 +703,11 @@ public class DrawingSurface extends SurfaceView // TH2EDIT was package
     NumStation num_st = st.getNumStation();
 
     if ( StationName.isCurrentStationName( name ) ) {
-      st.setPathPaint( BrushManager.fixedStationActivePaint );
       if ( manager != null ) {
-        // mCurrentStation = st;
+        // TDLog.v("Current station is " + name + " GREEN" );
         manager.setCurrentStationName( st );
       }
+      st.setPathPaint( BrushManager.fixedStationActivePaint );
     } else if ( num_st.mHidden == 1 ) {
       st.setPathPaint( BrushManager.fixedStationHiddenPaint );
     } else if ( num_st.mHidden == -1 || num_st.mBarrierAndHidden ) {
@@ -723,27 +725,67 @@ public class DrawingSurface extends SurfaceView // TH2EDIT was package
     }
   }
 
+  /** clear the current station - reset its paint
+   */
+  private void clearCurrentStation() 
+  {
+    // TDLog.v("DRAW SURFACE Clear current station name ");
+    DrawingStationName st = mCommandManager1.getCurrentStationName();
+    if ( st != null ) {
+      // TDLog.v("Clear current station name Manager 1");
+      setStationPaint( st, null, mCommandManager1 );
+      mCommandManager1.setCurrentStationName( null );
+    }
+    st = mCommandManager2.getCurrentStationName();
+    if ( st != null ) {
+      // TDLog.v("Clear current station name Manager 1");
+      setStationPaint( st, null, mCommandManager2 );
+      mCommandManager2.setCurrentStationName( null );
+    }
+  }
+
+  // /** @return true if the command manager has a current station
+  //  */
+  // boolean hasCurrentStation() { return commandManager.hasCurrentStation(); }
+
   /** set the current station
-   * @param st      station-name item
+   * @param st      station-name item - can be null to clear the current station 
    * @param saved   list of saved stations
    */
   void setCurrentStation( DrawingStationName st, List< StationInfo > saved )
   {
     DrawingStationName st0 = commandManager.getCurrentStationName();
-    if ( st0 != null && st0 != st ) {
-      st0 = mCommandManager1.getCurrentStationName();
-      setStationPaint( st0, saved, mCommandManager1 );
-      st0 = mCommandManager2.getCurrentStationName();
-      setStationPaint( st0, saved, mCommandManager2 );
-    }
-    if ( commandManager == mCommandManager1 ) {
-      setStationPaint( st, saved, commandManager );
-      st0 = mCommandManager2.getStation( st.getName() );
-      setStationPaint( st0, saved, mCommandManager2 );
+    if ( st0 != null /* && st0 != st */ ) {
+      TDLog.v("Set current station - old " + st0.getName() );
+      DrawingStationName st1 = mCommandManager1.getCurrentStationName();
+      mCommandManager1.setCurrentStationName( null );
+      setStationPaint( st1, saved, mCommandManager1 );
+      st1 = mCommandManager2.getCurrentStationName();
+      mCommandManager2.setCurrentStationName( null );
+      setStationPaint( st1, saved, mCommandManager2 );
+      if ( st == st0 ) {
+        TDLog.v("Set current station - same as old " + st0.getName() );
+        return;
+      }
     } else {
-      setStationPaint( st, saved, commandManager );
-      st0 = mCommandManager1.getStation( st.getName() );
-      setStationPaint( st0, saved, mCommandManager1 );
+      TDLog.v("Current station null");
+    }
+    if ( st != null ) {
+      TDLog.v("Set current station - new " + st.getName() );
+      st.setPathPaint( BrushManager.fixedStationActivePaint );
+      commandManager.setCurrentStationName( st );
+      // setStationPaint( st, saved, commandManager );
+      if ( commandManager == mCommandManager1 ) {
+        st0 = mCommandManager2.getStation( st.getName() );
+        st0.setPathPaint( BrushManager.fixedStationActivePaint );
+        mCommandManager2.setCurrentStationName( st0 );
+        // setStationPaint( st0, saved, mCommandManager2 );
+      } else {
+        st0 = mCommandManager1.getStation( st.getName() );
+        st0.setPathPaint( BrushManager.fixedStationActivePaint );
+        mCommandManager1.setCurrentStationName( st0 );
+        // setStationPaint( st0, saved, mCommandManager1 );
+      }
     }
   }
 
@@ -761,7 +803,7 @@ public class DrawingSurface extends SurfaceView // TH2EDIT was package
   public DrawingStationName addDrawingStationName ( String parent, NumStation num_st, float x, float y, boolean selectable, 
 		                             List< PlotInfo > xsections, List< StationInfo > saved ) // TH2EDIT was package
   {
-    // TDLog.Log( TDLog.LOG_PLOT, "add Drawing Station Name " + num_st.name + " " + x + " " + y );
+    // TDLog.v( "add Drawing Station Name [1] " + num_st.name + " " + x + " " + y );
     // FIXME STATION_XSECTION
     // DO as when loaded
 
@@ -792,7 +834,9 @@ public class DrawingSurface extends SurfaceView // TH2EDIT was package
    */
   DrawingStationName appendDrawingStationName ( long type, NumStation num_st, float x, float y, boolean selectable )
   {
+    // TDLog.v( "append Drawing Station Name [3] " + num_st.name + " " + x + " " + y );
     DrawingCommandManager cmd = ( type == DRAWING_PLAN )? mCommandManager1 : mCommandManager2;
+    clearCurrentStation();
     DrawingStationName st = new DrawingStationName( num_st, x, y, scrapIndex() );
     setStationPaint( st, null, cmd );
 
@@ -810,13 +854,18 @@ public class DrawingSurface extends SurfaceView // TH2EDIT was package
    */
   public DrawingStationName addDrawingStationName( String name, float x, float y ) // TH2EDIT was package
   {
-    // TDLog.Log( TDLog.LOG_PLOT, "add Drawing Station Name " + name + " " + x + " " + y );
+    // TDLog.v( "add Drawing Station Name [2] " + name + " " + x + " " + y );
     // NOTE No station_XSection in X-Sections
     DrawingStationName st = new DrawingStationName( name, x, y, scrapIndex() );
     st.setPathPaint( BrushManager.fixedStationPaint );
     commandManager.addTmpStation( st, false ); // NOTE make this true for selectable station in all sections
     return st;
   }
+
+  /** highlight a station name
+   * @param name  name to highight, or null to clear
+   */
+  void highlightStation( String name ) { commandManager.highlightStation( name ); }
 
   /** reset the "fixed" paint
    * @param app   application
@@ -1085,11 +1134,21 @@ public class DrawingSurface extends SurfaceView // TH2EDIT was package
    */
   void clearSelected() { commandManager.syncClearSelected(); }
 
-  void shiftDrawing( float x, float y ) { commandManager.shiftDrawing( x, y ); }
+  /** shift the drawing
+   * @param x   X-shift
+   * @param y   Y-shift
+   * @param scrap whether to shift only the current scrap
+   */
+  void shiftDrawing( float x, float y, boolean scrap ) { commandManager.shiftDrawing( x, y, scrap ); }
 
-  void scaleDrawing( float z ) { commandManager.scaleDrawing( z ); }
+  // /** scrap drawing by a factor
+  //  * @param z  factor
+  //  * @param scrap whether to scale only the current scrap
+  //  */
+  // void scaleDrawing( float z, boolean scrap ) { commandManager.scaleDrawing( z, scrap ); }
 
-  void affineTransformDrawing( float a, float b, float c, float d, float e, float f ) { commandManager.affineTransformDrawing( a,b,c, d,e,f ); }
+  void affineTransformDrawing( float a, float b, float c, float d, float e, float f, boolean scrap ) 
+  { commandManager.affineTransformDrawing( a,b,c, d,e,f, scrap ); }
 
   // ---------------------------------------------------------------------
 
@@ -1395,25 +1454,60 @@ public class DrawingSurface extends SurfaceView // TH2EDIT was package
     commandManager.deleteSectionPoint( scrap, cmd );
     commandManager.addEraseCommand( cmd );
   }
+
+  /** @return true if there are plot outlines
+   */
+  boolean hasPlotOutline() { return commandManager.hasPlotOutline(); }
   
-  void clearScrapOutline() { commandManager.clearScrapOutline(); }
+  /** clear the plot outlines
+   */
+  void clearPlotOutline() { commandManager.clearPlotOutline(); }
 
   void addScrapDataStream( String tdr, float xdelta, float ydelta )
   {
-    commandManager.clearScrapOutline( );
-    DrawingIO.doLoadOutlineDataStream( this, tdr, xdelta, ydelta, null );
+    commandManager.clearPlotOutline( );
+    DrawingIO.doLoadOutlineDataStream( this, tdr, xdelta, ydelta, null, -1 );
   }
 
   // @param name xsection scrap name ( survey_name + "-" + xsection_id )
   boolean hasXSectionOutline( String name ) { return commandManager.hasXSectionOutline( name ); }
 
-  // @param name xsection scrap name ( survey_name + "-" + xsection_id )
-  // @param tdr  xsection tdr pathname
-  void setXSectionOutline( String name, String tdr, float xdelta, float ydelta )
+  /** insert the outline of a xsection
+   * @param name       xsection scrap name ( survey_name + "-" + xsection_id )
+   * @param scrap_id   id of the scrap of the section point
+   * @param tdr        xsection tdr pathname
+   * @param xdelta     ???
+   * @param ydelta     ???
+   */
+  void setXSectionOutline( String name, int scrap_id, String tdr, float xdelta, float ydelta )
   {
-    DrawingIO.doLoadOutlineDataStream( this, tdr, xdelta, ydelta, name );
+    DrawingIO.doLoadOutlineDataStream( this, tdr, xdelta, ydelta, name, scrap_id );
   }
 
+  /** @return the section point of a given x-section
+   * @param scrap_name    X-section fullname
+   */
+  DrawingPointPath findSectionPoint( String scrap_name )
+  {
+    return commandManager.findSectionPoint( scrap_name );
+  }
+
+
+  void setAllXSectionOutlines( DrawingWindow window, int cm )
+  {
+    // PROBLEM: section points are in scraps, xsection outlines are in command manager
+    List< DrawingPointPath > pts = ( cm == 1 )? mCommandManager1.getSectionPoints()
+                                              : mCommandManager2.getSectionPoints();
+    for ( DrawingPointPath pt : pts ) {
+      String name = pt.getOption( TDString.OPTION_SCRAP );
+      if ( name != null ) {
+        String tdr = TDPath.getTdrFileWithExt( name );
+        int scrap_id = pt.mScrap;
+        setXSectionOutline( name, scrap_id, tdr, pt.cx-DrawingUtil.CENTER_X, pt.cy-DrawingUtil.CENTER_Y );
+      }
+    }
+  }
+    
   // @param name xsection scrap name ( survey_name + "-" + xsection_id )
   void clearXSectionOutline( String name )
   {

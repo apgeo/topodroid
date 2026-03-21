@@ -17,7 +17,7 @@ Information for the new survey:
 </ul>
 <br><p>
 
-The <i>name</i> is mandatory. 
+The <i>name</i> is mandatory.
 The survey names are used to list surveys in the
 <u>Main window</u> and TopoDroid distinguishes surveys by their name (although each survey has a unique numerical id in the database).<br>
 The name must be unique in the database. Names that differ only by the characters case are not different because
@@ -25,16 +25,15 @@ the filesystem is case insensitive. TopoDroid raises a warning if the new survey
 except for the characters case.<br><p>
 
 <b>WARNING</b>.
-The name of the survey cannot contain spaces, nor the characters '/' (slash, which is the pathname separator), ':' (colon),
-'*' (star), and '\' (backslash).
-Backslashes are dropped.
-Spaces are replaced with '_' (underscore), slashes and colons with dashes '-', and stars with '+' (plus).<br><p>
+The name of the sketch cannot contain special characters: '/', ':', '&lt;', '&gt;', '*', '\', '?', '|', '"'.<br>
+The name of the survey cannot contain spaces.  Spaces are replaced with '_' (underscore).
+<br><p>
 
 
 The <i>date</i> is written with format "yyyy.mm.dd". For example January 6, 2015 is "2015.01.06". It is preset to the current date.<br><p>
 
-The <i>team</i> can be a plain text with the surveyors names, or the names can by separated by commas or semicolon for better
-Therion/Survex export. It is also possible to use a <a href="page_team.htm">dialog</a> to enter the separated team names.<br>
+The <i>team</i> can be a plain text with the surveyors' names, or the names can by separated by commas or semicolon for better
+<i>Therion</i>/<i>Survex</i> export. It is also possible to use a <a href="page_team.htm">dialog</a> to enter the separated team names.<br>
 The "Team names" setting control how the team field should be entered and how it is handled in the exports.<br>
 The <i>team</i> should be filled in, otherwise the dialog has a warning when saved.
 The team can be forced to be empty by pressing the "save" button a second time.<br><p>
@@ -52,7 +51,7 @@ it affects the existing sketches.<br><p>
 
 <b>Buttons</b><br>
 <i>Save</i>: the new survey name is added to the database.<br>
-<i>Open</i>: saves and starts the <i>Shot list</i> activity immediately.<br><p>
+<i>Open</i>: saves and starts the <i>Shot list</i> window immediately.<br><p>
 
 <b>Diving data-mode</b> [T/G]<br>
 The diving data-mode is an experimental feature.

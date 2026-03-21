@@ -13,58 +13,85 @@ package com.topodroid.prefs;
 
 import com.topodroid.utils.TDLog;
 import com.topodroid.utils.TDTag;
+import com.topodroid.utils.TDFile;
+import com.topodroid.utils.TDString;
+import com.topodroid.utils.TDRequest;
 import com.topodroid.ui.TDLayout;
+import com.topodroid.ui.MyButton;
+import com.topodroid.help.IHelpViewer;
+import com.topodroid.help.AIdialog;
+// import com.topodroid.help.AIlocalModel; // GEMMA3
 import com.topodroid.TDX.TDandroid;
 import com.topodroid.TDX.TDInstance;
 import com.topodroid.TDX.TDLevel;
-// import com.topodroid.TDX.TDToast;
+import com.topodroid.TDX.TDConst;
+import com.topodroid.TDX.TDToast;
 // import com.topodroid.TDX.TDPath;
-// import com.topodroid.TDX.TopoDroidApp;
+import com.topodroid.TDX.TopoDroidAlertDialog;
+import com.topodroid.TDX.TopoDroidApp;
 // import com.topodroid.TDX.CWDActivity;
 import com.topodroid.TDX.R;
 
 import android.content.Intent;
 import android.content.Context;
 import android.content.SharedPreferences;
-// import android.content.res.Resources;
+import android.os.AsyncTask;
+import android.content.res.Resources;
 // import android.content.res.Configuration;
+import android.content.DialogInterface;
 
 import android.os.Bundle;
 import android.app.Activity;
+import android.net.Uri;
 
 import android.widget.LinearLayout;
+import android.widget.TextView;
+import android.widget.ImageButton;
+import android.widget.Toolbar;
 // import android.widget.ScrollView;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.view.LayoutInflater;
+// import android.view.MotionEvent;
+import android.view.Window;
 
 /**
  */
 public class TDPrefActivity extends Activity 
                             implements View.OnLongClickListener
+                            , IHelpViewer
 {
   static TDPrefActivity mPrefActivityAll = null;
   static TDPrefActivity mPrefActivitySurvey = null;
 
-  // static final int REQUEST_CWD         = 1;
-  static final int REQUEST_PLOT_SCREEN = 2;
-  static final int REQUEST_TOOL_SCREEN = 3;
-  static final int REQUEST_LOCATION    = 4;
-  static final int REQUEST_ACCURACY    = 5;
-  static final int REQUEST_SHOT_DATA   = 6;
-  static final int REQUEST_PT_CMAP     = 7;
-  static final int REQUEST_GRAPH_PAPER_SCALE = 8;
+  // use high numbers to avoid conflicts with TDRequest
+  // static final int REQUEST_CWD            = 1001;
+  static final int REQUEST_PLOT_SCREEN       = 1002;
+  static final int REQUEST_TOOL_SCREEN       = 1003;
+  static final int REQUEST_LOCATION          = 1004;
+  static final int REQUEST_ACCURACY          = 1005;
+  static final int REQUEST_SHOT_DATA         = 1006;
+  static final int REQUEST_PT_CMAP           = 1007;
+  static final int REQUEST_GRAPH_PAPER_SCALE = 1008;
 
   private int mPrefCategory = TDPrefCat.PREF_CATEGORY_ALL; // preference category
+  /* GEMMA3
+  private boolean mWithLocalModel = false;
+  // private boolean mWithLocalModelDialog = false;
+  // END GEMMA3 */
 
   // private TDPref mCwdPref;
   // private TDPref mBtAliasPref;
   private TDPref mPtCmapPref;
+  private TDPref mGeminiPref;
   private TDPref mGraphPaperScalePref;
 
   // private TopoDroidApp mApp;
   private Context mCtx;
   private TDPref[] mPrefs;
+
+  private TextView mTitleText = null;
+  private ImageButton mAIbutton;
 
   /** find a preference by the name
    * @param name    preference name
@@ -88,6 +115,7 @@ public class TDPrefActivity extends Activity
     if ( this == mPrefActivityAll ) mPrefActivityAll = null;
     if ( this == mPrefActivitySurvey ) mPrefActivitySurvey = null;
     // if (mPrefCategory == TDPrefCat.PREF_CATEGORY_ALL ) { TopoDroidApp.mPrefActivityAll = null; }
+    AIdialog.resetChat();
   }
 
   /** lifecycle: activity create
@@ -101,7 +129,12 @@ public class TDPrefActivity extends Activity
     getWindow().getDecorView().setSystemUiVisibility( TDSetting.mUiVisibility );
 
     TDandroid.setScreenOrientation( this );
+    /* GEMMA3
+    mWithLocalModel = AIlocalModel.hasLocalModel( this ); 
+    TDLog.v( "has local LLM " + mWithLocalModel );
+    // END GEMMA3 */
 
+    requestWindowFeature(Window.FEATURE_NO_TITLE);
 
     // mApp = (TopoDroidApp) getApplication();
     mCtx = TDInstance.context;
@@ -145,11 +178,137 @@ public class TDPrefActivity extends Activity
     super.onBackPressed();
   }
 
+  // ---------------------------------------------------------------------
+  private SharedPreferences mExportPrefs = null;
+  private int mExportFlag = 0;
+
+  void exportSettings( final SharedPreferences prefs, final int flag )
+  {
+    mExportPrefs = prefs;
+    mExportFlag  = flag;
+    Intent intent = TDandroid.getCreateDocumentIntent( TDConst.TEXT_PLAIN );
+    // intent.putExtra( Intent.EXTRA_TITLE, filename );
+    startActivityForResult( Intent.createChooser(intent, getResources().getString( R.string.select_export_file ) ), TDRequest.REQUEST_GET_EXPORT );
+    // doExportSettings( mExportPrefs, mExportFlag );
+  }
+
+  private void doExportSettings( final Uri uri, final SharedPreferences prefs, final int flag )
+  {
+    Context ctx = this;
+
+    ( new AsyncTask< Void, Void, Boolean >() { // FIXME static or LEAK
+      @Override
+      protected Boolean doInBackground(Void... v)
+      {
+        // TDLog.v("export settings - flag " + flag );
+        return TDSetting.exportSettings( ctx, uri, prefs, flag );
+      }
+      @Override
+      protected void onPostExecute( Boolean v )
+      {
+        if ( v ) {
+          // TDToast.make( String.format( TDInstance.getResourceString( R.string.exported_settings ), TDFile.getSettingsFile().getPath() ) );
+          TDToast.make( String.format( TDInstance.getResourceString( R.string.exported_settings ), uri.getPath() ) );
+        } else {
+          TDToast.makeWarn( R.string.export_settings_failed );
+        }
+      }
+    }).execute();
+  }
+
+  void importSettings( SharedPreferences prefs, final int flag )
+  {
+    mExportPrefs = prefs;
+    mExportFlag  = flag;
+    Intent intent = TDandroid.getOpenDocumentIntent( TDConst.TEXT_PLAIN );
+    // intent.putExtra( Intent.EXTRA_TITLE, filename );
+    startActivityForResult( Intent.createChooser(intent, getResources().getString( R.string.select_export_file ) ), TDRequest.REQUEST_GET_IMPORT );
+    // doImportSettings( null, mExportPrefs, mExportFlag );
+  }
+  
+  private void doImportSettings( Uri uri, SharedPreferences prefs, final int flag )
+  {
+    Context ctx = this;
+    ( new AsyncTask< Void, Void, Boolean >() { // FIXME static or LEAK
+      @Override
+      protected Boolean doInBackground(Void... v)
+      {
+        // TDLog.v("import settings - flag " + flag );
+        return TDSetting.importSettings( ctx, uri, prefs, flag );
+      }
+      @Override
+      protected void onPostExecute( Boolean v )
+      {
+        if ( v ) {
+          TDToast.make( R.string.imported_settings );
+        } else {
+          TDToast.makeWarn( R.string.imported_settings_failed );
+        }
+        reloadPreferences();
+      }
+    }).execute();
+  }
+
+  static String[] mCategories = {
+    "MAIN",
+    "SURVEY",
+    "SKETCH",
+    "CALIBRATION",
+    "DEVICE",
+    "SKETCH",
+    "DATA",
+    "UNITS",
+    "ACCUACY",
+    "LOCATION",
+    "CANVAS",
+    "LINES",
+    "POINTS",
+    // R.string.title_settings_walls, // 27 AUTOWALLS
+    "SKETCH",
+    "SKETCH",
+    "SKETCH",
+    "3D_VIEWER",
+    "3D_VIEWER",
+    "3D_VIEWER",
+    "MAIN",
+    "SURVEY",
+    "DATA",
+    "SKETCH",
+    "LINES",
+    "DEVICE",
+    "IMPORT",
+    "SKETCH",
+    "EXPORT",
+    "IMPORT",
+    "EXPORT_ENABLE",
+    "EXPORT_SURVEX",
+    "EXPORT_THERION",
+    "EXPORT_COMPASS",
+    "EXPORT_CSURVEY",
+    "EXPORT_VISUALTOPO",
+    "EXPORT_SVG",
+    "EXPORT_SHAPEFILE",
+    "EXPORT_DXF",
+    // R.string.title_settings_png, // 17
+    "EXPORT_GPX",
+    "EXPORT_KML",
+    "EXPORT_CSV",
+    "EXPORT_WALLS",
+    "EXPORT_POLYGON",
+    // R.string.title_settings_log       // 43
+  };
+
+  private String getCategoryName() { return getResources().getString( TDPrefCat.mTitleRes[ mPrefCategory ] ); }
+
   /** set the title of the window
    */
   private void setTheTitle()
   {
-    setTitle( getResources().getString( TDPrefCat.mTitleRes[ mPrefCategory ] ) );
+    if ( mTitleText != null ) {
+      mTitleText.setText( getCategoryName() );
+    } else {
+      setTitle( "[AI]  - " + getCategoryName() );
+    }
   }
 
   /** start the dialog to export/import settings
@@ -174,14 +333,37 @@ public class TDPrefActivity extends Activity
     return true;
   }
 
+  public void setAIbuttonEnabled( boolean enabled )
+  {
+    if ( enabled ) {
+      mAIbutton.setImageDrawable( MyButton.getButtonBackground( this, getResources(), R.drawable.iz_ai ) );
+      mAIbutton.setOnClickListener( new OnClickListener() {
+        @Override public void onClick( View v ) { startGemini(); }
+      } );
+    } else {
+      mAIbutton.setImageDrawable( MyButton.getButtonBackground( this, getResources(), R.drawable.iz_ai_no ) );
+      mAIbutton.setOnClickListener( null );
+    }
+  }
+
   /** load the preferences
    */
   private boolean loadPreferences( )
   {
     setContentView( R.layout.pref_activity );
+    // getActionBar().hide(); // setVisibility( View.GONE );
     LinearLayout layout = (LinearLayout) findViewById( R.id.layout );
     LayoutInflater li = (LayoutInflater)getSystemService( Context.LAYOUT_INFLATER_SERVICE );
     layout.setOnLongClickListener( this );
+    mAIbutton = (ImageButton)findViewById( R.id.title_button );
+    /* IF GEMMA3
+    setAIbuttonEnabled( mWithLocalModel || TDandroid.isOnline( this ) );
+    // ELSE GEMMA3 */
+    setAIbuttonEnabled( TDandroid.isOnline( this ) );
+    // END GEMMA3 */
+
+    mTitleText = (TextView)findViewById( R.id.title_text );
+    mTitleText.setTextColor( 0xff6699ff );
 
     mPrefs = null;
     // Resources res = getResources();
@@ -204,6 +386,7 @@ public class TDPrefActivity extends Activity
       case TDPrefCat.PREF_CATEGORY_CSX:       mPrefs = TDPref.makeCsxPrefs(      this, hlp ); break;
       case TDPrefCat.PREF_CATEGORY_TRO:       mPrefs = TDPref.makeTroPrefs(      this, hlp ); break;
       case TDPrefCat.PREF_CATEGORY_SRV:       mPrefs = TDPref.makeSrvPrefs(      this, hlp ); break;
+      case TDPrefCat.PREF_CATEGORY_PLY:       mPrefs = TDPref.makePlyPrefs(      this, hlp ); break;
       case TDPrefCat.PREF_CATEGORY_SVG:       mPrefs = TDPref.makeSvgPrefs(      this, hlp ); break;
       case TDPrefCat.PREF_CATEGORY_SHP:       mPrefs = TDPref.makeShpPrefs(      this, hlp ); break;
       case TDPrefCat.PREF_CATEGORY_DXF:       mPrefs = TDPref.makeDxfPrefs(      this, hlp ); break;
@@ -262,6 +445,7 @@ public class TDPrefActivity extends Activity
       //     } );
       //   }
       // }
+
       if ( TDLevel.overAdvanced ) {
         TDPref export_settings = findPreference( "DISTOX_EXPORT_SETTINGS" );
         View v = export_settings.getView();
@@ -303,6 +487,7 @@ public class TDPrefActivity extends Activity
       linkPreference( "DISTOX_EXPORT_TRO_PREF",     TDPrefCat.PREF_CATEGORY_TRO );
       linkPreference( "DISTOX_EXPORT_SRV_PREF",     TDPrefCat.PREF_CATEGORY_SRV );
       linkPreference( "DISTOX_EXPORT_SVG_PREF",     TDPrefCat.PREF_CATEGORY_SVG );
+      linkPreference( "DISTOX_EXPORT_PLY_PREF",     TDPrefCat.PREF_CATEGORY_PLY );
       linkPreference( "DISTOX_EXPORT_SHP_PREF",     TDPrefCat.PREF_CATEGORY_SHP );
       linkPreference( "DISTOX_EXPORT_DXF_PREF",     TDPrefCat.PREF_CATEGORY_DXF );
       // linkPreference( "DISTOX_EXPORT_PNG_PREF",     TDPrefCat.PREF_CATEGORY_PNG ); // NO_PNG
@@ -323,7 +508,22 @@ public class TDPrefActivity extends Activity
     } else if (mPrefCategory == TDPrefCat.PREF_CATEGORY_CAVE3D ) {
       linkPreference( "DISTOX_DEM3D_PREF",          TDPrefCat.PREF_DEM3D );
       linkPreference( "DISTOX_WALLS3D_PREF",        TDPrefCat.PREF_WALLS3D );
+
     } else if (mPrefCategory == TDPrefCat.PREF_CATEGORY_GEEK ) {
+      mGeminiPref = findPreference( "DISTOX_GEMINI" );
+      if ( mGeminiPref != null ) {
+        View v = mGeminiPref.getView();
+	if ( v != null ) {
+          GeminiDialog gemini_dialog = new GeminiDialog( this, this, mGeminiPref ); // null UserManualActivity
+          v.setOnClickListener( 
+            new OnClickListener() {
+              @Override
+              public void onClick( View v ) { gemini_dialog.show(); }
+          } );
+	}
+        mGeminiPref.setButtonValue( TDString.isNullOrEmpty( TDSetting.mGeminiApiKey )? "---" : "***" );
+      }
+
       // TDLog.v("PREF link GEEK sub-categories");
       linkPreference( "DISTOX_GEEK_SHOT",           TDPrefCat.PREF_GEEK_SHOT );
       linkPreference( "DISTOX_GEEK_SPLAY",          TDPrefCat.PREF_GEEK_SPLAY );
@@ -333,6 +533,7 @@ public class TDPrefActivity extends Activity
       linkPreference( "DISTOX_GEEK_DEVICE",         TDPrefCat.PREF_GEEK_DEVICE );
       linkPreference( "DISTOX_GEEK_IMPORT",         TDPrefCat.PREF_GEEK_IMPORT );
       linkPreference( "DISTOX_SKETCH_PREF",         TDPrefCat.PREF_GEEK_SKETCH ); // FIXME_SKETCH_3D
+
     } else if (mPrefCategory == TDPrefCat.PREF_GEEK_PLOT ) {
       mGraphPaperScalePref = findPreference( "DISTOX_GRAPH_PAPER_SCALE" );
       if ( mGraphPaperScalePref != null ) {
@@ -465,6 +666,22 @@ public class TDPrefActivity extends Activity
           TDSetting.setPreference( prefs, "DISTOX_GRAPH_PAPER_SCALE", Integer.toString(density) );
         }
         break;
+      case TDRequest.REQUEST_GET_EXPORT: 
+        if ( result == RESULT_OK && intent != null ) {  
+          Uri uri = intent.getData();
+          if ( uri != null && mExportPrefs != null ) {
+            doExportSettings( uri, mExportPrefs, mExportFlag );
+          }
+        }
+        break;
+      case TDRequest.REQUEST_GET_IMPORT: 
+        if ( result == RESULT_OK && intent != null ) {
+          Uri uri = intent.getData();
+          if ( uri != null && mExportPrefs != null ) {
+            doImportSettings( uri, mExportPrefs, mExportFlag );
+          }
+        }
+        break;
     }
   }
 
@@ -481,4 +698,70 @@ public class TDPrefActivity extends Activity
   //   }
   // }
 
+  public void showManPage( String page ) 
+  {
+    final String[] vals = page.split(":");
+    if ( vals.length != 2 ) return;
+    TDLog.v( "key <" + vals[0] + "> value <" + vals[1] + ">" );
+    // vals[0] = key
+    // vals[1] = value
+    final TDPrefKey pref = TDPrefKey.getPrefKey( vals[0] );
+    if ( pref != null ) {
+      final TDPrefHelper hlp = new TDPrefHelper( this );
+      Resources res = getResources();
+      TopoDroidAlertDialog.makeAlert( this, res,
+        String.format( res.getString( R.string.format_setting ), res.getString( pref.title ), vals[1] ),
+        new DialogInterface.OnClickListener() {
+          public void onClick( DialogInterface dialog, int btn ) {
+            TDSetting.updatePreference( hlp, pref.cat, vals[0], vals[1] );
+          }
+        }
+      );
+    } else {
+      TDLog.e("PrefKey not found");
+    }
+  }
+
+  public void showAIdialog() {}
+
+  public void showInvalid( final TDPref pref, final String response )
+  {
+    this.runOnUiThread( new Runnable() { public void run() {
+      TDToast.makeWarn( response ); 
+      if ( pref != null ) pref.setButtonValue( "---" );
+      TDSetting.setGeminiApiKey( "" );
+    } } );
+  }
+
+  public void startGemini()
+  {
+    /* GEMMA3
+    TDLog.v("Start Gemini with local AI " + mWithLocalModel );
+    if ( mWithLocalModel ) {
+      // if ( ! mWithLocalModelDialog ) {
+      //   mWithLocalModelDialog = true;
+        TDToast.makeLong( "Please wait while the AI starts up" );
+        setAIbuttonEnabled( false );
+        (new PrefAIdialog( this, this, null, mCategories[ mPrefCategory ] ) ).show();
+      // }
+    } else
+    // END GEMMA3 */
+    if ( TDSetting.mGeminiApiKey != null && ! TDSetting.mGeminiApiKey.isEmpty() ) {
+      setAIbuttonEnabled( false );
+      (new PrefAIdialog( this, this, TDSetting.mGeminiApiKey, mCategories[ mPrefCategory ] ) ).show();
+    } else { // start API key dialog
+      (new GeminiDialog( this, this, null )).show();
+    }
+  }
+
+  // @Override 
+  // public boolean onTouchEvent( MotionEvent ev )
+  // {
+  //   // TDLog.v("Touch at " + ev.getX(0)/TopoDroidApp.mDisplayWidth + " " + ev.getY(0)/TopoDroidApp.mDisplayHeight );
+  //   if ( ev.getX(0)/TopoDroidApp.mDisplayWidth < 0.1f && ev.getY(0)/TopoDroidApp.mDisplayHeight < 0.04f ) {
+  //     TDLog.v("Start AI dialog");
+  //     startGemini();
+  //   }
+  //   return false;
+  // }
 }

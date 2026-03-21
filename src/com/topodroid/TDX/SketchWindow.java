@@ -42,9 +42,9 @@ import com.topodroid.help.UserManualActivity;
 import com.topodroid.prefs.TDSetting;
 import com.topodroid.prefs.TDPrefCat;
 // import com.topodroid.dev.ConnectionState;
-import com.topodroid.common.PlotType;
-import com.topodroid.common.SymbolType;
-import com.topodroid.common.PointScale;
+import com.topodroid.types.PlotType;
+import com.topodroid.types.SymbolType;
+import com.topodroid.types.PointScale;
 
 import java.util.List;
 import java.util.Set;
@@ -2487,16 +2487,16 @@ public class SketchWindow extends ItemDrawer
       // TDLog.v( "Help menu, nn " + nn );
       switch ( mMode ) {
         case MODE_DRAW:
-          new HelpDialog(mActivity, izons_draw, menus, help_icons_draw, help_menus, NR_BUTTON2, help_menus.length, getResources().getString( HELP_PAGE ) ).show();
+          new HelpDialog(mActivity, mActivity, izons_draw, menus, help_icons_draw, help_menus, NR_BUTTON2, help_menus.length, getResources().getString( HELP_PAGE ) ).show();
           break;
         case MODE_ERASE:
-          new HelpDialog(mActivity, izons_erase, menus, help_icons_erase, help_menus, NR_BUTTON5, help_menus.length, getResources().getString( HELP_PAGE ) ).show();
+          new HelpDialog(mActivity, mActivity, izons_erase, menus, help_icons_erase, help_menus, NR_BUTTON5, help_menus.length, getResources().getString( HELP_PAGE ) ).show();
           break;
         case MODE_EDIT:
-          new HelpDialog(mActivity, izons_select, menus, help_icons_select, help_menus, NR_BUTTON3, help_menus.length, getResources().getString( HELP_PAGE ) ).show();
+          new HelpDialog(mActivity, mActivity, izons_select, menus, help_icons_select, help_menus, NR_BUTTON3, help_menus.length, getResources().getString( HELP_PAGE ) ).show();
           break;
         default: // MODE_MOVE
-          new HelpDialog(mActivity, izons_move, menus, help_icons_move, help_menus, NR_BUTTON1, help_menus.length, getResources().getString( HELP_PAGE ) ).show();
+          new HelpDialog(mActivity, mActivity, izons_move, menus, help_icons_move, help_menus, NR_BUTTON1, help_menus.length, getResources().getString( HELP_PAGE ) ).show();
       }
     }
   }

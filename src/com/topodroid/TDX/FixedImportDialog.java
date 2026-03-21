@@ -13,6 +13,7 @@ package com.topodroid.TDX;
 
 import com.topodroid.utils.TDLog;
 import com.topodroid.utils.TDUtil;
+import com.topodroid.utils.TDString;
 // import com.topodroid.utils.TDFile;
 import com.topodroid.ui.MyKeyboard;
 import com.topodroid.ui.MyDialog;
@@ -47,7 +48,7 @@ import android.widget.EditText;
 import android.content.Context;
 import android.content.Intent;
 
-import android.inputmethodservice.KeyboardView;
+// import android.inputmethodservice.KeyboardView;
 
 import android.net.Uri;
 
@@ -126,8 +127,9 @@ class FixedImportDialog extends MyDialog
     // mBtnCancel = (Button)findViewById( R.id.button_cancel );
     // mBtnCancel.setOnClickListener( this );
 
-    mKeyboard = new MyKeyboard( mContext, (KeyboardView)findViewById( R.id.keyboardview ),
-                                R.xml.my_keyboard_base, R.xml.my_keyboard_qwerty );
+    // mKeyboard = new MyKeyboard( mContext, (KeyboardView)findViewById( R.id.keyboardview ), R.xml.my_keyboard_base, R.xml.my_keyboard_qwerty );
+    mKeyboard = MyKeyboard.getMyKeyboard( mContext, findViewById( R.id.keyboardview ), R.xml.my_keyboard_base, R.xml.my_keyboard_qwerty );
+
     if ( TDSetting.mKeyboard ) {
       if ( TDSetting.mStationNames == 1 ) {
         MyKeyboard.registerEditText( mKeyboard, mETstation, MyKeyboard.FLAG_POINT );
@@ -225,24 +227,23 @@ class FixedImportDialog extends MyDialog
 
     boolean do_toast = false;
     if ( b == mBtnOk ) {
-      String station = mETstation.getText().toString();
+      String station = TDString.noSpaces( mETstation.getText().toString() ); // no spaces in station names
       if ( station.length() == 0 ) { // if ( station == null || station.length() == 0 )
-        mETstation.setError( mContext.getResources().getString( R.string.error_station_required ) );
+        mETstation.setError( resString( R.string.error_station_required ) );
         return;
       }
       // station = TDUtil.toStationFromName( station );
       if ( ! TDUtil.isStationName( station ) ) {
-        mETstation.setError( mContext.getResources().getString( R.string.bad_station_name ) );
+        mETstation.setError( resString( R.string.bad_station_name ) );
         return;
       }
       // mETstation.setText( station );
       
       if ( mParent.hasFixed( station ) ) {
-        mETstation.setError( mContext.getResources().getString( R.string.error_station_fixed ) );
+        mETstation.setError( resString( R.string.error_station_fixed ) );
         return;
       }
-      String comment = mETcomment.getText().toString();
-      // if ( comment == null ) comment = "";
+      String comment = TDUtil.getTextOrEmpty( mETcomment );
       if ( isSet ) {
         mParent.addFixedPoint( station, mLng, mLat, mHEll, mHGeo, comment, FixedInfo.SRC_MOBILE_TOP, -1, -1 ); // FIXME ACCURACY
         dismiss();

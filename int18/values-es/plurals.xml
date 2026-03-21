@@ -14,7 +14,7 @@
   </plurals>
   
   <plurals name="read_calib_data" tools:ignore="UnusedQuantity">
-    <item quantity="zero">No Se puede leer los datos</item>
+    <item quantity="zero">No se puede leer los datos</item>
     <item quantity="one">Leer datos (%2$d paquetes)</item>
     <item quantity="other">Leer %1$d datos (%2$d paquetes)</item>
   </plurals>
@@ -23,4 +23,21 @@
     <item quantity="one">Grupo encontrado</item>
     <item quantity="other">grupos %1$d encontrados</item>
   </plurals>
+<plurals name="scan_result">
+    <item quantity="zero">No se encontró ningún dispositivo</item>
+    <item quantity="one">Se encontró 1 dispositivo</item>
+    <item quantity="other">Se encontraron %1$d dispositivos</item>
+</plurals>
+
+<plurals name="trilateration_success">
+    <item quantity="zero">No se encontró ningún clúster</item>
+    <item quantity="one">Trilateración correcta: 1 clúster</item>
+    <item quantity="other">Trilateración correcta: %1$d clústers</item>
+</plurals>
+
+<plurals name="export_data_batch">
+    <item quantity="zero">Exportados 0 de 0 levantamientos</item>
+    <item quantity="one">Exportado %1$s de 1 levantamiento</item>
+    <item quantity="other">Exportados %1$s de %2$d levantamientos</item>
+</plurals>
 </resources>

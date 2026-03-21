@@ -18,8 +18,9 @@ import com.topodroid.utils.TDString;
 import com.topodroid.utils.TDUtil;
 import com.topodroid.math.TDVector;
 import com.topodroid.prefs.TDSetting;
-import com.topodroid.common.LegType;
-import com.topodroid.common.ExtendType;
+import com.topodroid.types.LegType;
+import com.topodroid.types.ExtendType;
+import com.topodroid.dev.cavway.CavwayConst;
 
 
 // import java.lang.Long;
@@ -57,9 +58,11 @@ public class DBlock
   public float mDip;       // degrees
   public float mDepth;     // depth at from station (diving mode)
   public String mComment;
+  public long mIdx = 0;
 
   int  mExtend;
-  long mFlag;     
+  private long mFlag;     
+  private long mCavwayFlag = 0;
   int  mBlockType;     // data type: BLANK, LEG, SEC_LEG, BACKLEG, SPLAY
   private int  mShotType;      // 0: DistoX, 1: manual, -1: DistoX backshot
   boolean mWithPhoto;
@@ -70,14 +73,14 @@ public class DBlock
   private String mAddress; // DistoX address - used only in exports
   // boolean mWasRecent = false; // REVISE_RECENT
 
-  int mRawMx = 0;
-  int mRawMy = 0;
-  int mRawMz = 0;
-  int mRawGx = 0;
-  int mRawGy = 0;
-  int mRawGz = 0;
+  long mRawMx = 0; // (M1x,M2x) in four bytes of a long: M1x.high M1x.low M2x.high M2x.low
+  long mRawMy = 0;
+  long mRawMz = 0;
+  long mRawGx = 0;
+  long mRawGy = 0;
+  long mRawGz = 0;
 
-  int mIndex = 0;      // device index
+  int mIndex = 0;      // BRIC index | Cavway scan-set
   long mDeviceTime = 0; // device tiem [s]
 
   // ------------------------------------------------------------------
@@ -90,10 +93,17 @@ public class DBlock
   static final long FLAG_NO_PLAN    =  8;
   static final long FLAG_NO_PROFILE = 16;
   static final long FLAG_NONE       = 24; // 16 | 8
-  // static final long FLAG_BACKSHOT   = 32;
+  static final long FLAG_BACKSHOT   = 32; // BACKSHOT
+  static final long FLAG_TAMPERED   = 64;
+
+  static final long FLAG_SURFACE_DUPLICATE_COMMENTED = 7; // FLAG_SURFACE | FLAG_DUPLICATE | FLAG_COMMENTED 
+  static final long FLAG_SURFACE_DUPLICATE_COMMENTED_BACKSHOT = 39; // FLAG_SURFACE | FLAG_DUPLICATE | FLAG_COMMENTED | FLAG_BACKSHOT
 
   static final long FLAG_NO_EXTEND     = 257; // used only in search dialog 256+1
   static final long FLAG_REVERSE_SPLAY = 258; // used only in search dialog 256+2
+
+  static final long FLAG_MASK     =  0xffff; // mask of the topodroid flag
+  static final long FLAG_CAVWAY   = 0xf0000; // mask of the cavway flag
 
   /** @return the block ID or the bric-index if the proper setting is active
    * @nore used only by the DBlockAdapter
@@ -111,16 +121,35 @@ public class DBlock
    * @param flag     flag to test
    * @return true if the flag is set
    */
-  boolean hasFlag( long flag )    { return (mFlag & flag) == flag; }
+  boolean hasFlag( long flag ) { return (mFlag & flag) == flag; }
 
-  public boolean isSurvey()    { return mFlag == FLAG_SURVEY; }
+  /** @return the Cavway flag: 0=none, 7=feature, 6=ridge, 5=backsight, 4=generic
+   */
+  public int cavwayFlag() { return (int)( mFlag >> 16 ); } // { return ( mFlag & FLAG_CAVWAY ) >> 16; }
+
+  /** @return the Cavway part of the flag: 0=none, 7=feature, 6=ridge, 5=backsight, 4=generic
+   * @param flag  input flag
+   */
+  public static int cavwayFlag( long flag ) { return (int)( flag >> 16 ); }
+
+  /** @return the cavway bits of the flag
+   */
+  public long cavwayBits() { return mFlag & FLAG_CAVWAY; }
+
+  public boolean isSurvey()    { return (mFlag & FLAG_MASK)       == FLAG_SURVEY; }
   public boolean isSurface()   { return (mFlag & FLAG_SURFACE)    == FLAG_SURFACE; }
   public boolean isDuplicate() { return (mFlag & FLAG_DUPLICATE)  == FLAG_DUPLICATE; }
   public boolean isCommented() { return (mFlag & FLAG_COMMENTED)  == FLAG_COMMENTED; } // FIXME_COMMENTED
   public boolean isNoPlan()    { return (mFlag & FLAG_NO_PLAN)    == FLAG_NO_PLAN; }
   public boolean isNoProfile() { return (mFlag & FLAG_NO_PROFILE) == FLAG_NO_PROFILE; }
   public boolean isNone()      { return (mFlag & FLAG_NONE)       == FLAG_NONE; }
-  // boolean isBackshot()  { return (mFlag & FLAG_BACKSHOT)   == FLAG_BACKSHOT; }
+  public boolean isBackshot()  { return (mFlag & FLAG_BACKSHOT)   == FLAG_BACKSHOT; } // BACKSHOT
+  public boolean isTampered()  { return (mFlag & FLAG_TAMPERED)   == FLAG_TAMPERED; }
+
+  /** @return true if the cavway flag has the requested value
+   * @param f   requested flag value
+   */
+  public boolean isCavwayFlag( int f ) { return ((mFlag >> 16) & f) == f; }
 
   // static boolean isSurvey(int flag) { return flag == FLAG_SURVEY; }
   public static boolean isSurface(long flag)   { return (flag & FLAG_SURFACE)    == FLAG_SURFACE; }
@@ -129,30 +158,48 @@ public class DBlock
   public static boolean isNoPlan(long flag)    { return (flag & FLAG_NO_PLAN)    == FLAG_NO_PLAN; }
   public static boolean isNoProfile(long flag) { return (flag & FLAG_NO_PROFILE) == FLAG_NO_PROFILE; }
   public static boolean isNone(long flag)      { return (flag & FLAG_NONE)       == FLAG_NONE; }
-  // static boolean isBackshot(int flag) { return (flag & FLAG_BACKSHOT) == FLAG_BACKSHOT; }
+  public static boolean isBackshot(long flag)  { return (flag & FLAG_BACKSHOT)   == FLAG_BACKSHOT; } // BACKSHOT
+  public static boolean isTampered(long flag)  { return (flag & FLAG_TAMPERED)   == FLAG_TAMPERED; }
+
+  public void setTampered() { mFlag |= FLAG_TAMPERED; }
+  public void clearTampered() { mFlag &= ~FLAG_TAMPERED; }
 
   public boolean failBacksplay()  { return mFailBacksplay; }
 
-  // void resetFlag() { mFlag = FLAG_SURVEY; }
+  void clearFlagDuplicateSurfaceCommented() { mFlag &= ~FLAG_SURFACE_DUPLICATE_COMMENTED; }
+  void clearFlagDuplicateSurfaceCommentedBackshot() { mFlag &= ~FLAG_SURFACE_DUPLICATE_COMMENTED_BACKSHOT; } // BACKSHOT
 
   /** set the block flag to a given bit-string
    * @param flag    new flag bit-string
+   * @return the new shot flag
+   * @note TAMPERED and CAVWAY flags are not reset
    */
-  void resetFlag( long flag ) { mFlag = flag; }
+  long resetFlag( long flag ) 
+  { 
+    // TDLog.v("BLK " + mId + " reset flag " + mFlag + " -> " + flag + " tempered: " + ((flag&FLAG_TAMPERED) != 0) );
+    mFlag = flag | ( mFlag & FLAG_TAMPERED ) | ( mFlag & FLAG_CAVWAY );
+    return mFlag;
+  }
 
-  /** set a flag value(s)
-   * @param flag    flag value(s) to set
-   */
-  void setFlag( long flag ) { mFlag |= flag; }
+  void setFlagFully( long flag ) { mFlag = flag; }
+
+  // /** set a flag value(s)
+  //  * @param flag    flag value(s) to set
+  //  */
+  // void setFlagBit( long flag ) { mFlag |= flag; TDLog.v("BLK " + mId + " set flag " + ((flag&FLAG_TAMPERED) != 0 ) ); }
 
   // /** clear a flag value(s)
   //  * @param flag   flag value(s) to clear
   //  */
   // void clearFlag( long flag ) { mFlag &= ~flag; }
 
-  /** @return the block flag
+  /** @return the block flag (cavway bits masked off)
    */
-  public long getFlag() { return mFlag; }
+  public long getFlag() { return mFlag & 0xffff; }
+
+  /** @return the block full flag (cavway bits not masked off)
+   */
+  public long getFlagFully() { return mFlag; }
 
   /** set the block visibility
    * @param visible  block visibility - must be one of View.VISIBLE, View.INVISIBLE, View.GONE
@@ -186,7 +233,10 @@ public class DBlock
   private static final int BLOCK_X_SPLAY   =  6; // FIXME_X_SPLAY cross splay
   private static final int BLOCK_H_SPLAY   =  7; // FIXME_H_SPLAY horizontal splay
   private static final int BLOCK_V_SPLAY   =  8; // FIXME_V_SPLAY vertical splay
-  private static final int BLOCK_SCAN      =  9; // FIXME_S_SPLAY scan splay
+  public  static final int BLOCK_SCAN      =  9; // FIXME_S_SPLAY scan splay
+  public  static final int BLOCK_XSCAN     = 10; // FIXME_S_SPLAY scan splay
+  public  static final int BLOCK_HSCAN     = 11; // FIXME_S_SPLAY scan splay
+  public  static final int BLOCK_VSCAN     = 12; // FIXME_S_SPLAY scan splay
   // private static final int BLOCK_BLUNDER   = 10; // 
 
   /** block-type to leg-type table
@@ -202,6 +252,9 @@ public class DBlock
     LegType.HSPLAY, // 4
     LegType.VSPLAY, // 5
     LegType.SCAN,   // 6
+    LegType.XSCAN,  // 7
+    LegType.HSCAN,  // 8
+    LegType.VSCAN,  // 9
     // LegType.BLUNDER,// 3 BLUNDER_LEG
   };
 
@@ -215,11 +268,14 @@ public class DBlock
     BLOCK_H_SPLAY,
     BLOCK_V_SPLAY,
     BLOCK_SCAN,
+    BLOCK_XSCAN,
+    BLOCK_HSCAN,
+    BLOCK_VSCAN,
   };
 
-  /** block-type to color-table
+  /** block-type to color-table; used in the shot listing
    */
-  private static final int[] colors = {
+  private static final int[] mTypeColor = {
     TDColor.LIGHT_PINK,   // 0 blank
     TDColor.WHITE,        // 1 midline
     TDColor.LIGHT_GRAY,   // 3 sec. leg
@@ -229,7 +285,10 @@ public class DBlock
     TDColor.GREEN,        // 5 FIXME_X_SPLAY X splay
     TDColor.DARK_BLUE,    // 7 H_SPLAY
     TDColor.DEEP_BLUE,    // 8 V_SPLAY
-    TDColor.YELLOW_GREEN, // 9 SCAN
+    TDColor.YELLOW_GREEN, // 9 SCAN    // all scan-set are shown yellow-green in the shot list - distinguished by a character at the end
+    TDColor.YELLOW_GREEN, // 10 XSCAN
+    TDColor.YELLOW_GREEN, // 11 HSCAN
+    TDColor.YELLOW_GREEN, // 12 VSCAN
     TDColor.GREEN
     // TDColor.VIOLET,       // 4 blunder leg BLUNDER
   };
@@ -268,79 +327,88 @@ public class DBlock
    */
   void resetBlockType( int type ) { mBlockType = type; }
 
-  /** return true if the block type is BLANK or BLANK_LEG
+  /** @return true if the block type is BLANK or BLANK_LEG
    */
   public boolean isTypeBlank() { return mBlockType == BLOCK_BLANK || mBlockType == BLOCK_BLANK_LEG; }
 
-  /** return true if the given type is BLANK or BLANK_LEG
+  /** @return true if the given type is BLANK or BLANK_LEG
    * @param t   given type
    */
   public static boolean isTypeBlank( int t ) { return t == BLOCK_BLANK || t == BLOCK_BLANK_LEG; }
 
-  /** return true if the block type is BLANK
+  /** @return true if the block type is BLANK
    */
   public boolean isBlank() { return mBlockType == BLOCK_BLANK; }
 
-  /** return true if the block type is MAIN_LEG or BACK_LEG
+  /** @return true if the block type is MAIN_LEG or BACK_LEG
    */
   public boolean isLeg() { return mBlockType == BLOCK_MAIN_LEG || mBlockType == BLOCK_BACK_LEG; }
 
-  /** return true if the block type is MAIN_LEG
+  /** @return true if the block type is MAIN_LEG
    */
   public boolean isMainLeg() { return mBlockType == BLOCK_MAIN_LEG; }
 
-  /** return true if the block type is BACK_LEG
+  /** @return true if the block type is BACK_LEG
    */
   public boolean isBackLeg() { return mBlockType == BLOCK_BACK_LEG; }
 
-  /** return true if the block type is SEC_LEG
+  /** @return true if the block type is SEC_LEG
    */
   public boolean isSecLeg() { return mBlockType == BLOCK_SEC_LEG; }
 
-  /** return true if the block type is any LEG
+  /** @return true if the block type is any LEG
    */
   public boolean isAnyLeg() { return mBlockType == BLOCK_SEC_LEG || mBlockType == BLOCK_MAIN_LEG || mBlockType == BLOCK_BACK_LEG; }
 
-  /** return true if the given type is (any) SPLAY
+  /** @return true if the given type is (any) SPLAY
    * @param t   given type
    */
   public static boolean isSplay( int t ) { return t >= BLOCK_SPLAY; }
 
-  /** return true if the block type is (any) SPLAY
+  /** @return true if the block type is (any) SPLAY
    */
   public boolean isSplay()      { return mBlockType >= BLOCK_SPLAY; }
 
-  /** return true if the block type is (any) SPLAY and is reverse
+  /** @return true if the block type is (any) SPLAY and is reverse
    */
   public boolean isReverseSplay() { return mBlockType >= BLOCK_SPLAY && TDString.isNullOrEmpty( mFrom ); }
 
-  /** return true if the block type is a special SPLAY
+  /** @return true if the block type is a special SPLAY
    */
   public boolean isOtherSplay() { return mBlockType >  BLOCK_SPLAY; }
 
-  /** return true if the block type is a generic SPLAY
+  /** @return true if the block type is a generic SPLAY
    */
   public boolean isPlainSplay() { return mBlockType == BLOCK_SPLAY; }
 
-  /** return true if the block type is a cross SPLAY
+  /** @return true if the block type is a cross SPLAY
    */
-  public boolean isXSplay()     { return mBlockType == BLOCK_X_SPLAY; }
+  public boolean isXSplay()     { return mBlockType == BLOCK_X_SPLAY || mBlockType == BLOCK_XSCAN; }
 
-  /** return true if the block type is a horizontal SPLAY
+  /** @return true if the block type is a horizontal SPLAY
    */
-  public boolean isHSplay()     { return mBlockType == BLOCK_H_SPLAY; }
+  public boolean isHSplay()     { return mBlockType == BLOCK_H_SPLAY || mBlockType == BLOCK_HSCAN; }
 
-  /** return true if the block type is a vertical SPLAY
+  /** @return true if the block type is a vertical SPLAY
    */
-  public boolean isVSplay()     { return mBlockType == BLOCK_V_SPLAY; }
+  public boolean isVSplay()     { return mBlockType == BLOCK_V_SPLAY || mBlockType == BLOCK_VSCAN; }
 
-  /** return true if the block type is a scan SPLAY
+  /** @return true if the block type is a scan SPLAY
    */
-  public boolean isScan()       { return mBlockType == BLOCK_SCAN; }
+  public boolean isScan()       { return mBlockType >= BLOCK_SCAN && mBlockType <= BLOCK_VSCAN; }
+  public boolean isXScan()      { return mBlockType == BLOCK_XSCAN; }
+  public boolean isHScan()      { return mBlockType == BLOCK_HSCAN; }
+  public boolean isVScan()      { return mBlockType == BLOCK_VSCAN; }
 
-  /** return the block leg-type
+  /** @return the block leg-type
    */
   long getLegType() { return legOfBlockType[ mBlockType ]; }
+
+  /** @return the leg-type for a given block-type
+   * @param block_type  block-type
+   */
+  static long getLegType( int block_type ) { return legOfBlockType[ block_type ]; }
+
   // {
   //   if ( mBlockType == BLOCK_SEC_LEG )  return LegType.EXTRA;
   //   if ( mBlockType == BLOCK_X_SPLAY )  return LegType.XSPLAY;
@@ -364,6 +432,9 @@ public class DBlock
        case LegType.HSPLAY:  mBlockType = BLOCK_H_SPLAY;     break;
        case LegType.VSPLAY:  mBlockType = BLOCK_V_SPLAY;     break;
        case LegType.SCAN:    mBlockType = BLOCK_SCAN;        break;
+       case LegType.XSCAN:   mBlockType = BLOCK_XSCAN;       break;
+       case LegType.HSCAN:   mBlockType = BLOCK_HSCAN;       break;
+       case LegType.VSCAN:   mBlockType = BLOCK_VSCAN;       break;
        // case LegType.BLUNDER: mBlockType = BLOCK_BLUNDER; break;
        default: // case LegTypeNORMAL:
          if ( isSplay() ) {
@@ -379,11 +450,12 @@ public class DBlock
      }
   }
   
-  /** return the color (from the block-type)
+  /** @return the color (from the block-type)
+   * @note used by the DBlockAdapter
    */
   int getColorByType() { 
     // TDLog.v( "Block " + mId + " color() block type " + mBlockType );
-    return colors[ mBlockType ];
+    return isTampered()? /* mTypeColor[ mBlockType ] | */ 0xffff0000 : mTypeColor[ mBlockType ];
   }
 
   // ---------------------------------------------------------------
@@ -493,10 +565,18 @@ public class DBlock
 
   /** set the display view
    * @param view   display view
+   * @return true if the block view has changed
    */
-  void setView( View view ) { mView = view; }
+  boolean setView( View view ) 
+  { 
+    if ( mView != view ) {
+      mView = view;
+      return true;
+    }
+    return false;
+  }
 
-  /** set the color of the background
+  /** set the color of the background of the view of this block
    * @param color   new background color
    */
   void setBackgroundColor( int color ) { if ( mView != null ) mView.setBackgroundColor( color ); }
@@ -968,23 +1048,66 @@ public class DBlock
    */
   private void formatFlagPhoto( PrintWriter pw )
   {
+    switch ( cavwayFlag() ) {
+      case CavwayConst.FLAG_NONE:
+        pw.format("]");
+        break;
+      case CavwayConst.FLAG_FEATURE: 
+        // pw.format("\u2990 ");     // upper tick square bracket
+        pw.format("]\u20f0");        // combining asterisc
+        // pw.format("\u066D");     // five point star
+        // pw.format("\u07B0 ");     // Thaana Sukun
+        // pw.format("]\u02E3");        // upper big x
+        // pw.format("]\u2DEF");        // combining X
+        break;
+      case CavwayConst.FLAG_RIDGE:
+        // pw.format("\u2773");         // curved bracket
+        pw.format("\u27E7");         // double square bracket
+        // pw.format("\u29d9");         // right wiggly fence
+        // pw.format("\u23AB");         // curved top-half bracket
+        // pw.format("\u2224");         // not divide
+        // pw.format("\u23A4");         // top-half bracket
+        // pw.format("\u2309");         // top-half bracket
+        // pw.format("\u2998");         // turtoise bracket
+        break;
+      case CavwayConst.FLAG_BACKSIGHT:
+        // pw.format("\u298C"); // underlined square bracket
+        // pw.format("]\u1AB3");  // combining down arrow
+        pw.format("]\u036e");  // combining V
+        // pw.format("\u02FF");   // lower backarrow
+        // pw.format("\u2345");   // mid arrow
+        // pw.format("]\uFE26");  // combining top line
+        // pw.format("]\u08f7");  // combining left arrow - no good
+        break;
+      case CavwayConst.FLAG_GENERIC:
+        // pw.format("\u298E");     // lower tick square bracket
+        pw.format("]\u2DEA");       // combining o
+        // pw.format("\u061E");     // three dots
+        // pw.format("]\u02D6");
+        // pw.format("]\u2092");
+        // pw.format("]\u1ddf");       // combining M
+        // pw.format("]\u2DE8");       // combining cyrillic M
+        break;
+      default:
+        pw.format("]");
+        break;
+    }
     if ( isNone() ) {
-      pw.format("]x");       // section symbol: 'x'
+      pw.format( "x");       // section symbol: 'x'
     } else if ( isNoPlan() ) {
-      pw.format("]\u00A7");       // section symbol
+      pw.format( "\u00A7");       // section symbol
     } else if ( isNoProfile() ) {
-      pw.format("]_");            // low_line: underscore
+      pw.format( "_");            // low_line: underscore
     } else if ( isDuplicate() ) {
-      pw.format( "]\u00B2" );     // superscript 2
+      pw.format( "\u00B2" );     // superscript 2
     } else if ( isSurface() ) {
-      pw.format( "]\u00F7" );     // division sign
+      pw.format( "\u00F7" );     // division sign
     // } else if ( isCommented() ) { // commented = gray background
     //   pw.format( "^" );
-    // } else if ( isBackshot() ) {
-    //   pw.format( "+" );
-    } else {
-      pw.format("]");
+    } else if ( isBackshot() ) {
+      pw.format( "\u266D" );
     }
+
     if ( mWithPhoto ) { pw.format("#"); }
   }
 
@@ -1031,6 +1154,16 @@ public class DBlock
     TDVector v2 = new TDVector( blen * cc * sb, blen * cc * cb, blen * sc );
     float d = (v1.minus(v2)).length();
     mFailBacksplay = ( d/alen + d/blen > 2 * TDSetting.mCloseDistance );
+  }
+
+  /** update AMD from another block
+   * @param b    data block
+   */
+  void updateAMD( DBlock b )
+  {
+    mAcceleration = b.mAcceleration;
+    mMagnetic     = b.mMagnetic;
+    mDip          = b.mDip;
   }
     
 

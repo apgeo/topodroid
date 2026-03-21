@@ -129,13 +129,13 @@ public class TDPath
   private static String ROOT_ZIP      = ROOT_CW_DIR + "/zip";
   private static String ROOT_TMP      = ROOT_CW_DIR + "/tmp";
   private static String ROOT_TDCONFIG = ROOT_CW_DIR + "/thconfig";
-  private static String ROOT_C3EXPORT = ROOT_CW_DIR + "/c3export";
+  private static String ROOT_C3EXPORT = ROOT_CW_DIR + "/c3export"; // used as temp folder for shp
 
   private static String APP_SURVEY_PATH   = null;
   private static String APP_PHOTO_PATH    = null;
   private static String APP_AUDIO_PATH    = null;
   private static String APP_NOTE_PATH     = null;
-  private static String APP_TDR_PATH      = null;
+  private static String APP_TDR_PATH      = null; // full dir pathname
   private static String APP_C3D_PATH      = null;
   private static String APP_OUT_PATH      = null;
 
@@ -487,6 +487,9 @@ public class TDPath
   public static String getTdconfigFile( String name ) { return ROOT_TDCONFIG + "/" + name; }
 
   // replaced with TDFile functions
+
+  /** c3xport folder is used as temporray forder for SHP files before zip-compressing them in SHZ
+   */
   // public static String getC3exportDir( ) { return ROOT_C3EXPORT ; }
   public static String getC3exportPath( String name ) { return ROOT_C3EXPORT + "/" + name; }
   // public static String getC3exportPath( String name, String ext ) { return ROOT_C3EXPORT + "/" + name + "." + ext; }
@@ -542,9 +545,13 @@ public class TDPath
   /** @return survey plot backup filename
    * @param survey   survey name
    * @param name     plot name
-   * @param backup   backup extension number 
+   * @param backup   backup extension number (-1 to fall back to unnumbered backup)
    */
-  static String getSurveyPlotTdrBackupFile( String survey, String name, int backup ) { return APP_TDR_PATH + "/" + survey + "-" + name + ".tdr.bck" + backup ; }
+  static String getSurveyPlotTdrBackupFile( String survey, String name, int backup ) 
+  { 
+    if ( backup < 0 ) return APP_TDR_PATH + "/" + survey + "-" + name + ".tdr.bck";
+    return APP_TDR_PATH + "/" + survey + "-" + name + ".tdr.bck" + backup ; 
+  }
 
   /** return a 3D sketch file in the survey folder
    * @param survey   survey name
@@ -750,12 +757,36 @@ public class TDPath
    * @param survey   survey name
    * @param idx      photo index
    */
-  static String getSurveyJpgFile( String survey, String idx )
+  static String getSurveyJpgFile( String survey, String idx ) { return getSurveyImageFile( survey, idx, ".jpg" ); }
+
+  /** @return full pathname of a survey photo (PNG) file 
+   * @param survey   survey name
+   * @param idx      photo index
+   */
+  static String getSurveyPngFile( String survey, String idx ) { return getSurveyImageFile( survey, idx, ".png" ); }
+
+  /** @return full pathname of a survey photo image file 
+   * @param survey   survey name
+   * @param idx      photo index
+   * @param ext      image file extension
+   */
+  private static String getSurveyImageFile( String survey, String idx, String ext ) 
   {
     String dirpath = PATH_CW_DIR + "/" + survey + "/photo";
     TDFile.makeTopoDroidDir( dirpath );
-    return dirpath + "/" + idx + ".jpg";
+    return dirpath + "/" + idx + ext;
   }
+
+  static String getSurveyNextImageFilepath( long photo_id, int format ) 
+  {
+    if ( format == PhotoInfo.FORMAT_JPEG ) {
+      return getSurveyJpgFile( TDInstance.survey, Long.toString(photo_id) ); // photo file is "survey/id.jpg"
+    } else if ( format == PhotoInfo.FORMAT_PNG ) {
+      return getSurveyPngFile( TDInstance.survey, Long.toString(photo_id) ); // photo file is "survey/id.png"
+    }
+    return null;
+  }
+
 
   /** @return full pathname of a survey audio (WAV) file 
    * @param survey   survey name
@@ -798,8 +829,9 @@ public class TDPath
   /** rename a plot file
    * @param old_name old (short) filename
    * @param new_name new (short) filename
+   * @return false on error, true on ok
    */
-  static void renamePlotFiles( String old_name, String new_name )
+  static boolean renamePlotFiles( String old_name, String new_name )
   {
     String old_tdr = TDPath.getTdrFile( old_name + ".tdr" );
     String new_tdr = TDPath.getTdrFile( new_name + ".tdr" );
@@ -808,20 +840,49 @@ public class TDPath
     new_tdr = new_tdr + TDPath.BCK_SUFFIX;
     File file1 = TDFile.getTopoDroidFile( old_tdr ); // DistoX-SAF
     File file2 = TDFile.getTopoDroidFile( new_tdr );
-    if ( ( ! file1.exists() ) || file2.exists() ) return;
+    if ( ! file1.exists() ) return true;
+    if ( file2.exists() ) return false;
     if ( ! file1.renameTo( file2 ) ) {
       TDLog.e("bck file rename failed");
-      return;
+      return false;
     }
     for ( int i=0; ; ++i ) {
       file1 = TDFile.getTopoDroidFile( old_tdr + i ); // DistoX-SAF
       file2 = TDFile.getTopoDroidFile( new_tdr + i );
-      if ( ( ! file1.exists() ) || file2.exists() ) break;
+      if ( ( ! file1.exists() ) /* || file2.exists() */ ) return true;
       if ( ! file1.renameTo( file2 ) ) {
         TDLog.e("bck" + i + " file rename failed");
-        break;
+        return false;
       }
     }
+    // return true;
+  }
+
+  /**
+   * @param survey   survey name
+   * @param from     old station name
+   * @param to       new station name
+   * @return false on error, true on ok
+   */
+  static boolean renameStationXSectionFiles( String survey, String from, String to )
+  {
+    boolean ret = true;
+    String prefix  = APP_TDR_PATH + "/" + survey;
+    String old_name = prefix + "-xs-" + from + ".tdr";
+    if ( TDFile.hasTopoDroidFile( old_name ) ) {
+      String new_name = prefix + "-xs-" + to + ".tdr";
+      // TDLog.v("Rename " + old_name + " -> " + new_name );
+      ret &= TDFile.moveFile( old_name, new_name );
+    // } else { TDLog.v("Rename " + old_name + " does not exist" );
+    }
+    old_name = prefix + "-xh-" + from + ".tdr";
+    if ( TDFile.hasTopoDroidFile( APP_TDR_PATH, old_name ) ) {
+      String new_name = prefix + "-xh-" + to + ".tdr";
+      // TDLog.v("Rename " + old_name + " -> " + new_name );
+      ret &= TDFile.moveFile( old_name, new_name );
+    // } else { TDLog.v("Rename " + old_name + " does not exist" );
+    }
+    return ret;
   }
 
   /** delete the files of a survey
@@ -950,6 +1011,14 @@ public class TDPath
   //   }
   //   return null;
   // }
+
+  static void checkOutdir()
+  {
+    TDLog.v("PATH out path " + APP_OUT_PATH );
+    if ( APP_OUT_PATH == null ) return;
+    File dir = new File( APP_OUT_PATH );
+    if ( ! dir.exists() ) dir.mkdirs();
+  }
 
   /** make sure the file parent directory exists
    * @param fp   file

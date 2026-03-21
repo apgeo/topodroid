@@ -11,7 +11,13 @@
  */
 package com.topodroid.help;
 
+import com.topodroid.utils.TDLog;
 import com.topodroid.ui.MyDialog;
+import com.topodroid.prefs.GeminiDialog;
+import com.topodroid.prefs.TDSetting;
+import com.topodroid.prefs.TDPref;
+import com.topodroid.TDX.TDandroid;
+import com.topodroid.TDX.TDToast;
 import com.topodroid.TDX.R;
 
 import java.util.ArrayList;
@@ -19,19 +25,24 @@ import java.util.ArrayList;
 import android.os.Bundle;
 import android.content.Context;
 
+import android.app.Activity;
+
 import android.widget.Button;
 import android.widget.ListView;
+// import android.widget.TextView;
 
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.view.View.OnLongClickListener;
 
 public class HelpDialog extends MyDialog
-                 implements OnClickListener
-                          , OnLongClickListener
+                        implements OnClickListener
+                        , OnLongClickListener
+                        , IHelpViewer
 {
   private ListView    mList;
   private HelpAdapter mAdapter;
+  private Activity    mParent;
 
   private final int[] mIcons;
   private final int[] mMenus;
@@ -42,6 +53,7 @@ public class HelpDialog extends MyDialog
   private final String mPage;
 
   private Button mBtnManual;
+  private Button mBtnAI;
 
   // TODO list of help entries
   /** cstr
@@ -54,9 +66,10 @@ public class HelpDialog extends MyDialog
    * @param n1          ...
    * @param page        man page (to be linked)
    */
-  public HelpDialog( Context context, int[] icons, int[] menus, int[] texts1, int[] texts2, int n0, int n1, String page )
+  public HelpDialog( Context context, Activity activity, int[] icons, int[] menus, int[] texts1, int[] texts2, int n0, int n1, String page )
   {
     super( context, null, R.string.HelpDialog );  // nul app
+    mParent = activity;
     mIcons = icons;
     mMenus = menus;
     mIconTexts = texts1;
@@ -76,6 +89,12 @@ public class HelpDialog extends MyDialog
     mBtnManual = (Button) findViewById( R.id.button_manual );
     mBtnManual.setOnClickListener( this );
     mBtnManual.setOnLongClickListener( this );
+    mBtnAI = (Button) findViewById( R.id.button_ai );
+    if ( TDandroid.isOnline( mContext ) ) {
+      mBtnAI.setOnClickListener( this );
+    } else {
+      mBtnAI.setBackgroundResource( R.drawable.iz_ai_no );
+    }
 
     mList = (ListView) findViewById(R.id.help_list);
     // mList.setOnItemClickListener( this );
@@ -113,8 +132,41 @@ public class HelpDialog extends MyDialog
   public void onClick( View v ) 
   {
     dismiss();
-    UserManualActivity.showHelpPage( mContext, mPage );
+    if ( v.getId() == R.id.button_manual ) {
+      showManPage( mPage );
+    } else if ( v.getId() == R.id.button_ai ) {
+      if ( TDandroid.isOnline( mContext ) ) {
+        if ( TDSetting.mGeminiApiKey != null && ! TDSetting.mGeminiApiKey.isEmpty() ) {
+          showAIdialog();
+        } else {
+          (new GeminiDialog( mContext, this, null )).show();
+        }
+      } else {
+        TDToast.make( R.string.ai_no_internet );
+      }
+    }
   }
+
+  public void showManPage( String page )
+  {
+    TDLog.v("load page " + page );
+    UserManualActivity.showHelpPage( mContext, page );
+  }
+
+  public void showAIdialog()
+  {
+    (new HelpAIdialog( mContext, this, TDSetting.mGeminiApiKey, mPage )).show();
+  }
+
+  public void showInvalid( final TDPref pref, final String response )
+  {
+    mParent.runOnUiThread( new Runnable() { public void run() {
+      TDToast.makeWarn( response ); 
+      if ( pref != null ) pref.setButtonValue( "---" );
+      TDSetting.setGeminiApiKey( "" );
+    } } );
+  }
+  
 
   /** react to a user long tap - only the taps on "man book" are taken
    *  open the manual with the start page
@@ -126,6 +178,18 @@ public class HelpDialog extends MyDialog
     dismiss();
     UserManualActivity.showHelpPage( mContext, null );
     return true;
+  }
+
+  public void setAIbuttonEnabled( boolean enabled )
+  {
+    TDLog.v("Help AI dialog - set button enable " + enabled );
+    if ( enabled ) {
+      mBtnAI.setBackgroundResource( R.drawable.iz_ai );
+      mBtnAI.setOnClickListener( this );
+    } else {
+      mBtnAI.setBackgroundResource( R.drawable.iz_ai_no );
+      mBtnAI.setOnClickListener( null );
+    }
   }
 
 }

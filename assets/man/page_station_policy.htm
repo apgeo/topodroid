@@ -32,7 +32,7 @@ Sequence a-b-c-d for the first (foreshot) and the second (backshot) policies.<br
 
 <p>
     Each time the automatic station assignment is carried out, it starts from the last leg (or second to last for the <i>backsight</i> and <i>tripod</i> policies).
-    If the survey has yet no leg, it starts from the first shot. 
+    If the survey has yet no leg, it starts from the first shot.
     Therefore shots before the last leg are not modified, while stations are assigned to all the shots following the last leg.
     This may affect the station of splays immediately following the last leg, when the station-assignment policy is changed.
 </p>
@@ -66,23 +66,23 @@ The magnetic anomaly compensation requires taking backsight shots. However, with
 
 The "TopoRobot" policy is just like the first, but station names follow the TopoRobot convention.<br><p>
 
-<h2>Station naming policy and activity levels</h2>
+<h2>Station naming policy and usage profiles</h2>
 
-Certain station naming policy are enabled only at high activity levels:
+Certain station naming policy are enabled only at high usage profiles:
 <ul>
 <li>"Tripod" requires "advanced" level</li>
 <li>"Magnetic anomaly" requires "expert" level</li>
 <li>"TopoRobot" requires "tester" level</li>
 </ul>
-Reducing the activity level when one of these is active, automatically set the station policy to the default policy (splays + foreshot).
-The policy is automatically reinstated again if the activity level is raised to the required value or above.<br><p>
+Reducing the usage profile when one of these is active, automatically set the station policy to the default policy (splays + foreshot).
+The policy is automatically reinstated again if the usage profile is raised to the required value or above.<br><p>
 
 <h2>Blunder leg-shot [T]</h2>
 
 A <i>blunder shot</i> is an intermediate leg shot that happened to be off-target.
 Typical leg sequences with blunders 'B' are "A-B-A-A" and "A-A-B-A".<br>
 Blunder leg-shot detection is an experimental feature of the <i>default station naming policy</i>.
-It must be enabled with a custom setting.<br>
+It must be enabled with a secondary setting.<br>
 Blunder shots are detected and marked as blank entry that will be hidden when the list is refreshed.<br>
 Blunder shots can be recovered.<br><p>
 

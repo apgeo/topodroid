@@ -13,6 +13,7 @@ package com.topodroid.TDX;
 
 // import com.topodroid.utils.TDLog;
 import com.topodroid.utils.TDUtil;
+import com.topodroid.utils.TDString;
 import com.topodroid.ui.MyKeyboard;
 import com.topodroid.ui.MyDialog;
 import com.topodroid.prefs.TDSetting;
@@ -38,7 +39,7 @@ import android.content.ClipboardManager;
 import android.content.ClipData;
 // import android.content.ClipDescription;
 
-import android.inputmethodservice.KeyboardView;
+// import android.inputmethodservice.KeyboardView;
 
 class FixedAddDialog extends MyDialog
                      implements View.OnClickListener
@@ -100,8 +101,9 @@ class FixedAddDialog extends MyDialog
     mNorth = true;
     mEast  = true;
 
-    mKeyboard = new MyKeyboard( mContext, (KeyboardView)findViewById( R.id.keyboardview ),
-                                R.xml.my_keyboard, R.xml.my_keyboard_qwerty );
+    // mKeyboard = new MyKeyboard( mContext, (KeyboardView)findViewById( R.id.keyboardview ), R.xml.my_keyboard, R.xml.my_keyboard_qwerty );
+    mKeyboard = MyKeyboard.getMyKeyboard( mContext, findViewById( R.id.keyboardview ), R.xml.my_keyboard, R.xml.my_keyboard_qwerty );
+
     if ( TDSetting.mKeyboard ) {
       if ( TDSetting.mStationNames == 1 ) {
         MyKeyboard.registerEditText( mKeyboard, mETstation, MyKeyboard.FLAG_POINT );
@@ -169,22 +171,22 @@ class FixedAddDialog extends MyDialog
   {
     String lng_it = mETlng.getText().toString(); // 20230118 local var "lng_it"
     if ( /* lng_it == null || */ lng_it.length() == 0 ) {
-      mETlng.setError( mContext.getResources().getString( R.string.error_long_required ) );
+      mETlng.setError( resString( R.string.error_long_required ) );
       return false;
     }
     String lat_it = mETlat.getText().toString(); // 20230118 local var "lat_it"
     if ( /* lat_it == null || */ lat_it.length() == 0 ) {
-      mETlat.setError( mContext.getResources().getString( R.string.error_lat_required) );
+      mETlat.setError( resString( R.string.error_lat_required) );
       return false;
     }
     mLng = FixedInfo.string2double( lng_it );
     if ( mLng < -1000 ) {
-      mETlng.setError( mContext.getResources().getString( R.string.error_long_required ) );
+      mETlng.setError( resString( R.string.error_long_required ) );
       return false;
     } 
     mLat = FixedInfo.string2double( lat_it );
     if ( mLat < -1000 ) {
-      mETlat.setError( mContext.getResources().getString( R.string.error_lat_required) );
+      mETlat.setError( resString( R.string.error_lat_required) );
       return false;
     }
     if ( ! mNorth ) mLat = - mLat;
@@ -262,10 +264,9 @@ class FixedAddDialog extends MyDialog
     MyKeyboard.close( mKeyboard );
   
     Button b = (Button) v;
-    // TDLog.Log( TDLog.LOG_INPUT, "FixedAddDialog onClick() button " + b.getText().toString() ); 
 
-    mNorth  = mBtnNS.getText().toString().equals(getContext().getString(R.string.north));
-    mEast  = mBtnEW.getText().toString().equals(getContext().getString(R.string.east));
+    mNorth = mBtnNS.getText().toString().equals( resString(R.string.north) );
+    mEast  = mBtnEW.getText().toString().equals( resString(R.string.east) );
     
     if ( b == mBtnNS ) {
       mBtnNS.setText( mNorth ? R.string.south : R.string.north );
@@ -285,29 +286,28 @@ class FixedAddDialog extends MyDialog
       mParent.getProj4Coords( this );
       return;
     } else if ( b == mBtnOK ) {
-      String name = mETstation.getText().toString();
-      if ( /* name == null || */ name.length() == 0 ) {
-        mETstation.setError( mContext.getResources().getString( R.string.error_station_required ) );
+      String name = TDString.noSpaces( mETstation.getText().toString() ); // no spaces in station names
+      if ( TDString.isNullOrEmpty( name ) ) {
+        mETstation.setError( resString( R.string.error_station_required ) );
         return;
       }
       name = TDUtil.toStationFromName( name );
       if ( ! TDUtil.isStationName( name ) ) {
-        mETstation.setError( mContext.getResources().getString( R.string.bad_station_name ) );
+        mETstation.setError( resString( R.string.bad_station_name ) );
         return;
       }
       mETstation.setText( name );
       
       if ( mParent.hasFixed( name ) ) {
-        mETstation.setError( mContext.getResources().getString( R.string.error_station_fixed ) );
+        mETstation.setError( resString( R.string.error_station_fixed ) );
         return;
       }
-      String comment = mETcomment.getText().toString();
-      // if ( comment == null ) comment = "";
+      String comment = TDUtil.getTextOrEmpty( mETcomment );
       if ( getLngLat() ) {
         // String h_ell_str = mEThell.getText().toString();
         String h_geo_str = mEThgeo.getText().toString();
         if ( ( /* h_ell_str == null || h_ell_str.length() == 0 ) && ( h_geo_str == null || */ h_geo_str.length() == 0 ) ) {
-          mEThgeo.setError( mContext.getResources().getString( R.string.error_alt_required) );
+          mEThgeo.setError( resString( R.string.error_alt_required) );
           return;
         }
         mHEll = -1000.0;
@@ -316,7 +316,7 @@ class FixedAddDialog extends MyDialog
           try {
             mHGeo = Double.parseDouble( h_geo_str.replace(",", ".") );
           } catch ( NumberFormatException e ) {
-            mEThgeo.setError( mContext.getResources().getString( R.string.error_invalid_number) );
+            mEThgeo.setError( resString( R.string.error_invalid_number) );
             return;
           }
           WorldMagneticModel wmm = new WorldMagneticModel( mContext );
@@ -325,7 +325,7 @@ class FixedAddDialog extends MyDialog
         //   try {
         //     mHEll = Double.parseDouble( h_ell_str.replace(",", ".") );
         //   } catch ( NumberFormatException e ) {
-        //     mEThell.setError( mContext.getResources().getString( R.string.error_invalid_number) );
+        //     mEThell.setError( resString( R.string.error_invalid_number) );
         //     return;
         //   }
         //   if ( ( /* h_geo_str == null || */ h_geo_str.length() == 0 ) ) {
@@ -335,15 +335,15 @@ class FixedAddDialog extends MyDialog
         //     try {
         //       mHGeo = Double.parseDouble( h_geo_str.replace(",", ".") );
         //     } catch ( NumberFormatException e ) {
-        //       mEThgeo.setError( mContext.getResources().getString( R.string.error_invalid_number) );
+        //       mEThgeo.setError( resString( R.string.error_invalid_number) );
         //       return;
         //     }
         //   }
         // }
         double accur = -1;
         if ( mETaccur.getText() != null ) {
-          String accur_str = mETaccur.getText().toString();
-          if ( accur_str.length() > 0 ) {
+          String accur_str = TDUtil.getTextOrNull( mETaccur );
+          if ( accur_str != null ) {
             try {
               accur = Double.parseDouble( accur_str );
             } catch ( NumberFormatException e ) {

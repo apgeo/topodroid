@@ -35,27 +35,48 @@ class PhotoViewDialog extends MyDialog
   /** cstr
    * @param context   context
    * @param photo     photo info
+   * @note called by StationPhotoDialog
    */
   PhotoViewDialog( Context context, PhotoInfo photo )
   {
     super( context, null, R.string.PhotoViewDialog ); // null app
     // TDLog.Log( TDLog.LOG_PHOTO, "Photo Dialog");
     // TDLog.v("photo dialog id " + photo.id );
-    String filename = TDPath.getSurveyJpgFile( TDInstance.survey, Long.toString(photo.id) );
+    String filename = null;
+    if ( photo.mFormat == PhotoInfo.FORMAT_JPEG ) {
+      filename = TDPath.getSurveyJpgFile( TDInstance.survey, Long.toString(photo.id) );
+    } else if ( photo.mFormat == PhotoInfo.FORMAT_PNG ) {
+      filename = TDPath.getSurveyPngFile( TDInstance.survey, Long.toString(photo.id) );
+    }
     mTdImage = new TDImage( filename );
     mTitle   = photo.mTitle;
   }
 
+  // /** cstr
+  //  * @param context   context
+  //  * @param filename  file path
+  //  */
+  // PhotoViewDialog( Context context, String filename )
+  // {
+  //   super( context, null, R.string.PhotoViewDialog ); // null app
+  //   // TDLog.v("photo dialog file " + filename );
+  //   // TDLog.Log( TDLog.LOG_PHOTO, "Photo Dialog");
+  //   mTdImage = new TDImage( filename );
+  // }
+
   /** cstr
    * @param context   context
    * @param filename  file path
+   * @param title     dialog title
+   * @param called by PhotoEditDialog DrawingPhotoEditDialog DrawingLineSectionDialog
    */
-  PhotoViewDialog( Context context, String filename )
+  PhotoViewDialog( Context context, String filename, String title )
   {
     super( context, null, R.string.PhotoViewDialog ); // null app
     // TDLog.v("photo dialog file " + filename );
     // TDLog.Log( TDLog.LOG_PHOTO, "Photo Dialog");
     mTdImage = new TDImage( filename );
+    mTitle   = title;
   }
 
 // -------------------------------------------------------------------

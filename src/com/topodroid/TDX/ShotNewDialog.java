@@ -21,7 +21,7 @@ import com.topodroid.ui.MyDialog;
 import com.topodroid.ui.TDLayout;
 import com.topodroid.ui.ExifInfo;
 import com.topodroid.prefs.TDSetting;
-import com.topodroid.common.ExtendType;
+import com.topodroid.types.ExtendType;
 
 
 import java.util.Locale;
@@ -36,7 +36,7 @@ import android.widget.RadioButton;
 
 import android.content.Context;
 
-import android.inputmethodservice.KeyboardView;
+// import android.inputmethodservice.KeyboardView;
 
 import android.widget.TextView;
 import android.widget.EditText;
@@ -156,8 +156,9 @@ class ShotNewDialog extends MyDialog
     mETup       = (EditText) findViewById(R.id.shot_up );
     mETdown     = (EditText) findViewById(R.id.shot_down );
 
-    mKeyboard = new MyKeyboard( mContext, (KeyboardView)findViewById( R.id.keyboardview ), 
-                                R.xml.my_keyboard_base_sign, R.xml.my_keyboard_qwerty );
+    // mKeyboard = new MyKeyboard( mContext, (KeyboardView)findViewById( R.id.keyboardview ), R.xml.my_keyboard_base_sign, R.xml.my_keyboard_qwerty );
+    mKeyboard = MyKeyboard.getMyKeyboard( mContext, findViewById( R.id.keyboardview ), R.xml.my_keyboard_base_sign, R.xml.my_keyboard_qwerty );
+
     if ( TDSetting.mKeyboard ) {
       int flag = MyKeyboard.FLAG_POINT_LCASE_2ND;
       if ( TDSetting.mStationNames == 1 ) flag = MyKeyboard.FLAG_POINT;
@@ -411,23 +412,26 @@ class ShotNewDialog extends MyDialog
 
     Button b = (Button) v;
     String val;
-    // TDLog.Log( TDLog.LOG_INPUT, "ShotNewDialog onClick button " + b.getText().toString() );
 
     if ( b == mBtnOk || b == mBtnSave ) {
+      if ( ShotEditDialog.sameString( mETfrom, mETto ) ) {
+        mETto.setError( resString( R.string.equal_station_names ) );
+        return;
+      }
       String shot_from =  null;
       String shot_to = "";
    
       if ( notDone && mETfrom.getText() != null ) {
         shot_from = TDUtil.toStationFromName( mETfrom.getText().toString() );
         if ( ! TDUtil.isStationName( shot_from ) ) {
-          mETfrom.setError( mContext.getResources().getString( R.string.bad_station_name ) );
+          mETfrom.setError( resString( R.string.bad_station_name ) );
           return;
         }
       }
       if ( notDone && mETto.getText() != null ) {
         shot_to = TDUtil.toStationToName( mETto.getText().toString() );
         if ( ! TDUtil.isStationName( shot_to ) ) {
-          mETto.setError( mContext.getResources().getString( R.string.bad_station_name ) );
+          mETto.setError( resString( R.string.bad_station_name ) );
           return;
         }
       }
@@ -438,28 +442,28 @@ class ShotNewDialog extends MyDialog
       // }
 
       if ( TDString.isNullOrEmpty( shot_from ) ) {
-        mETfrom.setError( mContext.getResources().getString( R.string.error_from_required ) );
+        mETfrom.setError( resString( R.string.error_from_required ) );
         return;
       }
 
-      String distance     = mETdistance.getText().toString().trim();
-      String backdistance = mETbackdistance.getText().toString().trim();
-      if ( distance.length() == 0 && backdistance.length() == 0 ) { 
-        mETdistance.setError( mContext.getResources().getString( (diving? R.string.error_depth_required : R.string.error_length_required) ) );
+      String distance     = TDString.noSpaces( mETdistance.getText().toString() );
+      String backdistance = TDString.noSpaces( mETbackdistance.getText().toString() );
+      if ( TDString.isNullOrEmpty( distance ) && TDString.isNullOrEmpty( backdistance ) ) {
+        mETdistance.setError( resString( (diving? R.string.error_depth_required : R.string.error_length_required) ) );
         return;
       }
 
-      String bearing = mETbearing.getText().toString().trim();
-      String backbearing = mETbackbearing.getText().toString().trim();
-      if ( bearing.length() == 0 && backbearing.length() == 0 ) {
-        mETbearing.setError( mContext.getResources().getString( R.string.error_azimuth_required ) );
+      String bearing     = TDString.noSpaces( mETbearing.getText().toString() );
+      String backbearing = TDString.noSpaces( mETbackbearing.getText().toString() );
+      if ( TDString.isNullOrEmpty( bearing ) && TDString.isNullOrEmpty( backbearing ) ) {
+        mETbearing.setError( resString( R.string.error_azimuth_required ) );
         return;
       }
 
-      String clino = mETclino.getText().toString().trim();
-      String backclino = mETbackclino.getText().toString().trim();
-      if ( clino.length() == 0 && backclino.length() == 0 ) {
-        mETclino.setError( mContext.getResources().getString( (diving? R.string.error_length_required : R.string.error_clino_required) ) );
+      String clino     = TDString.noSpaces( mETclino.getText().toString() );
+      String backclino = TDString.noSpaces( mETbackclino.getText().toString() );
+      if ( TDString.isNullOrEmpty( clino ) && TDString.isNullOrEmpty( backclino ) ) {
+        mETclino.setError( resString( (diving? R.string.error_length_required : R.string.error_clino_required) ) );
         return;
       }
 
@@ -476,7 +480,7 @@ class ShotNewDialog extends MyDialog
           shot_extend = TDAzimuth.computeLegExtend( bx );
         } catch ( NumberFormatException e ) { 
           // TDLog.e("Non-number bearing");
-          mETbearing.setError( mContext.getResources().getString( R.string.error_invalid_number ) );
+          mETbearing.setError( resString( R.string.error_invalid_number ) );
           return;
         }
       }
@@ -509,14 +513,14 @@ class ShotNewDialog extends MyDialog
                              Float.parseFloat(backclino.replace(',','.') ),
                              bbx, // DIVING_BEARING Float.parseFloat(backbearing.replace(',','.') ),
                              Float.parseFloat(backdistance.replace(',','.') ),
-                             back_extend, DBlock.FLAG_SURVEY,
+                             back_extend, DBlock.FLAG_BACKSHOT, // BACKSHOT DBlock.FLAG_SURVEY,
                              null, null, null, null, null );
               } else {
                 blk = mApp.insertManualShot( mAt, shot_to, shot_from,
                              Float.parseFloat(backdistance.replace(',','.') ),
                              Float.parseFloat(backbearing.replace(',','.') ),
                              Float.parseFloat(backclino.replace(',','.') ),
-                             back_extend, DBlock.FLAG_SURVEY,
+                             back_extend, DBlock.FLAG_BACKSHOT, // BACKSHOT DBlock.FLAG_SURVEY,
                              null, null, null, null, null );
               }
             }
@@ -527,14 +531,14 @@ class ShotNewDialog extends MyDialog
                                bx, // DIVING_BEARING Float.parseFloat( bearing.replace(',','.') ),
                                Float.parseFloat( distance.replace(',','.') ), // diving depth
                                shot_extend, DBlock.FLAG_SURVEY,
-                               mETleft.getText().toString().replace(',','.') ,
+                               mETleft.getText().toString().replace(',','.') , // FIXME NOSPACES
                                mETright.getText().toString().replace(',','.') ,
                                mETup.getText().toString().replace(',','.') ,
                                mETdown.getText().toString().replace(',','.') ,
                                splay_station );
 	    } else {
               blk = mApp.insertManualShot( mAt, shot_from, shot_to,
-                               Float.parseFloat( distance.replace(',','.') ),
+                               Float.parseFloat( distance.replace(',','.') ), // FIXME NOSPACES
                                Float.parseFloat( bearing.replace(',','.') ),
                                Float.parseFloat( clino.replace(',','.') ),
                                shot_extend, DBlock.FLAG_SURVEY,
@@ -549,7 +553,7 @@ class ShotNewDialog extends MyDialog
               if ( diving ) {
                 float bbx = divingBearing( backbearing ); // DIVING_BEARING
                 blk = mApp.insertManualShot( mAt, shot_to, shot_from,
-                             Float.parseFloat( backclino.replace(',','.') ),
+                             Float.parseFloat( backclino.replace(',','.') ), // FIXME NOSPACES
                              bbx, // Float.parseFloat( backbearing.replace(',','.') ),
                              Float.parseFloat( backdistance.replace(',','.') ),
                              back_extend, DBlock.FLAG_SURVEY,
@@ -560,7 +564,7 @@ class ShotNewDialog extends MyDialog
                              splay_station );
               } else {
                 blk = mApp.insertManualShot( mAt, shot_to, shot_from,
-                             Float.parseFloat( backdistance.replace(',','.') ),
+                             Float.parseFloat( backdistance.replace(',','.') ), // FIXME NOSPACES
                              Float.parseFloat( backbearing.replace(',','.') ),
                              Float.parseFloat( backclino.replace(',','.') ),
                              back_extend, DBlock.FLAG_SURVEY,
@@ -633,7 +637,8 @@ class ShotNewDialog extends MyDialog
                                     "snap " + shot_from + " " + shot_to,
                                     PhotoInfo.CAMERA_TOPODROID,
                                     "",  // TODO geomorphology code
-                                    PhotoInfo.TYPE_SHOT
+                                    PhotoInfo.TYPE_SHOT,
+                                    PhotoInfo.FORMAT_JPEG
             ); // FIXME TITLE has to go
           } catch ( IOException e ) {
             TDLog.e( "IO exception " + e.getMessage() );

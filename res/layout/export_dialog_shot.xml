@@ -29,11 +29,11 @@
       android:layout_height="wrap_content"
       android:text="@string/export_overwrite"
       />
-    <CheckBox android:id="@+id/zip_share"
+    <!-- CheckBox android:id="@+id/zip_share"
       android:layout_width="match_parent" 
       android:layout_height="wrap_content"
       android:text="@string/export_share"
-      />
+      / -->
     <!-- CheckBox android:id="@+id/zip_symbols"
       android:layout_width="match_parent" 
       android:layout_height="wrap_content"
@@ -48,11 +48,6 @@
     android:layout_marginTop="@dimen/marginvbig"
     android:layout_marginBottom="@dimen/marginvbig"
     >
-    <!-- CheckBox android:id="@+id/compass_prefix" OBSOLETED BY EditText
-      android:layout_width="match_parent" 
-      android:layout_height="wrap_content"
-      android:text="@string/export_prefix"
-      / -->
     <CheckBox android:id="@+id/compass_splays"
       android:layout_width="match_parent" 
       android:layout_height="wrap_content"
@@ -74,13 +69,30 @@
       android:layout_height="wrap_content"
       android:text="@string/export_swap_lr"
       />
-    <EditText android:id="@+id/compass_prefix"
+    <LinearLayout
       android:layout_width="match_parent" 
       android:layout_height="wrap_content"
-      android:hint="@string/export_prefix_hint"
-      android:importantForAutofill="no"
-      android:inputType="text"
-      />
+      android:orientation="horizontal" 
+      >
+      <CheckBox android:id="@+id/compass_prefix_cb"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/export_prefix_hint"
+        android:layout_marginEnd="@dimen/margintiny" 
+        />
+      <Button android:id="@+id/compass_prefix_survey"
+        style="@style/button_default"
+        android:text="@string/export_prefix_reset"
+        android:layout_marginEnd="@dimen/margintiny"
+        />
+      <EditText android:id="@+id/compass_prefix"
+        android:layout_width="fill_parent" 
+        android:layout_height="wrap_content"
+        android:hint="@string/export_prefix_hint"
+        android:importantForAutofill="no"
+        android:inputType="text"
+        />
+    </LinearLayout>
   </LinearLayout>
 
   <LinearLayout android:id="@+id/layout_csurvey"
@@ -100,7 +112,59 @@
       android:layout_height="wrap_content"
       android:text="@string/export_media"
       />
+    <!-- LinearLayout
+      android:layout_width="match_parent" 
+      android:layout_height="wrap_content"
+      android:orientation="horizontal" 
+      >
+      <Button android:id="@+id/csurvey_prefix_survey"
+        style="@style/button_default"
+        android:text="@string/export_prefix_survey"
+        />
+      <EditText android:id="@+id/csurvey_prefix"
+        android:layout_width="fill_parent" 
+        android:layout_height="wrap_content"
+        android:hint="@string/export_prefix_hint"
+        android:importantForAutofill="no"
+        android:inputType="text"
+        />
+    </LinearLayout -->
   </LinearLayout>
+
+  <!--// HBPly -->
+  <LinearLayout android:id="@+id/layout_polygon"
+      android:layout_width="match_parent"
+      android:layout_height="wrap_content"
+      android:orientation="vertical"
+      android:layout_marginTop="@dimen/marginvbig"
+      android:layout_marginBottom="@dimen/marginvbig"
+      >
+    <RadioGroup
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        >
+      <RadioButton
+          android:id="@+id/ply_lrud"
+          android:layout_width="match_parent"
+          android:layout_height="wrap_content"
+          android:text="@string/lrud"
+          android:checked="true"
+          />
+      <RadioButton
+          android:id="@+id/ply_snumber"
+          android:layout_width="match_parent"
+          android:layout_height="wrap_content"
+          android:text="@string/s1_s1000"
+          />
+      <RadioButton
+          android:id="@+id/ply_minus"
+          android:layout_width="match_parent"
+          android:layout_height="wrap_content"
+          android:text="@string/minus"
+          />
+    </RadioGroup>
+  </LinearLayout>
+
 
   <LinearLayout android:id="@+id/layout_survex"
     android:layout_width="match_parent" 
@@ -158,8 +222,13 @@
       android:layout_height="wrap_content"
       android:text="@string/export_maps"
       />
-    <CheckBox android:id="@+id/therion_lrud"
+    <CheckBox android:id="@+id/therion_uncommented_maps"
       android:layout_width="match_parent" 
+      android:layout_height="wrap_content"
+      android:text="@string/export_uncommented_maps"
+      />
+    <CheckBox android:id="@+id/therion_lrud"
+      android:layout_width="match_parent"
       android:layout_height="wrap_content"
       android:text="@string/export_lrud"
       />
@@ -260,21 +329,38 @@
       />
   </LinearLayout>
 
-  <!-- LinearLayout android:id="@+id/layout_winkarst"
+  <LinearLayout android:id="@+id/layout_winkarst"
     android:layout_width="match_parent" 
     android:layout_height="wrap_content"
     android:orientation="vertical" 
     android:layout_marginTop="@dimen/marginvbig"
     android:layout_marginBottom="@dimen/marginvbig"
     >
-    <EditText android:id="@+id/winkarst_prefix"
+    <LinearLayout
       android:layout_width="match_parent" 
       android:layout_height="wrap_content"
-      android:hint="@string/export_prefix_hint"
-      android:importantForAutofill="no"
-      android:inputType="text"
-      />
-  </LinearLayout -->
+      android:orientation="horizontal" 
+      >
+      <CheckBox android:id="@+id/winkarst_prefix_cb"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/export_prefix_hint"
+        android:layout_marginEnd="@dimen/margintiny" 
+        />
+      <Button android:id="@+id/winkarst_prefix_survey"
+        style="@style/button_default"
+        android:text="@string/export_prefix_reset"
+        android:layout_marginEnd="@dimen/margintiny"
+        />
+      <EditText android:id="@+id/winkarst_prefix"
+        android:layout_width="match_parent" 
+        android:layout_height="wrap_content"
+        android:hint="@string/export_prefix_hint"
+        android:importantForAutofill="no"
+        android:inputType="text"
+        />
+    </LinearLayout>
+  </LinearLayout>
 
   <LinearLayout android:id="@+id/layout_csv"
     android:layout_width="match_parent" 
@@ -317,7 +403,7 @@
       android:text="@string/export_splays"
       />
     <CheckBox android:id="@+id/kml_stations"
-      android:layout_width="match_parent" 
+      android:layout_width="match_parent"
       android:layout_height="wrap_content"
       android:text="@string/export_stations"
       />
@@ -346,6 +432,13 @@
       android:text="@string/export_georeference"
       / -->
   </LinearLayout>
+
+  <CheckBox android:id="@+id/export_share"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginTop="@dimen/margintiny"
+    android:text="@string/export_share"
+    />
 
   <LinearLayout android:id="@+id/help"
     android:layout_width="match_parent" 

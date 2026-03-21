@@ -11,6 +11,7 @@
  */
 package com.topodroid.TDX;
 
+// import com.topodroid.dev.BtScan;
 import com.topodroid.dev.cavway.CavwayMemoryDialog;
 import com.topodroid.dev.cavway.CavwayInfoDialog;
 import com.topodroid.dev.cavway.CavwayInfoReadTask;
@@ -20,6 +21,7 @@ import com.topodroid.dev.distox_ble.DistoXBLEMemoryDialog;
 // import com.topodroid.dev.distox_ble.XBLEFirmwareDialog;
 
 import com.topodroid.ui.TDProgress;
+import com.topodroid.ui.ListItemAdapter;
 
 import com.topodroid.utils.TDLog;
 // import com.topodroid.utils.TDString;
@@ -41,6 +43,8 @@ import com.topodroid.prefs.TDPrefCat;
 import com.topodroid.packetX.PacketDialog;
 import com.topodroid.dev.Device;
 import com.topodroid.dev.DeviceUtil;
+import com.topodroid.dev.ble.BleScanner;
+import com.topodroid.dev.ble.BleScanCallback;
 import com.topodroid.dev.cavway.MemoryCavwayTask;
 import com.topodroid.dev.distox.MemoryReadTask;
 import com.topodroid.dev.distox.IMemoryDialog;
@@ -68,12 +72,12 @@ import com.topodroid.calib.CalibExport;
 
 import java.util.Set;
 import java.util.Locale;
-// import java.util.List;
+import java.util.List;
 import java.util.ArrayList;
 
 import java.io.File; // private app files (ccsv)
 
-// import java.lang.reflect.Method;
+import java.lang.reflect.Method;
 // import java.lang.reflect.InvocationTargetException;
 
 import android.app.Activity;
@@ -112,6 +116,10 @@ import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothClass;
 // import android.bluetooth.BluetoothAdapter;
 
+// import android.bluetooth.le.ScanCallback;
+import android.bluetooth.le.ScanResult;
+import android.bluetooth.le.ScanRecord;
+
 public class DeviceActivity extends Activity
                             implements View.OnClickListener
                             , OnItemClickListener
@@ -121,6 +129,9 @@ public class DeviceActivity extends Activity
 {
   private TopoDroidApp mApp;
   private DeviceHelper mApp_mDData;
+
+  private BleScanner mBleScanner = null;
+  // private BtScan mBtScan = null;
 
   // referrer ( getReferrer() is from API-22 ) // FIXME
   // public final int REFERRER_NONE = 0;
@@ -140,7 +151,7 @@ public class DeviceActivity extends Activity
   private TextView mTvAddressB;
 
   private static final int[] izonsno = {
-                        0,
+                        R.drawable.iz_bt_scan, 
                         0,
                         R.drawable.iz_toggle_no,
                         R.drawable.iz_2compute_no,
@@ -165,8 +176,10 @@ public class DeviceActivity extends Activity
   private BitmapDrawable mBMcalib_no;
   private BitmapDrawable mBMread;
   private BitmapDrawable mBMread_no;
+  private BitmapDrawable mBMbt;
+  private BitmapDrawable mBMbt_scan;
 
-  // static final private int IDX_BT     = 0;
+  static final private int IDX_BT     = 0;
   static final private int IDX_INFO   = 1;
   static final private int IDX_TOGGLE = 2;
   static final private int IDX_CALIB  = 3;
@@ -174,7 +187,7 @@ public class DeviceActivity extends Activity
   static final private int IDX_MEMORY = 5;
 
   private static final int[] menus = {
-                        // R.string.menu_scan,
+                        R.string.menu_scan, // BT_SCAN
                         // R.string.menu_scan_ble, // FIXME_SCAN_BRIC
                         // R.string.menu_pair,
                         R.string.menu_detach,
@@ -196,7 +209,7 @@ public class DeviceActivity extends Activity
                         // R.string.help_remote
                      };
   private static final int[] help_menus = {
-                        // R.string.help_scan,
+                        R.string.help_scan,
                         // R.string.help_scan_ble, // FIXME_SCAN_BRIC
                         // R.string.help_pair,
                         R.string.help_detach,
@@ -209,7 +222,8 @@ public class DeviceActivity extends Activity
 
   private static final int HELP_PAGE = R.string.DeviceActivity;
 
-  private ListItemAdapter mArrayAdapter; // populated by updateList
+  private ListItemAdapter mDeviceListAdapter; // populated by updateList
+  private ArrayList< Device > mDeviceList;
   private ListView mList;
 
   private ArrayList< BluetoothDevice > mNonameList = null;  // BT_NONAME
@@ -219,6 +233,8 @@ public class DeviceActivity extends Activity
   private Device currDeviceB() { return TDInstance.getDeviceB(); }
 
   private boolean mHasBLE     = false; // BRIC default to false
+
+  private boolean mBTisScanning = false;
 
   private final BroadcastReceiver mPairReceiver = new BroadcastReceiver()
   {
@@ -246,11 +262,11 @@ public class DeviceActivity extends Activity
     } else {
       mNonameList.clear();
     }
-    Set<BluetoothDevice> device_set = DeviceUtil.getBondedDevices(); // get paired devices
-    if ( device_set == null || device_set.isEmpty() ) return false;
-    for ( BluetoothDevice device : device_set ) {
-      if ( device.getName() == null && device.getType() == 2 ) { // only type 2 (BLE)
-        mNonameList.add( device );
+    Set<BluetoothDevice> bt_device_set = DeviceUtil.getBondedDevices(); // get paired devices
+    if ( bt_device_set == null || bt_device_set.isEmpty() ) return false;
+    for ( BluetoothDevice bt_device : bt_device_set ) {
+      if ( bt_device.getName() == null && bt_device.getType() == 2 ) { // only type 2 (BLE)
+        mNonameList.add( bt_device );
       }
     }
     return ! mNonameList.isEmpty();
@@ -375,6 +391,57 @@ public class DeviceActivity extends Activity
     updateList( false );
   }
 
+  /** do forget a device
+   * @param device device to forget
+   */
+  void doForgetDevice( Device device )
+  {
+    String address = device.getAddress();
+    TDLog.v("forget device " + address );
+    mApp_mDData.forgetDevice( address );
+    // forget device on Android
+    Set<BluetoothDevice> bt_device_set = DeviceUtil.getBondedDevices(); // add bonded devices
+    if ( bt_device_set != null && ! bt_device_set.isEmpty() ) {
+      boolean found = false;
+      for ( BluetoothDevice bt_device : bt_device_set ) {
+        if ( address.equals(  bt_device.getAddress() ) ) {
+          found = true;
+          try {
+            Method method = bt_device.getClass().getMethod( "removeBond", (Class[]) null );
+            method.invoke( bt_device, (Object[]) null );
+            TDLog.v("unpair device " + address + " done " );
+          } catch ( Exception e ) {
+            TDToast.make( R.string.fail_forget_device );
+            TDLog.e("unpair device " + address + " error " + e.getMessage() );
+          }
+          break;
+        }
+      }
+      if ( ! found ) {
+        TDLog.v("unpair device " + address + " not found");
+      }
+    }
+    removeDeviceFromList( device );
+    Device curr_dev = currDeviceA();
+    if ( curr_dev != null && curr_dev.getAddress().equals( address ) ) detachDevice();
+  }
+
+  /** ask whether to forget a device
+   * @param device device to forget
+   */
+  void forgetDevice( final Device device )
+  {
+    TopoDroidAlertDialog.makeAlert( this, getResources(),
+      String.format( getResources().getString(R.string.ask_forget_device), device.getNickname() ),
+      new DialogInterface.OnClickListener() {
+        @Override
+        public void onClick( DialogInterface dialog, int btn ) {
+          doForgetDevice( device );
+        }
+      }
+    );
+  }
+
 
   @Override
   protected void onCreate(Bundle savedInstanceState) 
@@ -455,14 +522,18 @@ public class DeviceActivity extends Activity
       mBMcalib_no = MyButton.getButtonBackground( mApp, res, izonsno[IDX_CALIB] );
       mBMread    = MyButton.getButtonBackground( mApp, res, izons[IDX_READ] );
       mBMread_no = MyButton.getButtonBackground( mApp, res, izonsno[IDX_READ] );
+      mBMbt      = MyButton.getButtonBackground( mApp, res, izons[IDX_BT] );
+      mBMbt_scan = MyButton.getButtonBackground( mApp, res, izonsno[IDX_BT] );
     // }
 
     mButtonView1 = new MyHorizontalButtonView( mButton1 );
     mListView.setAdapter( mButtonView1.mAdapter );
 
-    mArrayAdapter = new ListItemAdapter( this, R.layout.message );
+    mDeviceListAdapter = new ListItemAdapter( this, R.layout.message );
+    mDeviceList = new ArrayList< Device >();
+
     mList = (ListView) findViewById(R.id.dev_list);
-    mList.setAdapter( mArrayAdapter );
+    mList.setAdapter( mDeviceListAdapter );
     mList.setOnItemClickListener( this );
     // mList.setLongClickable( true );
     mList.setOnItemLongClickListener( this );
@@ -483,98 +554,197 @@ public class DeviceActivity extends Activity
     showDistoXButtons();
   }
 
+  /** clear the list of devices and the adapter
+   */
+  private void clearDeviceList()
+  {
+    mDeviceListAdapter.clear();
+    mDeviceList.clear();
+  }
+
+  /** add a device to the list of devices and the adapter
+   * @param dev   device to add
+   * @return true if the device was not on the list and has been inserted
+   */
+  private boolean addDeviceToList( Device dev )
+  {
+    if ( ! isDeviceOnList( dev.getAddress() ) ) {
+      mDeviceListAdapter.add( dev.toString() );
+      mDeviceList.add( dev );
+      return true;
+    }
+    return false;
+  }
+
+  /** drop a device from the list
+   * @param dev   device to drop
+   */
+  private void removeDeviceFromList( Device dev )
+  {
+    if ( isDeviceOnList( dev.getAddress() ) ) {
+      TDLog.v("remove device " + dev.getAddress() );
+      updateList( false );
+    } else {
+      TDLog.e("remove device " + dev.getAddress() + " not listed");
+    }
+  }
+      
+
   private void updateList( boolean check_noname )
   {
     // TDLog.v("device activity update list - check noname " + check_noname );
     if ( check_noname ) mHasNonameDevice = updateNonameList(); // BT_NONAME
-    mArrayAdapter.clear();
+    clearDeviceList();
     // if ( TDLevel.overTester ) { // FIXME VirtualDistoX
-    //   mArrayAdapter.add( "X000" );
+    //   mDeviceListAdapter.add( "X000" );
+    //   mdeviceList.add( new Device( ... ) ); // TODO
     // }
     // Map< String, String > bt_aliases = TopoDroid.mDData.selectAllAlias(); // BT_ALIAS
 
-    Set<BluetoothDevice> device_set = DeviceUtil.getBondedDevices(); // get paired devices
-    if ( device_set == null || device_set.isEmpty() ) {
-      // TDToast.make(R.string.no_paired_device );
-    } else { 
+    Set<BluetoothDevice> bt_device_set = DeviceUtil.getBondedDevices(); // add bonded devices
+    if ( bt_device_set != null && ! bt_device_set.isEmpty() ) {
       setTitle( R.string.title_device );
-      for ( BluetoothDevice device : device_set ) {
-        String addr = device.getAddress();
-        Device dev = mApp_mDData.getDevice( addr );
-// ----------- DEBUG
-//         int type = device.getType(); // 0 = unknown, 1 = classis, 2 = LE, 3 both
-//         if ( type == 2 ) {
-//           BluetoothClass bt_class = device.getBluetoothClass();
-//           ParcelUuid[] uuids = device.getUuids();
-//           TDLog.v("BT class " + bt_class.toString() + " " + device.getName() + " class " + bt_class.getMajorDeviceClass() + " " + bt_class.getDeviceClass() + " " + addr );
-//           if ( uuids != null ) {
-//             for ( ParcelUuid puuid : uuids ) {
-//               // UUID uuid = puuid.getUuid();
-//               TDLog.v("uuid " + puuid.toString() );
-//             }
-//           } else {
-//             TDLog.v("no uuid ");
-//           }
-//         }
-// ----------- END DEBUG
-        if ( dev == null ) {
-          String bt_name = null;
-          try {
-            bt_name = device.getName();
-          } catch( SecurityException e ) {
-            TDLog.e("SECURITY " + e.getMessage() );
-          }
-          if ( bt_name == null ) {
-            if ( device.getType() == 2 ) { // Bluetooth LE
-              TDToast.makeWarn( String.format( getResources().getString( R.string.device_no_name ), addr ) );
-              TDLog.v( "WARNING. Null name for device " + addr );
-            }
-          } else {
-            // String aliased = (String)bt_aliases.get( bt_name ); // BT_ALIAS
-            String aliased = TopoDroidApp.mDData.getAliasName( bt_name );
-            if ( aliased != null ) bt_name = aliased;
-
-            String name = Device.btnameToName( bt_name );
-            // TDLog.v("BLE " + "Device Activity: bt name <" + bt_name + "> name <" + name + ">" );
-            if ( Device.isDistoX( bt_name ) ) {
-              mApp_mDData.insertDevice( addr, bt_name, name, null );
-              dev = mApp_mDData.getDevice( addr );
-            } else if ( Device.isSap( bt_name ) ) { // FIXME SHETLAND FIXME_SAP6
-              // if ( TDLevel.overExpert ) {
-                // TDLog.v("SAP shetland device name " + bt_name + " --> name " + name );
-                mApp_mDData.insertDevice( addr, bt_name, name, null );
-                dev = mApp_mDData.getDevice( addr );
-              // }
-            } else if ( Device.isBric( bt_name ) ) {
-              // if ( TDLevel.overExpert ) {
-                mApp_mDData.insertDevice( addr, bt_name, name, null );
-                dev = mApp_mDData.getDevice( addr );
-              // }
-            } else if ( Device.isCavway( bt_name ) ){
-              mApp_mDData.insertDevice( addr, bt_name, name, null );
-              dev = mApp_mDData.getDevice( addr );
-            }
-          }
-        } else {
-          // if ( ! TDLevel.overExpert ) { // drop SAP and BRIC
-          //   if ( dev.isSap() || dev.isBric() ) dev = null;
-          // }
+      for ( BluetoothDevice bt_device : bt_device_set ) {
+        String addr = bt_device.getAddress();
+        String bt_name = null;
+        try {
+          bt_name = bt_device.getName();
+        } catch( SecurityException e ) {
+          TDLog.e("SECURITY " + e.getMessage() );
         }
-        if ( dev != null ) {
-          // // TDLog.e( "device " + name );
-          // if ( dev.mModel.startsWith( Device.NAME_DISTOX2 ) ) {      // DistoX2 X310
-          //   mArrayAdapter.add( " X310 " + dev.mName + " " + addr );
-          // } else if ( dev.mModel.equals( Device.NAME_DISTOX1 ) ) {    // DistoX A3
-          //   mArrayAdapter.add( " A3 " + dev.mName + " " + addr );
-          // } else {
-          //   // do not add
-          // }
-          mArrayAdapter.add( dev.toString() );
-        }
+        addBluetoothDevice( bt_device, addr, bt_name );
       }
     }
+    List< Device > devices = mApp_mDData.getDevices(); // now add other devices stored in the database
+    for ( Device device : devices ) {
+      addDeviceToList( device );
+    }
   }
-    
+
+  /** @return true if the given device is in the database
+   * @param dev   device
+   */
+  private boolean isDeviceInDatabase( Device dev )
+  {
+    String address = dev.getAddress();
+    if ( address == null ) {
+      TDLog.e("Cannot list device with null address"); // pretend it is already on the list
+      return true;
+    }
+    List< Device > devices = mApp_mDData.getDevices();
+    for ( Device device : devices ) {
+      if ( address.equals( device.getAddress() ) ) return true;
+    }
+    return false;
+  }
+
+  /** @return true if the device is on the device list
+   * @param address   device address
+   */
+  private boolean isDeviceOnList( String address )
+  {
+    for ( Device device : mDeviceList ) {
+      if ( address.equals( device.getAddress() ) ) return true;
+    }
+    return false;
+  }
+
+  /** add device returned by a scan
+   * @param result  result of the scan
+   * @return true if the device is novel
+   */
+  public boolean notifyScanResult( ScanResult result )
+  {
+    BluetoothDevice bt_dev = result.getDevice();
+    ScanRecord rec = result.getScanRecord();
+    // List< ParcelUuid > uuids = rec.getServiceUuids(); // can use uuid.toString() to get services UUID
+    return addBluetoothDevice( bt_dev, bt_dev.getAddress(), bt_dev.getName() );
+  }
+
+  /** add a Bluetooth device to the list
+   * @param bt_device Bluetooth device
+   * @param addres    device address
+   * @param bt_name   device BT name
+   * @return true if the device has been added (it was not already on the list)
+   */
+  public boolean addBluetoothDevice(  BluetoothDevice bt_device, String address, String bt_name )
+  {
+    Device dev = mApp_mDData.getDevice( address );
+    // ---- DEBUG
+    //  int type = bt_device.getType(); // 0 = unknown, 1 = classis, 2 = LE, 3 both
+    //  if ( type == 2 ) {
+    //    BluetoothClass bt_class = bt_device.getBluetoothClass();
+    //    ParcelUuid[] uuids = bt_device.getUuids();
+    //    TDLog.v("BT class " + bt_class.toString() + " " + bt_device.getName() + " class " + bt_class.getMajorDeviceClass() + " " + bt_class.getDeviceClass() + " " + address );
+    //    if ( uuids != null ) {
+    //      for ( ParcelUuid puuid : uuids ) {
+    //        // UUID uuid = puuid.getUuid();
+    //        TDLog.v("uuid " + puuid.toString() );
+    //      }
+    //    } else {
+    //      TDLog.v("no uuid ");
+    //    }
+    //  }
+    // ---- END DEBUG
+    if ( dev == null ) {
+      if ( bt_name == null ) {
+        if ( bt_device != null && bt_device.getType() == 2 ) { // Bluetooth LE
+          TDToast.makeWarn( String.format( getResources().getString( R.string.device_no_name ), address ) );
+          TDLog.v( "WARNING. Null name for device " + address );
+        }
+      } else {
+        // String aliased = (String)bt_aliases.get( bt_name ); // BT_ALIAS
+        String aliased = TopoDroidApp.mDData.getAliasName( bt_name );
+        if ( aliased != null ) bt_name = aliased;
+
+        String name = Device.btnameToName( bt_name ); // short name (mickname): BT name without model signature
+        // TDLog.v("BLE " + "Device Activity: bt name <" + bt_name + "> name <" + name + ">" );
+        // these if's do all the same thing but i keep them distinguished
+        if ( Device.isCavway( bt_name ) ){         //CavwayX1
+          mApp_mDData.insertDevice( address, bt_name, name, null );
+          dev = mApp_mDData.getDevice( address );
+        } else if ( Device.isDistoX( bt_name ) ) { // DistoX DistoX2 DistoXBLE
+          mApp_mDData.insertDevice( address, bt_name, name, null );
+          dev = mApp_mDData.getDevice( address );
+        } else if ( Device.isSap( bt_name ) ) {    // SAP5 SAP6 - FIXME SHETLAND FIXME_SAP6
+          mApp_mDData.insertDevice( address, bt_name, name, null );
+          dev = mApp_mDData.getDevice( address );
+        } else if ( Device.isBric( bt_name ) ) {   // BRIC4 BRIC5
+          mApp_mDData.insertDevice( address, bt_name, name, null );
+          dev = mApp_mDData.getDevice( address );
+        } else if ( Device.isDiscoX( bt_name ) ) { // discox
+          mApp_mDData.insertDevice( address, bt_name, name, null );
+          dev = mApp_mDData.getDevice( address );
+        }
+      }
+    } else {
+      // if ( ! TDLevel.overExpert ) { // drop SAP and BRIC
+      //   if ( dev.isSap() || dev.isBric() ) dev = null;
+      // }
+    }
+    if ( dev != null ) {
+      return addDeviceToList( dev );
+    }
+    return false;
+  }
+
+  /** add a device that has been manually entered
+   * @param address   device address
+   * @param bt_name   device BT name (model-number)
+   * @param nickname  device nickname (can be null)
+   */ 
+  public void addDevice( String address, String bt_name, String nickname )
+  {
+    // TDLog.v( "add device: " + address + " " + bt_name + " " + nickname );
+    Device device = mApp_mDData.getDevice( address );
+    if ( device != null ) {
+      TDToast.makeWarn( R.string.device_already_present );
+      return;
+    }
+    mApp_mDData.insertDevice( address, bt_name, Device.btnameToName( bt_name ), nickname );
+    updateList( false );
+  }
+
   /** react on user tap on an item in the list
    * @param parent  adapter parent
    * @param view    item view
@@ -599,6 +769,7 @@ public class DeviceActivity extends Activity
       return;
     }
     CharSequence item = ((TextView) view).getText();
+    TDLog.v("on item click: " + item.toString() );
     StringBuffer buf = new StringBuffer( item );
     int k = buf.lastIndexOf(" ");
     String[] vals = item.toString().split(" ", 3 );
@@ -636,7 +807,9 @@ public class DeviceActivity extends Activity
     setState( false );
   }
 
-  // pair the android and the current device
+  /** pair the android and the current device
+   * NOT USED
+   *
   private void pairDevice()
   {
     if ( currDeviceA() == null ) return;
@@ -653,6 +826,7 @@ public class DeviceActivity extends Activity
                // 1: paired ok
     }
   }
+   */
 
   // interface ICoeffDisplayer
   // @Implements
@@ -660,14 +834,15 @@ public class DeviceActivity extends Activity
 
 
   /** display calibration coeffs
-   * @param coeffs ...
+   * @param coeffs     calibration coeff array (either 52 or 104 bytes)
+   * @param cali_info  calibration info (16 bytes)
    */
   // @Implements
-  public void displayCoeff( byte[] coeffs )
+  public void displayCoeff( byte[] coeffs, byte[] cali_info )
   { // null coeff, null coeff2
     // FIXME TWO_SENSORS if the device is two-sensors 
     if ( currDeviceA() == null ) return;
-    (new CalibCoeffDialog( this, coeffs ) ).show();
+    (new CalibCoeffDialog( this, coeffs, cali_info ) ).show();
   }
 
   // @Implements
@@ -759,9 +934,20 @@ public class DeviceActivity extends Activity
 
     int k = 0;
     if ( k < mNrButton1 && b == mButton1[k++] ) {         // RESET COMM STATE [This is fast]
-      mApp.resetComm();
-      // setState( false ); // not necessary - moved to the end
-      TDToast.make( R.string.bt_reset );
+      if ( mBTisScanning ) {
+        // if ( mBtScan != null ) {
+        //   mBtScan.resetReceiver();
+        //   mBtScan = null;
+        // }
+        if ( mBleScanner != null ) {
+          mBleScanner.stopBleScan();
+          mBleScanner = null;
+        }
+      } else {
+        mApp.resetComm();
+        // setState( false ); // not necessary - moved to the end
+        TDToast.make( R.string.bt_reset );
+      }
     } else if ( k < mNrButton1 && b == mButton1[k++] ) {    // INFO TDLevel.overNormal
       if ( currDeviceA() == null ) {
         TDToast.makeBad( R.string.no_device_address );
@@ -837,23 +1023,6 @@ public class DeviceActivity extends Activity
       }
     }
     setState( false );
-  }
-
-  /** add a device that has been manually entered
-   * @param address   device address
-   * @param bt_name   device BT name (model-number)
-   * @param nickname  device nickname (can be null)
-   */ 
-  public void addDevice( String address, String bt_name, String nickname )
-  {
-    // TDLog.v( "add device: " + address + " " + bt_name + " " + nickname );
-    Device device = mApp_mDData.getDevice( address );
-    if ( device != null ) {
-      TDToast.makeWarn( R.string.device_already_present );
-      return;
-    }
-    mApp_mDData.insertDevice( address, bt_name, Device.btnameToName( bt_name ), nickname );
-    updateList( false );
   }
 
   /** set of BRIC4 datetime
@@ -1083,13 +1252,13 @@ public class DeviceActivity extends Activity
   // -----------------------------------------------------------------------------
 
   // UNUSED
-  // public void addBleDevice( BluetoothDevice device ) // TODO BLEX
+  // public void addBleDevice( BluetoothDevice bt_device ) // TODO BLEX
   // {
-  //   if ( device == null ) return;
-  //   String address = device.getAddress();
+  //   if ( bt_device == null ) return;
+  //   String address = bt_device.getAddress();
   //   String name    = null;
   //   try {
-  //     name = device.getName();
+  //     name = bt_device.getName();
   //   } catch( SecurityException e ) {
   //     TDLog.e("SECURITY " + e.getMessage() );
   //   }
@@ -1113,16 +1282,18 @@ public class DeviceActivity extends Activity
   //     case TDRequest.REQUEST_DEVICE:
   //       if ( result == RESULT_OK ) {
   //         String address = extras.getString( TDTag.TOPODROID_DEVICE_ACTION );
-  //         // TDLog.Log(TDLog.LOG_DISTOX, "OK " + address );
   //         if ( address == null ) {
   //           TDLog.e( "onActivityResult REQUEST DEVICE: null address");
-  //         } else if ( currDeviceA() == null || ! address.equals( currDeviceA().getAddress() ) ) { // N.B. address != null
-  //           mApp.disconnectRemoteDevice( true ); // new DataStopTask( mApp, null, null );
-  //           mApp.setDevicePrimary( address, null, null, null );
-  //           DeviceUtil.checkPairing( address );
-  //           // mCurrDevice = TDInstance.getDeviceA();
-  //           showDistoXButtons();
-  //           setState( true );
+  //         } else {
+  //           TDLog.v( "BT scan result: address " + address );
+  //           // if ( currDeviceA() == null || ! address.equals( currDeviceA().getAddress() ) ) { // N.B. address != null
+  //           //   mApp.disconnectRemoteDevice( true ); // new DataStopTask( mApp, null, null );
+  //           //   mApp.setDevicePrimary( address, null, null, null );
+  //           //   DeviceUtil.checkPairing( address );
+  //           //   // mCurrDevice = TDInstance.getDeviceA();
+  //           //   showDistoXButtons();
+  //           //   setState( true );
+  //           // }
   //         }
   //       } else if ( result == RESULT_CANCELED ) {
   //         TDLog.e( "CANCELED");
@@ -1170,7 +1341,7 @@ public class DeviceActivity extends Activity
     ArrayAdapter< String > menu_adapter = new ArrayAdapter<>(this, R.layout.menu );
 
     int k = -1;
-    // ++k; if ( TDLevel.overBasic    ) menu_adapter.add( res.getString( menus[k] ) );         // BT_SCAN
+    ++k; menu_adapter.add( res.getString( menus[k] ) );         // BT_SCAN
     // ++k; if ( TDLevel.overExpert && mHasBLE ) menu_adapter.add( res.getString( menus[k] ) ); // FIXME_SCAN_BRIC BLE_SCAN
     // ++k; if ( TDLevel.overBasic    ) menu_adapter.add( res.getString( menus[k] ) );
     ++k; if ( TDLevel.overNormal   ) menu_adapter.add( res.getString( menus[k] ) );
@@ -1192,6 +1363,16 @@ public class DeviceActivity extends Activity
     onMenu = false;
   }
 
+  public void setBtScanning( boolean scanning )
+  {
+    mBTisScanning = scanning;
+    TDandroid.setButtonBackground( mButton1[IDX_BT], (scanning ? mBMbt_scan : mBMbt ) );
+    if ( ! scanning ) {
+      // mBtScan = null;
+      mBleScanner   = null;
+    }
+  }
+
   /** handle a tap on a menu
    * @param pos  index of the tapped menu
    */
@@ -1199,19 +1380,38 @@ public class DeviceActivity extends Activity
   {
     closeMenu();
     int p = 0;
-    // if ( TDLevel.overBasic && p++ == pos ) { // BT_SCAN
-    //   Intent scanIntent = new Intent( Intent.ACTION_VIEW ).setClass( this, DeviceList.class );
-    //   scanIntent.putExtra( TDTag.TOPODROID_DEVICE_ACTION, DeviceList.DEVICE_SCAN );
-    //   startActivityForResult( scanIntent, TDRequest.REQUEST_DEVICE );
-    //   TDToast.makeLong(R.string.wait_scan );
+    if ( p++ == pos ) { // BT_SCAN
+      if ( mBTisScanning ) return;
+      if ( TDandroid.BELOW_API_31 ) {
+        // Intent scanIntent = new Intent( Intent.ACTION_VIEW ).setClass( this, BtScan.class );
+        // scanIntent.putExtra( TDTag.TOPODROID_DEVICE_ACTION, BtScan.DEVICE_SCAN );
+        // startActivityForResult( scanIntent, TDRequest.REQUEST_DEVICE );
+        // TDToast.makeLong(R.string.wait_scan );
+        if ( ! TDandroid.hasLocation( this ) ) { // check if location is enabled
+          TDToast.makeWarn( R.string.location_enabled );
+          return;
+        }
+        // else {
+        //   mBtScan = new BtScan( this, this ); // ).show();
+        //   if ( mBtScan.scanBtDevices() ) {
+        //     setBtScanning( true );
+        //   } else {
+        //     mBtScan = null;
+        //   }
+        // }
+      } // else {
+        mBleScanner = new BleScanner( this, this );
+        mBleScanner.startBleScan( new BleScanCallback(this, mBleScanner) );
+        setBtScanning( true );
+      // }
 
     // } else if ( TDLevel.overExpert && mHasBLE && p++ == pos ) { // FIXME_SCAN_BRIC BLE_SCAN
     //   BluetoothAdapter adapter = BluetoothAdapter.getDefaultAdapter();
     //   (new BleScanDialog( this, this, adapter, null )).show();
     // } else if ( TDLevel.overBasic && p++ == pos ) { // PAIR
     //   pairDevice();
-    // } else 
-    if ( TDLevel.overNormal && p++ == pos ) { // DETACH
+
+    } else if ( TDLevel.overNormal && p++ == pos ) { // DETACH
       detachDevice();
 
     } else if ( TDLevel.overAdvanced && p++ == pos ) { // FIRMWARE
@@ -1243,7 +1443,7 @@ public class DeviceActivity extends Activity
       intent.putExtra( TDPrefCat.PREF_CATEGORY, TDPrefCat.PREF_CATEGORY_DEVICE );
       startActivity( intent );
     } else if ( p++ == pos ) { // HELP
-      new HelpDialog(this, izons, menus, help_icons, help_menus, mNrButton1, help_menus.length, getResources().getString( HELP_PAGE ) ).show();
+      new HelpDialog(this, this, izons, menus, help_icons, help_menus, mNrButton1, help_menus.length, getResources().getString( HELP_PAGE ) ).show();
     // } else if ( TDLevel.overTester && p++ == pos ) { // CALIB_RESET
     //   doCalibReset();
     }
@@ -1295,20 +1495,34 @@ public class DeviceActivity extends Activity
         coeff[52+46] = low;    coeff[52+47] = high;
         coeff[52+48] = zeroNL; coeff[52+49] = zeroNL; coeff[52+50] = zeroNL; coeff[52+51] = zeroNL;
       }
-      mApp.uploadCalibCoeff( coeff, false, b ); 
+      byte[] cali_info = null;
+      if ( TDInstance.isDeviceCavway() ) {
+        cali_info = new byte[16];
+        cali_info[ 0 ] = (byte)0x55;
+        cali_info[ 1 ] = (byte)0x01;
+        for ( int k = 2; k < 16; ++ k ) cali_info[k] = (byte)0;
+      }
+      mApp.uploadCalibCoeff( coeff, false, b, cali_info ); 
     }
   }
 
   @Override 
   public boolean onItemLongClick(AdapterView<?> parent, View view, int pos, long id)
   {
-    String item_str = mArrayAdapter.getItem(pos); // "model name addr"
-    if ( item_str == null || item_str.equals("X000") ) return true;
+    CharSequence item = ((TextView) view).getText();
+    TDLog.v("on item long click " + pos + ": " + item.toString() );
+    String item_str = mDeviceListAdapter.getItem(pos); // "model name addr"
+    if ( item_str == null || item_str.equals("X000") ) {
+      TDLog.v("on item long click: pos " + pos + " item " + item_str );
+      return true;
+    }
     String[] vals = item_str.split(" ", 3);
     String address = vals[2]; // address or nickname
     Device device = mApp_mDData.getDevice( address );
     if ( device != null ) {
       (new DeviceNameDialog( this, this, device )).show();
+    } else {
+      TDLog.v("on item long click: address " + address + " not in database" );
     }
     return true;
   }
@@ -1426,6 +1640,14 @@ public class DeviceActivity extends Activity
     // progress.setText( msg );
     progress.show();
   }
+
+  public void syncDateTime() 
+  { 
+    String address = TDInstance.deviceAddress();
+    if ( address != null ) mApp.syncDateTime( this, address );
+  }
+
+
 
 }
 

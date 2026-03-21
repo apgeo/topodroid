@@ -16,6 +16,7 @@ import com.topodroid.dev.cavway.CavwayInfoDialog;
 import com.topodroid.dev.distox_ble.DistoXBLEComm; // SIWEI_TIAN
 // import com.topodroid.dev.distox_ble.DistoXBLEConst;
 import com.topodroid.dev.distox_ble.DistoXBLEInfoDialog;
+import com.topodroid.dev.distox.DistoX; // DistoX.DISTOX_OFF
 
 import com.topodroid.utils.TDMath;
 import com.topodroid.utils.TDLog;
@@ -44,15 +45,18 @@ import com.topodroid.dev.distox1.DeviceA3Info;
 import com.topodroid.dev.distox2.DistoX310Comm;
 import com.topodroid.dev.distox2.DeviceX310Info;
 import com.topodroid.dev.distox2.DeviceX310Details;
+import com.topodroid.dev.cavway.CavwaySyncDateTimeTask;
 import com.topodroid.dev.sap.SapComm;
+import com.topodroid.dev.discox.DiscoXComm;
 import com.topodroid.dev.bric.BricComm;
 import com.topodroid.dev.bric.BricInfoDialog;
-import com.topodroid.dev.PairingRequest;
+import com.topodroid.dev.PairingRequest; // FIXME DROP_PAIRING
+// import com.topodroid.dev.cavway.CavwayConst;
 import com.topodroid.dev.cavway.CavwayMemoryDialog;
-import com.topodroid.common.LegType;
-import com.topodroid.common.ExtendType;
-import com.topodroid.common.PlotType;
-import com.topodroid.common.ExportInfo;
+import com.topodroid.types.LegType;
+import com.topodroid.types.ExtendType;
+import com.topodroid.types.PlotType;
+import com.topodroid.types.ExportInfo;
 // import com.topodroid.calib.CalibCoeffDialog;
 // import com.topodroid.calib.CalibReadTask;
 import com.topodroid.calib.CalibInfo;
@@ -88,7 +92,7 @@ import android.os.RemoteException;
 // import android.database.sqlite.SQLiteDatabase;
 
 import android.app.Application;
-// import android.app.Activity;
+import android.app.Activity;
 // import android.app.Notification;
 // import android.app.NotificationManager;
 // import android.app.KeyguardManager;
@@ -236,7 +240,7 @@ public class TopoDroidApp extends Application
    */
   public void notifyListerStatus( ListerHandler lister, final int status )
   { 
-    // TDLog.v( "TDApp: notify status " + status );
+    // TDLog.v( "APP: notify status " + status );
     if ( lister == null ) return;
     if ( mMainActivity == null ) return;
     mMainActivity.runOnUiThread( new Runnable() { 
@@ -276,7 +280,7 @@ public class TopoDroidApp extends Application
   // public static TDPrefHelper mPrefHlp      = null;
   static SurveyWindow mSurveyWindow          = null; // FIXME ref Survey Activity
   public static ShotWindow mShotWindow       = null; // FIXME ref Shot Activity - public for prefs/TDSetting
-  public static DrawingWindow mDrawingWindow = null; // FIXME currently not used
+  public static DrawingWindow mDrawingWindow = null;
   public static MainWindow mMainActivity     = null; // FIXME ref Main Activity
   public static TopoGL mTopoGL               = null; // FIXME
 
@@ -285,6 +289,11 @@ public class TopoDroidApp extends Application
   static long lastShotId( ) { return mData.getLastShotId( TDInstance.sid ); }
 
   static StationName mStationName = null;
+
+  public static void resetRecentTools() 
+  {
+    if ( mDrawingWindow != null ) mDrawingWindow.resetRecentTools();
+  }
 
   // static Device mDevice = null;
   // static int deviceType() { return (mDevice == null)? 0 : mDevice.mType; }
@@ -593,6 +602,15 @@ public class TopoDroidApp extends Application
     mData.updateSurveyExtend( TDInstance.sid, extend );
   }
 
+  /** @return the statistics of a survey
+   * @param sid   survey ID
+   */
+  static SurveyStat getSurveyStat( long sid )
+  {
+    List< Device > devices = mDData.getDevices();
+    return mData.getSurveyStat( sid, devices );
+  }
+
   /** @return the info of the current calibration
    */
   public CalibInfo getCalibInfo()
@@ -656,10 +674,10 @@ public class TopoDroidApp extends Application
 
   public void disconnectRemoteDevice( boolean force )
   {
-    // TDLog.v( "TDApp: disconnect remote device. force " + force );
-    // TDLog.Log( TDLog.LOG_COMM, "TDApp disconnect RemoteDevice listers " + mListerSet.size() + " force " + force );
+    // TDLog.v( "TDApp: disconnect remote device. force " + force + " listers " + mListerSet.size() );
     if ( force || mListerSet.size() == 0 ) {
       if ( mComm != null && mComm.isConnected() ) {
+        // TDLog.v("TDApp: disconnect comm");
         mComm.disconnectRemoteDevice( ); // FIXME BLE5 to check
       }
     }
@@ -838,8 +856,8 @@ public class TopoDroidApp extends Application
     // TDLog.v( "PCmap set map done");
 
     TDSetting.loadSecondaryPreferences( prefHlp );
-    TDLog.v( "load secondary done");
-    checkAutoPairing();
+    // TDLog.v( "load secondary done");
+    checkAutoPairing(); // FIXME DROP_PAIRING
 
     // if ( TDLog.LOG_DEBUG ) {
     //   isTracing = true;
@@ -864,11 +882,21 @@ public class TopoDroidApp extends Application
       } else if ( TDInstance.isDeviceA3() ) {
         // TDLog.v( "TDApp: create DistoX1 comm");
         mComm = new DistoXA3Comm( this );
-      } else if ( TDInstance.isDeviceSap() ) {
+      } else if ( TDInstance.isDeviceSap5() ) {
         String address = TDInstance.deviceAddress();
         BluetoothDevice bt_device = TDInstance.getBleDevice();
         // TDLog.v( "TDApp: create SAP comm");
-        mComm = new SapComm( this, address, bt_device );
+        mComm = new SapComm( this, address, bt_device, 5 );
+      } else if ( TDInstance.isDeviceSap6() ) {
+        String address = TDInstance.deviceAddress();
+        BluetoothDevice bt_device = TDInstance.getBleDevice();
+        // TDLog.v( "TDApp: create SAP comm");
+        mComm = new SapComm( this, address, bt_device, 6 );
+      } else if ( TDInstance.isDeviceDiscoX() ) {
+        String address = TDInstance.deviceAddress();
+        BluetoothDevice bt_device = TDInstance.getBleDevice();
+        // TDLog.v( "TDApp: create SAP comm");
+        mComm = new DiscoXComm( this, address, bt_device );
       } else if ( TDInstance.isDeviceBric() ) {
         String address = TDInstance.deviceAddress();
         BluetoothDevice bt_device = TDInstance.getBleDevice();
@@ -900,8 +928,18 @@ public class TopoDroidApp extends Application
    */
   void doBluetoothButton( Context ctx, ILister lister, Button b, int nr_shots )
   {
+    if ( TDSetting.WITH_IMMUTABLE && ! TDInstance.isSurveyMutable ) {
+      doBluetoothReset( lister );
+      return;
+    }
+
     if ( TDLevel.overAdvanced ) {
-      if ( TDInstance.isDeviceBric() ) {
+      if ( TDInstance.isDeviceCavway() ) { // CAVWAY
+        if ( TDInstance.hasDeviceRemoteControl() && ! TDSetting.isConnectionModeMulti()) {
+          CutNPaste.showPopupBT( ctx, lister, this, b, false, (nr_shots == 0) );
+          return;
+        }
+      } else if ( TDInstance.isDeviceBric() ) {
         // TDLog.v( "bt button over advanced : BRIC");
         if ( mComm != null && mComm.isConnected() ) { // FIXME BRIC_TESTER
           CutNPaste.showPopupBT( ctx, lister, this, b, false, (nr_shots == 0) );
@@ -954,6 +992,7 @@ public class TopoDroidApp extends Application
     mDataDownloader.setDownloading( false );
     mDataDownloader.stopDownloadData( lister );
     if ( lister != null ) {
+      // TDLog.v("APP notify " + mDataDownloader.getStatus() + " lister " + lister.toString() );
       lister.setConnectionStatus( mDataDownloader.getStatus() );
       // mDataDownloader.notifyConnectionStatus( lister, ConnectionState.CONN_DISCONNECTED );
     }
@@ -995,7 +1034,7 @@ public class TopoDroidApp extends Application
 
     thisApp = this;
     TDInstance.setContext( getApplicationContext() );
-    TDLog.v("TDApp on create");
+    // TDLog.v("TDApp on create");
 
     // MODE_WORLD_WRITEABLE and MODE_WORLD_READABLE are no longer supported
     // SQLiteDatabase dbase = openOrCreateDatabase("DISTOX14", 0, null );
@@ -1085,7 +1124,7 @@ public class TopoDroidApp extends Application
    */
   void initEnvironmentFirst(  ) // TDPrefHelper prefHlp 
   {
-    TDLog.v("TDApp init env [1] already done " + done_init_env_first );
+    // TDLog.v("TDApp init env [1] already done " + done_init_env_first );
     if ( done_init_env_first ) return;
     // TDLog.v("TDApp Init Env [1]");
     done_init_env_first = true;
@@ -1094,7 +1133,7 @@ public class TopoDroidApp extends Application
     TDPrefHelper prefHlp = new TDPrefHelper( this );
     mDData = new DeviceHelper( thisApp );
     // LOADING THE SETTINGS IS RATHER EXPENSIVE !!!
-    TDLog.v("TDApp load primary prefs");
+    // TDLog.v("TDApp load primary prefs");
     TDSetting.loadPrimaryPreferences( TDInstance.getResources(),  prefHlp );
 
     thisApp.mDataDownloader = new DataDownloader( thisApp, thisApp );
@@ -1164,7 +1203,7 @@ public class TopoDroidApp extends Application
    */
   static  boolean initEnvironmentSecond( )
   {
-    TDLog.v("TDApp init env [2] already done " + done_init_env_second );
+    // TDLog.v("TDApp init env [2] already done " + done_init_env_second );
     if ( done_init_env_second ) return true;
     // TDLog.v("TDApp Init Env [2]");
     done_init_env_second = true;
@@ -1182,7 +1221,7 @@ public class TopoDroidApp extends Application
         installSymbols( true );
       }
       String firmware_version = mDData.getValue( "firmware_version" );
-      TDLog.v("APP current firmware version " + firmware_version );
+      // TDLog.v("APP current firmware version " + firmware_version );
       if ( firmware_version == null || ( ! firmware_version.equals( TDVersion.FIRMWARE_VERSION ) ) ) {
         installFirmware( false ); // false = do not overwrite
       }
@@ -1198,13 +1237,13 @@ public class TopoDroidApp extends Application
 
     // TDLog.Profile("TDApp paths");
     boolean created = TDPath.setTdPaths( TDInstance.cwd /*, TDInstance.cbd */ );
-    TDLog.v("TD app: env init-2 cwd created " + created );
+    // TDLog.v("TD app: env init-2 cwd created " + created );
     return true;
   }
 
   static boolean initEnvironmentThird()
   {
-    TDLog.v("TDApp init env [3] loaded palette " + done_loaded_palette );
+    // TDLog.v("TDApp init env [3] loaded palette " + done_loaded_palette );
     // TDLog.Profile("TDApp DB"); 
     // ***** DATABASE MUST COME BEFORE PREFERENCES
     // if ( ! with_dialog_r ) {
@@ -1216,16 +1255,17 @@ public class TopoDroidApp extends Application
         Thread loader = new Thread() {
           @Override
           public void run() {
-            TDLog.v("TDApp loading palette");
+            // TDLog.v("TDApp loading palette");
             Resources res = TDInstance.getResources();
             // BrushManager.reloadPointLibrary( TDInstance.context, res ); // reload symbols
             // BrushManager.reloadLineLibrary( res );
             // BrushManager.reloadAreaLibrary( res );
-            // BrushManager.setHasSymbolLibraries( true );
-            BrushManager.loadAllLibraries( TDInstance.context, res );
+            BrushManager.setHasSymbolLibraries( false );
+            BrushManager.loadAllSymbolLibraries( TDInstance.context, res );
             BrushManager.doMakePaths( );
             MainWindow.enablePaletteButton();
             done_loaded_palette = true;
+            BrushManager.setHasSymbolLibraries( true );
           }
         };
         loader.setPriority( Thread.MIN_PRIORITY );
@@ -1234,7 +1274,9 @@ public class TopoDroidApp extends Application
         TDLog.e("TDApp init env [3] database not opened");
       }
     } else {
-      BrushManager.initAllIndices();
+      BrushManager.setHasSymbolLibraries( false );
+      BrushManager.initAllSymbolIndices();
+      BrushManager.setHasSymbolLibraries( true );
     }
     // mStationName = new StationName();
     return mData.hasDB();
@@ -1280,7 +1322,7 @@ public class TopoDroidApp extends Application
   public static void setCWD( String cwd /* , String cbd */ )
   {
     if ( TDString.isNullOrEmpty( cwd ) ) cwd = TDInstance.cwd;
-    TDLog.v( "TDApp set CWD " + cwd /* + " CBD " + cbd */ );
+    // TDLog.v( "TDApp set CWD " + cwd /* + " CBD " + cbd */ );
 
     if ( cwd.equals( TDInstance.cwd ) ) return;
     // TDInstance.cbd = cbd;
@@ -1290,7 +1332,7 @@ public class TopoDroidApp extends Application
 
     boolean created_cwd = TDPath.setTdPaths( TDInstance.cwd /*, TDInstance.cbd */ );
     boolean created_db  = mData.openSurveyDatabase( TDInstance.context );
-    TDLog.v("TD app: cwd created " + created_cwd + " db created " + created_db );
+    // TDLog.v("TD app: cwd created " + created_cwd + " db created " + created_db );
     if ( created_db ) done_loaded_palette = false; // 20241018 force reloading palette
 
     if ( mMainActivity != null ) mMainActivity.setTheTitle( );
@@ -1302,9 +1344,10 @@ public class TopoDroidApp extends Application
    * @param coeff    calibration coefficients
    * @param check    whether to check that the calibration matches the device 
    * @param b        "write" button - to update its state at the end
+   * @param cali_info Cavway cali-info (null for DistoX)
    * @note called by GMActivity and by CalibCoeffDialog and DeviceActivity (to reset coeffs)
    */
-  public void uploadCalibCoeff( byte[] coeff, boolean check, Button b ) // 20250123 dropped second
+  public void uploadCalibCoeff( byte[] coeff, boolean check, Button b, byte[] cali_info ) // 20250123 dropped second
   {
     // TODO this writeCoeff should be run in an AsyncTask
     if ( b != null ) b.setEnabled( false );
@@ -1315,6 +1358,11 @@ public class TopoDroidApp extends Application
     } else if ( ! mComm.writeCoeff( TDInstance.deviceAddress(), coeff ) ) {
       TDToast.makeBad( R.string.write_failed );
     } else {
+      if ( cali_info != null ) {
+        if ( ! mComm.writeCaliInfo( TDInstance.deviceAddress(), cali_info ) ) {
+          TDToast.makeBad( R.string.write_failed );
+        }
+      }
       // write OK: read coeff back and check they were written correctly
       int len = coeff.length;
       byte[] coeff2 = new byte[ len ];
@@ -1344,13 +1392,19 @@ public class TopoDroidApp extends Application
    * @return true if successful
    * @note called by CalibReadTask.onPostExecute
    */
-  public boolean readCalibCoeff( byte[] coeff ) // 20250123 droped second
+  public boolean readCalibCoeff( byte[] coeff, byte[] cali_info ) // 20250123 droped second
   {
     if ( mComm == null || TDInstance.getDeviceA() == null ) {
       TDLog.e("No comm or no device");
       return false;
     }
+    TDLog.v("App read calib coeff");
     boolean ret = mComm.readCoeff( TDInstance.deviceAddress(), coeff );
+    if ( (cali_info != null ) && (mComm instanceof CavwayComm ) ) {
+      TDLog.v("App read calib info");
+      CavwayComm comm = (CavwayComm)mComm;
+      comm.readCaliInfo( TDInstance.deviceAddress(), cali_info );
+    }
     resetComm();
     return ret;
   }
@@ -1602,9 +1656,10 @@ public class TopoDroidApp extends Application
    * @param name      survey name - if name is null, survey refs in TDInstance are cleared 
    * @param datamode  survey datamode
    * @param update    whether to call a display update
+   * @param all_info  whether to set all data instead of only info in TDInstance
    * @return survey ID
    */
-  public long setSurveyFromName( String name, int datamode, boolean update )
+  public long setSurveyFromName( String name, int datamode, boolean update, boolean all_info )
   { 
     TDInstance.sid      = -1;       // no survey by default
     TDInstance.survey   = null;
@@ -1614,33 +1669,40 @@ public class TopoDroidApp extends Application
     ManualCalibration.reset();
 
     if ( name != null && mData != null ) {
-      // TDLog.v( "set SurveyFromName <" + name + ">");
+      // TDLog.v( "set Survey From Name <" + name + ">");
 
       TDInstance.sid = mData.setSurvey( name, datamode );
+      if ( TDSetting.WITH_IMMUTABLE ) {
+        TDInstance.isSurveyMutable = mData.isSurveyMutable( TDInstance.sid );
+      } else {
+        TDInstance.isSurveyMutable = true;
+      }
 
       // mFixed.clear();
       TDInstance.survey = null;
       if ( TDInstance.sid > 0 ) {
         TDPath.setSurveyPaths( name );
-        DistoXStationName.setInitialStation( mData.getSurveyInitStation( TDInstance.sid ) );
         TDInstance.survey = name;
 	TDInstance.datamode = mData.getSurveyDataMode( TDInstance.sid );
 	// TDLog.v( "set survey from name: <" + name + "> datamode " + datamode + " " + TDInstance.datamode );
-        TDInstance.secondLastShotId = lastShotId();
-        // restoreFixed();
-	if ( update ) updateWindows();
-        TDInstance.xsections = ( SurveyInfo.XSECTION_SHARED == mData.getSurveyXSectionsMode( TDInstance.sid ) );
+        if ( all_info ) {
+          DistoXStationName.setInitialStation( mData.getSurveyInitStation( TDInstance.sid ) );
+          TDInstance.secondLastShotId = lastShotId();
+          // restoreFixed();
+	  if ( update ) updateWindows();
+          TDInstance.xsections = ( SurveyInfo.XSECTION_SHARED == mData.getSurveyXSectionsMode( TDInstance.sid ) );
 
-        // TDInstance.extend = 
-        int extend = mData.getSurveyExtend( TDInstance.sid );
-        // TDLog.v( "set SurveyFromName extend: " + extend );
-        if ( SurveyInfo.isSurveyExtendLeft( extend ) ) { 
-          TDAzimuth.mFixedExtend = -1L;
-        } else if ( SurveyInfo.isSurveyExtendRight( extend ) ) { 
-          TDAzimuth.mFixedExtend = 1L;
-        } else {
-          TDAzimuth.mFixedExtend = 0;
-          TDAzimuth.mRefAzimuth  = extend;
+          // TDInstance.extend = 
+          int extend = mData.getSurveyExtend( TDInstance.sid );
+          // TDLog.v( "set SurveyFromName extend: " + extend );
+          if ( SurveyInfo.isSurveyExtendLeft( extend ) ) { 
+            TDAzimuth.mFixedExtend = -1L;
+          } else if ( SurveyInfo.isSurveyExtendRight( extend ) ) { 
+            TDAzimuth.mFixedExtend = 1L;
+          } else {
+            TDAzimuth.mFixedExtend = 0;
+            TDAzimuth.mRefAzimuth  = extend;
+          }
         }
       }
       return TDInstance.sid;
@@ -1658,7 +1720,7 @@ public class TopoDroidApp extends Application
   {
     if ( mData == null ) return false;
     long new_sid = mData.getSurveyId( new_survey );
-    TDLog.v( "MOVE data: " + old_sid + "/" + old_id + " to " + new_sid );
+    // TDLog.v( "MOVE data: " + old_sid + "/" + old_id + " to " + new_sid );
     if ( new_sid <= 0 || new_sid == old_sid ) return false;
     return mData.moveShotsBetweenSurveys( old_sid, old_id, new_sid );
   }
@@ -1815,8 +1877,12 @@ public class TopoDroidApp extends Application
         // address, model, head, tail, name, nickname
         TDInstance.setDeviceA( new Device( address, model, 0, 0, name, null ) );
         TDInstance.setBleDevice( bt_device );
-        if ( TDInstance.isDeviceSap() ) {
-          mComm = new SapComm( this, address, bt_device ); 
+        if ( TDInstance.isDeviceDiscoX() ) {
+          mComm = new DiscoXComm( this, address, bt_device ); 
+        } else if ( TDInstance.isDeviceSap5() ) {
+          mComm = new SapComm( this, address, bt_device, 5 ); 
+        } else if ( TDInstance.isDeviceSap6() ) {
+          mComm = new SapComm( this, address, bt_device, 6 ); 
         } else if ( TDInstance.isDeviceBric() ) {
           mComm = new BricComm( this, this, address, bt_device );
         }
@@ -1922,7 +1988,12 @@ public class TopoDroidApp extends Application
 
   /** set the "current station" to the "last station" if the current station is unset
    */
-  private void resetCurrentOrLastStation( ) { StationName.resetCurrentOrLastStation( mData, TDInstance.sid); }
+  private void resetCurrentOrLastStation( )
+  { 
+    // TDLog.v("APP DATA reset current station");
+    StationName.resetCurrentOrLastStation( mData, TDInstance.sid);
+    // if ( mDrawingWindow != null ) mDrawingWindow.clearCurrentStation(); // not necessary
+  }
 
   /** @return the origin station of the first plot
    */
@@ -1930,6 +2001,16 @@ public class TopoDroidApp extends Application
 
 
   // static long trobotmillis = 0L; // TROBOT_MILLIS
+
+  /** assign the station to the data block, either the current station of the last station
+   * @param blk  data block
+   */
+  void assignScanBlockStation( DBlock blk )
+  {
+    blk.mFrom = StationName.getCurrentOrLastStation( mData, TDInstance.sid );
+    blk.mTo = "";
+    mData.updateShotName( blk.mId, TDInstance.sid, blk.mFrom, blk.mTo );
+  }
 
   /** called also by ShotWindow::updateBlockList
    * this re-assign stations to shots with station(s) already set
@@ -1944,7 +2025,9 @@ public class TopoDroidApp extends Application
     Set<String> sts = mData.selectAllStationsBefore( blk0.mId, TDInstance.sid /*, TDStatus.NORMAL */ );
     // TDLog.v("DATA " + "assign stations after " + blk0.mId + " " + blk0.Name() + " size " + list.size() + " stations " + sts.size() );
     // if ( TDSetting.mSurveyStations < 0 ) return;
+    // TDLog.v("APP DATA clear current station");
     StationName.clearCurrentStation();
+    // if ( mDrawingWindow != null ) mDrawingWindow.clearCurrentStation(); // not necessary
     if ( StationPolicy.doTopoRobot() ) {
       // long millis = SystemClock.uptimeMillis(); // TROBOT_MILLIS
       // if ( millis > trobotmillis + 10000 ) {
@@ -1998,7 +2081,7 @@ public class TopoDroidApp extends Application
    * @param psd2      profile data
    * @param toast     whether to toast to result
    */
-  static void exportSurveyAsCsxAsync( Context context, Uri uri, String origin, PlotSaveData psd1, PlotSaveData psd2, boolean toast )
+  void exportSurveyAsCsxAsync( Context context, Uri uri, String origin, PlotSaveData psd1, PlotSaveData psd2, boolean toast )
   {
     SurveyInfo survey_info = getSurveyInfo();
     if ( survey_info == null ) {
@@ -2011,7 +2094,7 @@ public class TopoDroidApp extends Application
     // String filename = TDPath.getSurveyCsxFile( fullname );
     // TDLog.Log( TDLog.LOG_IO, "exporting as CSX " + fullname + " " + filename );
     // TDLog.Log( TDLog.LOG_IO, "exporting as CSX " + fullname );
-    (new SaveFullFileTask( context, uri, TDInstance.sid, mData, survey_info, psd1, psd2, origin, /* filename, */ fullname, 
+    (new SaveFullFileTask( this, context, uri, TDInstance.sid, mData, survey_info, psd1, psd2, origin, /* filename, */ fullname, 
        /* TDPath.getCsxFile(""), */ toast )).execute();
   }
 
@@ -2147,7 +2230,10 @@ public class TopoDroidApp extends Application
     if ( karst  ) installSymbols( R.raw.symbols_karst,  true );
 
     mDData.setValue( "symbol_version", TDVersion.SYMBOL_VERSION );
-    BrushManager.loadAllLibraries( this, getResources() );
+    BrushManager.setHasSymbolLibraries( false );
+    BrushManager.loadAllSymbolLibraries( this, getResources() );
+    // BrushManager.doMakePaths( ); // TODO FIXME needed ?
+    BrushManager.setHasSymbolLibraries( true );
     DrawingSurface.clearManagersCache();
   }
 
@@ -2265,8 +2351,7 @@ public class TopoDroidApp extends Application
    * @param down     DOWN length
    * could return the long at
    */
-  long insertLRUDatStation( long at, String splay_station, float bearing, float clino,
-                            String left, String right, String up, String down )
+  long insertLRUDatStation( long at, String splay_station, float bearing, float clino, String left, String right, String up, String down )
   {
     // TDLog.v("LRUD " + "insert LRUD " + at + " station " + splay_station );
     return addManualSplays( at, splay_station, left, right, up, down, bearing, false, true ); // horizontal=false, true=ret +/-1;
@@ -2280,22 +2365,23 @@ public class TopoDroidApp extends Application
     * @param clino    from block
     * @param extend   ...
     * @return id of inserted leg
-    * note before inserting the duplicate leg it set the CurrentStationName
+    * @note before inserting the duplicate leg it set the CurrentStationName
     */
   long insertDuplicateLeg( String from, String to, float distance, float bearing, float clino, int extend )
   {
+    if ( distance <= 0.0f ) return -1L;
     // reset current station so that the next shot does not attach to the intermediate leg
     resetCurrentOrLastStation( );
     long time = TDUtil.getTimeStamp();
     distance = distance / TDSetting.mUnitLength;
     // TDLog.v( "[2] duplicate-shot Data " + distance + " " + bearing + " " + clino );
-    long id = mData.insertManualShot( TDInstance.sid, -1L, time, 0, distance, bearing, clino, 0.0f, extend, 0.0, LegType.NORMAL, 1 );
+    long id = mData.insertManualShot( TDInstance.sid, -1L, time, 0, distance, bearing, clino, 0.0f, extend, 0.0, DBlock.FLAG_DUPLICATE, LegType.NORMAL, 1 );
     if ( mData.checkSiblings( id, TDInstance.sid, from, to, distance, bearing, clino ) ) {
       // TDLog.v("APP insert duplicate leg detect bad sibling");
       TDToast.makeWarn( R.string.bad_sibling );
     }
     mData.updateShotName( id, TDInstance.sid, from, to );
-    mData.updateShotFlag( id, TDInstance.sid, DBlock.FLAG_DUPLICATE );
+    mData.updateShotFlag( id, TDInstance.sid, DBlock.FLAG_DUPLICATE ); // @note manual shot flag does not have cavway bits
     return id;
   }
 
@@ -2352,17 +2438,17 @@ public class TopoDroidApp extends Application
     }
 
     extend = ExtendType.EXTEND_IGNORE;
-    if ( l >= 0.0f ) { // FIXME_X_SPLAY
+    if ( l > 0.0f ) { // FIXME_X_SPLAY
       ok = true;
       if ( horizontal ) { // WENS
         // extend = TDAzimuth.computeSplayExtend( 270 );
         // extend = ( TDSetting.mLRExtend )? TDAzimuth.computeSplayExtend( 270 ) : ExtendType.EXTEND_UNSET;
         if ( at >= 0L ) {
-          id = mData.insertManualShotAt( TDInstance.sid, at, time, 0, l, 270.0f, 0.0f, 0.0f, extend, 0.0, LegType.XSPLAY, 1 );
+          id = mData.insertManualShotAt( TDInstance.sid, at, time, 0, l, 270.0f, 0.0f, 0.0f, extend, 0.0, DBlock.FLAG_SURVEY, LegType.XSPLAY, 1 );
           // TDLog.v("APP insert at " + at + " return " + id + " incrementing at [2]" );
           ++at;
         } else {
-          id = mData.insertManualShot( TDInstance.sid, -1L, time, 0, l, 270.0f, 0.0f, 0.0f, extend, 0.0, LegType.XSPLAY, 1 );
+          id = mData.insertManualShot( TDInstance.sid, -1L, time, 0, l, 270.0f, 0.0f, 0.0f, extend, 0.0, DBlock.FLAG_SURVEY, LegType.XSPLAY, 1 );
         }
       } else {
         float b = bearing - 90.0f;
@@ -2371,27 +2457,27 @@ public class TopoDroidApp extends Application
         // extend = ( TDSetting.mLRExtend )? TDAzimuth.computeSplayExtend( b ) : ExtendType.EXTEND_UNSET;
         // b = in360( b );
         if ( at >= 0L ) {
-          id = mData.insertManualShotAt( TDInstance.sid, at, time, 0, l, b, 0.0f, 0.0f, extend, 0.0, LegType.XSPLAY, 1 );
+          id = mData.insertManualShotAt( TDInstance.sid, at, time, 0, l, b, 0.0f, 0.0f, extend, 0.0, DBlock.FLAG_SURVEY, LegType.XSPLAY, 1 );
           // TDLog.v("APP insert at " + at + " return " + id + " incrementing at [3]" );
           ++at;
         } else {
-          id = mData.insertManualShot( TDInstance.sid, -1L, time, 0, l, b, 0.0f, 0.0f, extend, 0.0, LegType.XSPLAY, 1 );
+          id = mData.insertManualShot( TDInstance.sid, -1L, time, 0, l, b, 0.0f, 0.0f, extend, 0.0, DBlock.FLAG_SURVEY, LegType.XSPLAY, 1 );
         }
       }
       mData.updateShotName( id, TDInstance.sid, splay_station, TDString.EMPTY );
       // TDLog.v("LRUD " + "insert " + id + " left " + l );
     }
-    if ( r >= 0.0f ) {
+    if ( r > 0.0f ) {
       ok = true;
       if ( horizontal ) { // WENS
         // extend = TDAzimuth.computeSplayExtend( 90 );
         // extend = ( TDSetting.mLRExtend )? TDAzimuth.computeSplayExtend( 90 ) : ExtendType.EXTEND_UNSET;
         if ( at >= 0L ) {
-          id = mData.insertManualShotAt( TDInstance.sid, at, time, 0, r, 90.0f, 0.0f, 0.0f, extend, 0.0, LegType.XSPLAY, 1 );
+          id = mData.insertManualShotAt( TDInstance.sid, at, time, 0, r, 90.0f, 0.0f, 0.0f, extend, 0.0, DBlock.FLAG_SURVEY, LegType.XSPLAY, 1 );
           // TDLog.v("APP insert at " + at + " return " + id + " incrementing at [4]" );
           ++at;
         } else {
-          id = mData.insertManualShot( TDInstance.sid, -1L, time, 0, r, 90.0f, 0.0f, 0.0f, extend, 0.0, LegType.XSPLAY, 1 );
+          id = mData.insertManualShot( TDInstance.sid, -1L, time, 0, r, 90.0f, 0.0f, 0.0f, extend, 0.0, DBlock.FLAG_SURVEY, LegType.XSPLAY, 1 );
         }
       } else {
         // float b = bearing + 90.0f; if ( b >= 360.0f ) b -= 360.0f;
@@ -2399,56 +2485,56 @@ public class TopoDroidApp extends Application
         // extend = TDAzimuth.computeSplayExtend( b );
         // extend = ( TDSetting.mLRExtend )? TDAzimuth.computeSplayExtend( b ) : ExtendType.EXTEND_UNSET;
         if ( at >= 0L ) {
-          id = mData.insertManualShotAt( TDInstance.sid, at, time, 0, r, b, 0.0f, 0.0f, extend, 0.0, LegType.XSPLAY, 1 );
+          id = mData.insertManualShotAt( TDInstance.sid, at, time, 0, r, b, 0.0f, 0.0f, extend, 0.0, DBlock.FLAG_SURVEY, LegType.XSPLAY, 1 );
           // TDLog.v("APP insert at " + at + " return " + id + " incrementing at [5]" );
           ++at;
         } else {
-          id = mData.insertManualShot( TDInstance.sid, -1L, time, 0, r, b, 0.0f, 0.0f, extend, 0.0, LegType.XSPLAY, 1 );
+          id = mData.insertManualShot( TDInstance.sid, -1L, time, 0, r, b, 0.0f, 0.0f, extend, 0.0, DBlock.FLAG_SURVEY, LegType.XSPLAY, 1 );
         }
       }
       mData.updateShotName( id, TDInstance.sid, splay_station, TDString.EMPTY );
       // TDLog.v("LRUD " + "insert " + id + " right " + r );
     }
     extend = ExtendType.EXTEND_VERT;
-    if ( u >= 0.0f ) {  
+    if ( u > 0.0f ) {  
       ok = true;
       if ( horizontal ) {
         if ( at >= 0L ) {
-          id = mData.insertManualShotAt( TDInstance.sid, at, time, 0, u, 0.0f, 0.0f, 0.0f, extend, 0.0, LegType.XSPLAY, 1 );
+          id = mData.insertManualShotAt( TDInstance.sid, at, time, 0, u, 0.0f, 0.0f, 0.0f, extend, 0.0, DBlock.FLAG_SURVEY, LegType.XSPLAY, 1 );
           // TDLog.v("APP insert at " + at + " return " + id + " incrementing at [6]" );
           ++at;
         } else {
-          id = mData.insertManualShot( TDInstance.sid, -1L, time, 0, u, 0.0f, 0.0f, 0.0f, extend, 0.0, LegType.XSPLAY, 1 );
+          id = mData.insertManualShot( TDInstance.sid, -1L, time, 0, u, 0.0f, 0.0f, 0.0f, extend, 0.0, DBlock.FLAG_SURVEY, LegType.XSPLAY, 1 );
         }
       } else {
         if ( at >= 0L ) {
-          id = mData.insertManualShotAt( TDInstance.sid, at, time, 0, u, 0.0f, 90.0f, 0.0f, extend, 0.0, LegType.XSPLAY, 1 );
+          id = mData.insertManualShotAt( TDInstance.sid, at, time, 0, u, 0.0f, 90.0f, 0.0f, extend, 0.0, DBlock.FLAG_SURVEY, LegType.XSPLAY, 1 );
           // TDLog.v("APP insert at " + at + " return " + id + " incrementing at [7]" );
           ++at;
         } else {
-          id = mData.insertManualShot( TDInstance.sid, -1L, time, 0, u, 0.0f, 90.0f, 0.0f, extend, 0.0, LegType.XSPLAY, 1 );
+          id = mData.insertManualShot( TDInstance.sid, -1L, time, 0, u, 0.0f, 90.0f, 0.0f, extend, 0.0, DBlock.FLAG_SURVEY, LegType.XSPLAY, 1 );
         }
       }
       mData.updateShotName( id, TDInstance.sid, splay_station, TDString.EMPTY );
       // TDLog.v("LRUD " + "insert " + id + " up " + u );
     }
-    if ( d >= 0.0f ) {
+    if ( d > 0.0f ) {
       ok = true;
       if ( horizontal ) {
         if ( at >= 0L ) {
-          id = mData.insertManualShotAt( TDInstance.sid, at, time, 0, d, 180.0f, 0.0f, 0.0f, extend, 0.0, LegType.XSPLAY, 1 );
+          id = mData.insertManualShotAt( TDInstance.sid, at, time, 0, d, 180.0f, 0.0f, 0.0f, extend, 0.0, DBlock.FLAG_SURVEY, LegType.XSPLAY, 1 );
           // TDLog.v("APP insert at " + at + " return " + id + " incrementing at [8]" );
           ++at;
         } else {
-          id = mData.insertManualShot( TDInstance.sid, -1L, time, 0, d, 180.0f, 0.0f, 0.0f, extend, 0.0, LegType.XSPLAY, 1 );
+          id = mData.insertManualShot( TDInstance.sid, -1L, time, 0, d, 180.0f, 0.0f, 0.0f, extend, 0.0, DBlock.FLAG_SURVEY, LegType.XSPLAY, 1 );
         }
       } else {
         if ( at >= 0L ) {
-          id = mData.insertManualShotAt( TDInstance.sid, at, time, 0, d, 0.0f, -90.0f, 0.0f, extend, 0.0, LegType.XSPLAY, 1 );
+          id = mData.insertManualShotAt( TDInstance.sid, at, time, 0, d, 0.0f, -90.0f, 0.0f, extend, 0.0, DBlock.FLAG_SURVEY, LegType.XSPLAY, 1 );
           // TDLog.v("APP insert at " + at + " return " + id + " incrementing at [9]" );
           ++at;
         } else {
-          id = mData.insertManualShot( TDInstance.sid, -1L, time, 0, d, 0.0f, -90.0f, 0.0f, extend, 0.0, LegType.XSPLAY, 1 );
+          id = mData.insertManualShot( TDInstance.sid, -1L, time, 0, d, 0.0f, -90.0f, 0.0f, extend, 0.0, DBlock.FLAG_SURVEY, LegType.XSPLAY, 1 );
         }
       }
       mData.updateShotName( id, TDInstance.sid, splay_station, TDString.EMPTY );
@@ -2484,14 +2570,13 @@ public class TopoDroidApp extends Application
   {
     TDInstance.secondLastShotId = lastShotId();
     DBlock ret = null;
-    long id;
     long time = TDUtil.getTimeStamp();
 
     distance = distance / TDSetting.mUnitLength - ManualCalibration.mLength;
     clino    = clino    / TDSetting.mUnitAngle  - ManualCalibration.mClino;
     float b  = bearing  / TDSetting.mUnitAngle;
 
-    // TDLog.v("APP insert manual shot " + from + "-" + to + " at " + at + " D " + distance + " B " + bearing + " C " + clino );
+    // TDLog.v("APP insert manual shot " + from + "-" + to + " at " + at + " D " + distance + " B " + bearing + " C " + clino + " flag " + flag0 );
 
     if ( ( distance < 0.0f ) ||
          ( clino < -90.0f || clino > 90.0f ) ||
@@ -2506,6 +2591,7 @@ public class TopoDroidApp extends Application
       //   TDToast.make( R.string.makes_cycle );
       // } else
       {
+        long id = -1;
         // TDLog.Log( TDLog.LOG_SHOT, "manual-shot Data " + distance + " " + bearing + " " + clino );
         boolean horizontal = ( Math.abs( clino ) > TDSetting.mVThreshold );
         // TDLog.Log( TDLog.LOG_SHOT, "manual-shot SID " + TDInstance.sid + " LRUD " + left + " " + right + " " + up + " " + down);
@@ -2513,39 +2599,42 @@ public class TopoDroidApp extends Application
           // TDLog.v( "[1] manual-shot Data " + distance + " " + bearing + " " + clino );
           at = addManualSplays( at, splay_station, left, right, up, down, bearing, horizontal, false );
 
-          if ( at >= 0L ) {
-            id = mData.insertManualShotAt( TDInstance.sid, at, time, 0, distance, bearing, clino, 0.0f, extend0, 0.0, LegType.NORMAL, 1 );
-            // TDLog.v("APP insert at " + at + " return " + id );
-          } else {
-            id = mData.insertManualShot( TDInstance.sid, -1L, time, 0, distance, bearing, clino, 0.0f, extend0, 0.0, LegType.NORMAL, 1 );
+          if ( distance > 0.0f ) {
+            if ( at >= 0L ) {
+              id = mData.insertManualShotAt( TDInstance.sid, at, time, 0, distance, bearing, clino, 0.0f, extend0, 0.0, flag0, LegType.NORMAL, 1 );
+              // TDLog.v("APP insert at " + at + " return " + id );
+            } else {
+              id = mData.insertManualShot( TDInstance.sid, -1L, time, 0, distance, bearing, clino, 0.0f, extend0, 0.0, flag0, LegType.NORMAL, 1 );
+            }
+            // String name = from + "-" + to;
+            mData.updateShotName( id, TDInstance.sid, from, to );
+            if ( mData.checkSiblings( id, TDInstance.sid, from, to, distance, bearing, clino ) ) {
+              // TDLog.v("APP insert manual shot detect bad sibling");
+              TDToast.makeWarn( R.string.bad_sibling );
+            }
+            // mData.updateShotExtend( id, TDInstance.sid, extend0, stretch0 );
+            // mData.updateShotExtend( id, TDInstance.sid, ExtendType.EXTEND_IGNORE, 1 ); // FIXME WHY ???
+            // FIXME updateDisplay( );
           }
-          // String name = from + "-" + to;
-          mData.updateShotName( id, TDInstance.sid, from, to );
-          if ( mData.checkSiblings( id, TDInstance.sid, from, to, distance, bearing, clino ) ) {
-            // TDLog.v("APP insert manual shot detect bad sibling");
-            TDToast.makeWarn( R.string.bad_sibling );
-          }
-          // mData.updateShotExtend( id, TDInstance.sid, extend0, stretch0 );
-          // mData.updateShotExtend( id, TDInstance.sid, ExtendType.EXTEND_IGNORE, 1 ); // FIXME WHY ???
-          // FIXME updateDisplay( );
         } else {
           // TDLog.v( "[2] manual-shot Data " + distance + " " + bearing + " " + clino );
-          if ( at >= 0L ) {
-            id = mData.insertManualShotAt( TDInstance.sid, at, time, 0, distance, bearing, clino, 0.0f, extend0, 0.0, LegType.NORMAL, 1 );
-            // TDLog.v("APP insert at " + at + " return " + id + " incrementing at [1]" );
-            ++ at;
-          } else {
-            id = mData.insertManualShot( TDInstance.sid, -1L, time, 0, distance, bearing, clino, 0.0f, extend0, 0.0, LegType.NORMAL, 1 );
+          if ( distance > 0.0f ) {
+            if ( at >= 0L ) {
+              id = mData.insertManualShotAt( TDInstance.sid, at, time, 0, distance, bearing, clino, 0.0f, extend0, 0.0, flag0, LegType.NORMAL, 1 );
+              // TDLog.v("APP insert at " + at + " return " + id + " incrementing at [1]" );
+              ++ at;
+            } else {
+              id = mData.insertManualShot( TDInstance.sid, -1L, time, 0, distance, bearing, clino, 0.0f, extend0, 0.0, flag0, LegType.NORMAL, 1 );
+            }
+            // String name = from + "-" + to;
+            mData.updateShotName( id, TDInstance.sid, from, to );
+            // mData.updateShotExtend( id, TDInstance.sid, extend0, stretch0 );
+            // mData.updateShotExtend( id, TDInstance.sid, ExtendType.EXTEND_IGNORE, 1 );  // FIXME WHY ???
+            // FIXME updateDisplay( );
           }
-          // String name = from + "-" + to;
-          mData.updateShotName( id, TDInstance.sid, from, to );
-          // mData.updateShotExtend( id, TDInstance.sid, extend0, stretch0 );
-          // mData.updateShotExtend( id, TDInstance.sid, ExtendType.EXTEND_IGNORE, 1 );  // FIXME WHY ???
-          // FIXME updateDisplay( );
-
           addManualSplays( at, splay_station, left, right, up, down, bearing, horizontal, false );
         }
-        ret = mData.selectShot( id, TDInstance.sid );
+        if ( id >= 0 ) ret = mData.selectShot( id, TDInstance.sid );
       }
     } else {
       TDToast.makeBad( R.string.missing_station );
@@ -2660,6 +2749,39 @@ public class TopoDroidApp extends Application
 
 
   // --------------------------------------------------------
+
+  // FIXME_CAVWAY
+  /** send a command to the Cavway
+   * @param cmd   command code (@see CavwayConst)
+   */
+  public void sendCavwayCommand( int cmd )
+  { 
+    // boolean ret = false;
+    if ( mComm != null && mComm instanceof CavwayComm ) {
+      TDLog.v( "Cavway app send command " + cmd );
+      // mComm.sendCommand( cmd );
+      setCavwayLaser( cmd, 1, null, 0, true, true );
+    // } else {
+    //   TDLog.e("Comm is null or not Cavway");
+    }
+    // return ret;
+  }
+
+  // FIXME_DISCOX - not used at the moment
+  /** send a command to the DiscoX
+   * @param cmd   command code (@see SapConst)
+   */
+  public void sendDiscoXCommand( int cmd )
+  { 
+    // boolean ret = false;
+    if ( mComm != null && mComm instanceof DiscoXComm ) {
+      TDLog.v( "DiscoX app send command " + cmd );
+      mComm.sendCommand( cmd );
+    // } else {
+    //   TDLog.e("Comm is null or not DiscoX");
+    }
+    // return ret;
+  }
 
   // FIXME_SAP6
   /** send a command to the SAP6
@@ -2829,11 +2951,16 @@ public class TopoDroidApp extends Application
         (new Thread() {
           public void run() {
             ((CavwayComm)mComm).setCavwayLaser(TDInstance.deviceAddress(), what, nr, lister, data_type, closeBT );
+            // notifyDisconnected( lister, data_type );
+            // TDLog.v("shot window cmd " + what + " set connection status " + mDataDownloader.getStatus() );
+            // if ( mShotWindow != null ) mShotWindow.setConnectionStatus( mDataDownloader.getStatus() );
           }
         } ).start();
         return true;
       } else {
-        return ((CavwayComm)mComm).setCavwayLaser(TDInstance.deviceAddress(), what, nr, lister, data_type, closeBT );
+        boolean ret = ((CavwayComm)mComm).setCavwayLaser(TDInstance.deviceAddress(), what, nr, lister, data_type, closeBT );
+        // if ( ret && mShotWindow != null ) mShotWindow.setConnectionStatus( mDataDownloader.getStatus() );
+        return ret;
       }
     } else {
       TDLog.e("set XBLE laser: not XBLE comm");
@@ -3158,6 +3285,7 @@ public class TopoDroidApp extends Application
   // DISTOX PAIRING
   // cannot be static because register/unregister are not static
 
+  // FIXME DROP_PAIRING
   // active pairing request
   static PairingRequest mPairingRequest = null;
 
@@ -3203,9 +3331,10 @@ public class TopoDroidApp extends Application
    * @param uri             output URI
    * @param export_info     export info
    * @param toast           whether to toast a message
+   * @param in_foreground   whether to run in foreground
    * @note called by (ShotWindow and) SurveyWindow on export
    *
-  boolean doExportDataAsync( Context context, Uri uri, ExportInfo export_info, boolean toast )
+  boolean doExportDataAsync( Context context, Uri uri, ExportInfo export_info, boolean toast, boolean in_foreground )
   {
     // TDLog.v( "APP URI-export - index " + export_info.index );
     if ( export_info.index < 0 ) return false; // extra safety
@@ -3213,7 +3342,7 @@ public class TopoDroidApp extends Application
       // TDLog.v( "APP URIr-export zip");
       // this is SurveyWindow.doArchive
       while ( ! TopoDroidApp.mEnableZip ) Thread.yield();
-      (new ExportZipTask( context, this, uri )).execute();
+      (new ExportZipTask( context, this, uri, toast )).execute();
     } else {
       SurveyInfo survey_info = getSurveyInfo( );
       if ( survey_info == null ) return false;
@@ -3230,18 +3359,22 @@ public class TopoDroidApp extends Application
    * @param context         context
    * @param export_info     export info
    * @param toast           whether to toast a message
+   * @param in_foreground   whether to run in foreground (only ZIP export)
    * @note called by SurveyWindow on export
    */
-  boolean doExportDataAsync( Context context, ExportInfo export_info, boolean toast )
+  boolean doExportDataAsync( Context context, ExportInfo export_info, boolean toast, boolean in_foreground )
   {
     // TDLog.v( "APP async-export - index " + export_info.index + " name " + export_info.name );
     if ( export_info.index < 0 ) return false; // extra safety
     if ( export_info.index == TDConst.SURVEY_FORMAT_ZIP ) { // EXPORT ZIP
       while ( ! TopoDroidApp.mEnableZip ) Thread.yield();
-      (new ExportZipTask( context, this, null )).execute();
-      // (new ExportZipTask( context, this, null )).doInForeground();
-      // return false;
-      return true;
+      if ( in_foreground ) {
+        ExportZipTask zip_export = new ExportZipTask( context, this, null, toast );
+        return zip_export.doInForeground();
+      } else {
+        (new ExportZipTask( context, this, null, toast )).execute();
+        return true;
+      }
     } else {
       String filename = export_info.name;
       SurveyInfo survey_info = getSurveyInfo( );
@@ -3251,19 +3384,22 @@ public class TopoDroidApp extends Application
       Uri uri = Uri.fromFile( new File( TDPath.getOutFile( filename ) ) );
       if ( uri != null ) {
         // TDLog.v("EXPORT " + filename + " info " + export_info.index + " " + export_info.name );
-        (new SaveDataFileTask( uri, format, TDInstance.sid, survey_info, mData, TDInstance.survey, TDInstance.getDeviceA(), export_info, toast )).execute();
+        (new SaveDataFileTask( this, uri, format, TDInstance.sid, survey_info, mData, TDInstance.survey, TDInstance.getDeviceA(), export_info, toast )).execute();
         return true;
       }
     }
     return false;
   }
 
-  void shareZip( Uri uri0 )
+  /** share the zip export
+   */
+  void shareZip( )
   {
     String zipname = TDPath.getSurveyZipFile( TDInstance.survey );
-    TDLog.v("Zip share file " + zipname );
+    // TDLog.v("Zip sharing file: " + zipname );
     // Uri uri = Uri.fromFile( TDFile.getFile( zipname ) );
     Uri uri = MyFileProvider.fileToUri( this, TDFile.getFile( zipname ) );
+    // TDLog.v("Uri " + uri.toString() );
 
     Intent intent = new Intent( );
     intent.setAction( Intent.ACTION_SEND );
@@ -3274,10 +3410,51 @@ public class TopoDroidApp extends Application
     intent.setType( "application/zip" );
     intent.addFlags( Intent.FLAG_GRANT_READ_URI_PERMISSION );
     try {
-      mSurveyWindow.startActivity( intent );
+      if ( mSurveyWindow != null ) {
+        mSurveyWindow.startActivity( intent );
+      } else {
+        TDToast.makeWarn( R.string.zip_share_failed );
+      }
       // mSurveyWindow.startActivity( Intent.createChooser( intent, "chooser title" ) );
     } catch ( ActivityNotFoundException e ) {
       TDToast.makeWarn( R.string.zip_share_failed );
+    }
+  }
+
+  /** share a file (KML, TH, etc.)
+   * @param filename   the filename (relative, e.g., "survey.kml")
+   * @param mimeType   the MIME type for the file
+   * @param act        activity type
+   */
+  void shareFile( String filename, String mimeType, int act )
+  {
+    String filepath = TDPath.getOutFile( filename );
+    // TDLog.v("Share file " + filepath );
+    Uri uri = MyFileProvider.fileToUri( this, TDFile.getFile( filepath ) );
+    try {
+      if ( act == 1 ) {
+        shareUri( mSurveyWindow, uri, mimeType );
+      } else if ( act == 2 ) {
+        shareUri( mDrawingWindow, uri, mimeType );
+      } else {
+        TDToast.makeWarn( R.string.file_share_failed );
+      }
+    } catch ( ActivityNotFoundException e ) {
+      TDToast.makeWarn( R.string.file_share_no_app );
+    }
+  }
+
+  public static void shareUri( Activity activity, Uri uri, String mimeType ) throws ActivityNotFoundException
+  {
+    if ( activity != null ) {
+      Intent intent = new Intent( );
+      intent.setAction( Intent.ACTION_SEND );
+      intent.putExtra( Intent.EXTRA_STREAM, uri );
+      intent.setType( mimeType );
+      intent.addFlags( Intent.FLAG_GRANT_READ_URI_PERMISSION );
+      activity.startActivity( intent );
+    } else {
+      TDToast.makeWarn( R.string.file_share_failed );
     }
   }
 
@@ -3337,5 +3514,22 @@ public class TopoDroidApp extends Application
   //     // }
   //   }
   // }
+
+  public void syncDateTime( Context ctx, final String address )
+  {
+    if ( ! TDInstance.isDeviceCavway() ) return;
+    if ( mComm != null && mComm instanceof CavwayComm ) {
+      (new CavwaySyncDateTimeTask( ctx, (CavwayComm)mComm, address )).execute();
+    }
+  }
+
+  /** @return the first block of a scan set
+   * @param blk   block in the scan-set
+   */
+  static DBlock getScanSetFirstBlock( DBlock blk, int status ) 
+  {
+    if ( blk == null || ! blk.isScan() ) return null;
+    return mData.selectShot( blk.mId, TDInstance.sid );
+  }
 
 }

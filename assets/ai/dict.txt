@@ -1,0 +1,275 @@
+ciónazimuth:{
+  bg: 
+  cn: 
+  de: 
+  es: azimut
+  fr: 
+  hu: azimut
+  it: azimut
+  pt: azimute
+  ru: азимут
+}
+bearing:{
+  bg: 
+  cn: 
+  de: Richtung
+  es: Dirección
+  fr: 
+  hu: irány
+  it: direzione
+  pt: direção
+  ru: направление
+}
+closure error:{
+  bg: 
+  cn: 
+  de: Abschlussfehler
+  es: error de cierre
+  fr: erreur de bouclage
+  hu: záráshiba
+  it: errore di chiusura
+  pt: erro de fechamento
+  ru: ошибка закрытия кольца
+}
+compass:{
+  bg: 
+  cn: 
+  de: 
+  es: brújula
+  fr: 
+  hu: kompasz
+  it: bussola
+  pt: bússola
+  ru: компас
+}
+cross-section:{
+  bg: 
+  cn: 
+  de: 
+  es: sección transversal
+  fr: coupe transversale
+  hu: keresztmetszet
+  it: sezione trasversale
+  pt: corte
+  ru: поперечное сечение
+}
+denivelation:{
+  bg: 
+  cn: 
+  de: Hőhenunterschied
+  es: desnivel
+  fr: dénivelé
+  hu: magasságkülönbség
+  it: dislivello
+  pt: desnível 
+  ru: денивеляция
+}
+development:{
+  bg: 
+  cn: 
+  de: Gesamtganglänge
+  es: desarrollo
+  fr: deveppement
+  hu: járathossz
+  it: sviluppo
+  pt: desenvolvimento
+  ru: общая длина хода
+}
+entrance:{
+  bg: 
+  cn: 
+  de: Eingang
+  es: entrada
+  fr: entrée
+  hu: bejárat
+  it: ingresso
+  pt: entrada 
+  ru: вход
+}
+grid:{
+  bg: 
+  cn: 
+  de: 
+  es: cuadrícula
+  fr: 
+  hu: rács
+  it: reticolato
+  pt: grade
+  ru: сетка
+}
+leg:{
+  bg: 
+  cn: 
+  de: Meßstrecke
+  es: tramo
+  fr: visée
+  hu: poligon mérés
+  it: battuta
+  pt: visada
+  ru: замер
+}
+loop closure:{
+  bg: 
+  cn: 
+  de:
+  es: cierre de bucle
+  fr: 
+  hu: hurok záródás
+  it: chiusura di anelli
+  pt: fechamento de poligonal
+  ru: закрытие петли
+}
+midline:{
+  bg: 
+  cn: 
+  de: Meßzug
+  es: poligonal
+  fr: cheminement
+  hu: poligon vonal
+  it: poligonale
+  pt: linha de trena 
+  ru: нитка хода
+}
+notebook:{
+  bg: 
+  cn: 
+  de: Notizblock
+  es: cuaderno
+  fr: carnet topo
+  hu: vázlat füzet
+  it: tacquino
+  pt: bloco de anotações
+  ru: заметки
+}
+plan:{
+  bg: 
+  cn: 
+  de: Grungriss
+  es: planta
+  fr: plan
+  hu: alaprajz
+  it: pianta
+  pt: planta baixa
+  ru: план
+}
+profile:{
+  bg: 
+  cn: 
+  de: Langschnitt
+  es: alzado desarrollado
+  fr: coupe developée
+  hu: kiterített oldalnézet
+  it: sezione longitudinale
+  pt: perfil retificado
+  ru: разрез развертка
+}
+projected profile:{
+  bg: 
+  cn: 
+  de: Aufriss
+  es: alzado proyectado
+  fr: coupe projectée
+  hu: vetített oldalnézet
+  it: sezione proiettata
+  pt: perfil
+  ru: разрез проекция
+}
+range:{
+  bg: 
+  cn: 
+  de: Entfernung
+  es: extensión
+  fr: extension
+  hu: távolság
+  it: estensione
+  pt: extensão
+  ru: расстояние
+}
+scale:{
+  bg: 
+  cn: 
+  de: Maßstab
+  es: escala
+  fr: echelle
+  hu: skála
+  it: scala
+  pt: escala
+  ru: масштаб
+}
+section:{
+  bg: 
+  cn: 
+  de: Querschnitt
+  es: alzado
+  fr: coupe
+  hu: metszet
+  it: sezione
+  pt: corte
+  ru: разрез
+}
+shot:{
+  bg: 
+  cn: 
+  de: 
+  es: toma
+  fr: visée
+  hu: mérés
+  it: tiro
+  pt: toma
+  ru: замер
+}
+splay:{
+  bg: 
+  cn: 
+  de: 
+  es: toma lateral
+  fr: 
+  hu: sün
+  it: splay
+  pt: medida auxiliar
+  ru: сплей
+}
+station:{
+  bg: 
+  cn: 
+  de: Meßpunkt
+  es: estación
+  fr: station
+  hu: mérési pont
+  it: caposaldo
+  pt: base
+  ru: пикет
+}
+surveying:{
+  bg: 
+  cn: 
+  de: Vermessung
+  es: topografia
+  fr: topographie
+  hu: felmérés
+  it: topografia
+  pt: topografia
+  ru: топосъёмка
+}
+tape:{
+  bg: 
+  cn: 
+  de: Maßband
+  es: cinta
+  fr: decametre
+  hu: mérőszalag
+  it: bindella
+  pt: trena
+  ru: длина
+}
+x-section:{
+  bg: 
+  cn: 
+  de: 
+  es: sección
+  fr: coupe
+  hu: keresztmetszet
+  it: sezione
+  pt: corte
+  ru: поперечное сечение
+}

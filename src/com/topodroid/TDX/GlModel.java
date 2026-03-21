@@ -12,6 +12,8 @@
 package com.topodroid.TDX;
 
 import com.topodroid.utils.TDLog;
+import com.topodroid.dem.DEMsurface;
+import com.topodroid.dem.ParserDEM;
 
 // import com.topodroid.c3in.ParserBluetooth;
 // import com.topodroid.c3in.ParserSketch; // NO_C3D
@@ -48,6 +50,7 @@ public class GlModel
   static boolean showLegsSurface   = true;
   static boolean showLegsDuplicate = true;
   static boolean showLegsCommented = true;
+  static boolean showLegsBackshot  = true;
 
   TglParser mParser = null;
   RectF mSurfaceBounds = null;
@@ -68,8 +71,11 @@ public class GlModel
   public GlLines glLegsS   = null; // surface
   public GlLines glLegsD   = null; // duplicate
   public GlLines glLegsC   = null; // commented
+  public GlLines glLegsB   = null; // backshot
   public GlLines glSplays  = null;
   GlLines glGrid    = null;
+  GlLines glVGrid1  = null;
+  GlLines glVGrid2  = null;
   GlLines glFrame   = null;
   GlLines glSurfaceLegs = null;
   GlWalls glWalls = null;
@@ -148,6 +154,8 @@ public class GlModel
     glSurfaceLegs = null;
     glSurface = null;
     glGrid    = null;
+    glVGrid1  = null;
+    glVGrid2  = null;
     glFrame   = null;
     glNames   = null;
     glWalls   = null;
@@ -158,6 +166,7 @@ public class GlModel
     glLegsS   = null;
     glLegsD   = null;
     glLegsC   = null;
+    glLegsB   = null;
     glPath    = null;
     mParser   = null;
     glPoint   = null; // WITH-GPS
@@ -190,10 +199,11 @@ public class GlModel
   // ----------------------------------------------------------------------------------
   // DISPLAY MODE
 
-  static final int FRAME_NONE = 0;
-  static final int FRAME_GRID = 1;
-  static final int FRAME_AXES = 2;
-  static final int FRAME_MAX  = 3;
+  static final int FRAME_NONE  = 0;
+  static final int FRAME_GRID  = 1;
+  static final int FRAME_GRID2 = 2;
+  static final int FRAME_AXES  = 3;
+  static final int FRAME_MAX   = 4;
 
   static final int DRAW_NONE  = 0;
   static final int DRAW_LINE  = 1;
@@ -246,7 +256,10 @@ public class GlModel
 
   /** cycle through the modes of the display of the frame
    */
-  static void toggleFrameMode()   { frameMode = (frameMode + 1) % FRAME_MAX; }
+  static void toggleFrameMode() 
+  { 
+    frameMode = (frameMode + 1) % FRAME_MAX;
+  }
 
   /** reset to the default display modes
    */
@@ -263,6 +276,7 @@ public class GlModel
     showLegsSurface   = true;
     showLegsDuplicate = true;
     showLegsCommented = true;
+    showLegsBackshot  = true;
     // GlSketch.reloadSymbols( TDPath.PATH_SYMBOL_POINT );
   }
 
@@ -274,6 +288,7 @@ public class GlModel
     if ( glLegsS  != null ) glLegsS.setColorMode(  GlLines.COLOR_NONE, GlLines.COLOR_MAX );
     if ( glLegsD  != null ) glLegsD.setColorMode(  GlLines.COLOR_NONE, GlLines.COLOR_MAX );
     if ( glLegsC  != null ) glLegsC.setColorMode(  GlLines.COLOR_NONE, GlLines.COLOR_MAX );
+    if ( glLegsB  != null ) glLegsB.setColorMode(  GlLines.COLOR_NONE, GlLines.COLOR_MAX );
     if ( glSplays != null ) glSplays.setColorMode( GlLines.COLOR_NONE, GlLines.COLOR_MAX );
     clearStationHighlight();
   }
@@ -306,6 +321,7 @@ public class GlModel
       if ( glLegsS  != null ) glLegsS.toggleColorMode( max );
       if ( glLegsD  != null ) glLegsD.toggleColorMode( max );
       if ( glLegsC  != null ) glLegsC.toggleColorMode( max );
+      if ( glLegsB  != null ) glLegsB.toggleColorMode( max );
       if ( glSplays != null ) glSplays.setColorMode( glLegs.mColorMode, GlLines.COLOR_MAX ); 
     }
   }
@@ -351,6 +367,7 @@ public class GlModel
       // glLegsS.hideOrShow( visible );
       // glLegsD.hideOrShow( visible );
       // glLegsC.hideOrShow( visible );
+      // glLegsB.hideOrShow( visible );
       glLegs.hideOrShow( visible );
       glNames.hideOrShow( visible );
     }
@@ -378,7 +395,7 @@ public class GlModel
       }
     }
 
-    if ( frameMode == FRAME_GRID ) { 
+    if ( frameMode == FRAME_GRID || frameMode == FRAME_GRID2 ) { 
       GlLines grid = null;
       synchronized( this ) { grid = glGrid; } 
       if ( grid != null ) {
@@ -391,8 +408,16 @@ public class GlModel
           revMatrix[ 5] = -1;
           Matrix.multiplyMM( matrix, 0, mvp_matrix, 0, revMatrix, 0 );
           grid.draw( matrix, DRAW_LINE ); 
+          grid = (frameMode == FRAME_GRID) ? glVGrid1 : glVGrid2 ;
+          if ( grid != null ) {
+            grid.draw( matrix, DRAW_LINE );
+          }
         } else {
           grid.draw( mvp_matrix, DRAW_LINE );
+          grid = (frameMode == FRAME_GRID) ? glVGrid1 : glVGrid2 ;
+          if ( grid != null ) {
+            grid.draw( mvp_matrix, DRAW_LINE );
+          }
         }
       }
     } else if ( frameMode == FRAME_AXES  ) { 
@@ -469,6 +494,10 @@ public class GlModel
     if ( showLegsCommented ) {
       synchronized( this ) { legs = glLegsC; }
       if ( legs   != null ) legs.draw( mvp_matrix, DRAW_LINE, mStationPoints, TglColor.ColorLegC );
+    }
+    if ( showLegsBackshot ) {
+      synchronized( this ) { legs = glLegsB; }
+      if ( legs   != null ) legs.draw( mvp_matrix, DRAW_LINE, mStationPoints, TglColor.ColorLegB );
     }
     synchronized( this ) { legs = glLegs; }
     if ( legs   != null ) legs.draw( mvp_matrix, DRAW_LINE, mStationPoints, TglColor.ColorLeg );
@@ -585,7 +614,7 @@ public class GlModel
     float zmax = (float)legs.getZmax() + delta;
     
     makeGrid(  xmin, xmax, zmin, zmax, (float)legs.getYmin(), (float)legs.getYmax(), grid_size );
-    makeFrame( xmin, xmax, zmin, zmax, (float)legs.getYmin(), (float)legs.getYmax() );
+    makeFrame( xmin, xmax, zmin, zmax, (float)legs.getYmin(), (float)legs.getYmax(), grid_size );
   }
 
   /** prepare the walls triangles using the Convex-Hull model
@@ -674,7 +703,7 @@ public class GlModel
   {
     if ( computer.hasPlanview() ) {
       // FIXME INCREMENTAL : , 0 );
-      GlLines plan = new GlLines( mContext, TglColor.ColorPlan, 0 );
+      GlLines plan = new GlLines( mContext, TglColor.ColorPlan, 0, false );
       for ( PCPolygon poly : computer.getPlanview() ) {
         int nn = poly.size();
         if ( nn > 2 ) {
@@ -695,7 +724,7 @@ public class GlModel
     }
     if ( computer.hasProfilearcs() ) {
       // FIXME INCREMENTAL : , 0 );
-      GlLines profile = new GlLines( mContext, TglColor.ColorPlan, 0 );
+      GlLines profile = new GlLines( mContext, TglColor.ColorPlan, 0, false );
       for ( PCSegment sgm : computer.getProfilearcs() ) {
         profile.addLine( sgm.getV1(), sgm.getV2(), 4, -1, false, mXmed, mYmed, mZmed, null );
       }
@@ -714,6 +743,7 @@ public class GlModel
   //   glLegsS.prepareTemperatureBuffer( legsSurface );
   //   glLegsD.prepareTemperatureBuffer( legsDuplicate );
   //   glLegsC.prepareTemperatureBuffer( legsCommented );
+  //   glLegsB.prepareTemperatureBuffer( legsBackshot );
   // }
 
   // called by GlRenderer notifyDEM
@@ -733,6 +763,7 @@ public class GlModel
     glLegsS.prepareDepthBuffer( legsSurface );
     glLegsD.prepareDepthBuffer( legsDuplicate );
     glLegsC.prepareDepthBuffer( legsCommented );
+    glLegsB.prepareDepthBuffer( legsBackshot );
 
     prepareSurfaceLegs( mParser, dem );
   }
@@ -742,7 +773,7 @@ public class GlModel
     if ( parser == null || surface == null ) return;
     // TDLog.v("Model prepare surface legs. Shots " + parser.getShots().size() );
     // FIXME INCREMENTAL : , 0 );
-    GlLines surface_legs = new GlLines( mContext, TglColor.ColorSurfaceLeg, 0 );
+    GlLines surface_legs = new GlLines( mContext, TglColor.ColorSurfaceLeg, 0, false );
     for ( Cave3DShot leg : parser.getShots() ) {
       if ( leg.from_station == null || leg.to_station == null ) continue; // skip fake-legs
       Vector3D v1 = new Vector3D( leg.from_station );
@@ -850,7 +881,8 @@ public class GlModel
     // step = 2 * step;
     int nx = 1 + (int)((x2-x1)/step);
     int nz = 1 + (int)((z2-z1)/step);
-    // TDLog.v("Model Grid NX " + nx + " NY " + nz + " cell " + step + " X0 " + x1 + " Y0 " + y1 + " Z0 " + z1 );
+    int ny = 1 + (int)((y2-y1)/step);
+    // TDLog.v("Model Grid N " + nx + " " + nz + " " + ny + " step " + step + " X " + x1 + " " + x2 + " Z " + z1 + " " + z2 + " Y " + y1 + " " + y2 );
     int count = nx + nz + 1;
     float[] data = new float[ count*2 * 7 ];
     int k = 0;
@@ -888,17 +920,79 @@ public class GlModel
     data[ k++ ] = y2;
     data[ k++ ] = z2;
     data[ k++ ] = 1; data[ k++ ] = 0; data[ k++ ] = 0; data[ k++ ] = 1.0f;
+
+    int count2 = 2 * ny;
+    float[] data1 = new float[ count2*2 * 7 ];
+    float[] data2 = new float[ count2*2 * 7 ];
+    x0 = x1 + step;
+    z0 = z2 - step;
+    float y0 = y1;
+    k = 0;
+    for ( int i=0; i<ny; ++i ) {
+      data1[ k++ ] = x1;
+      data1[ k++ ] = y0;
+      data1[ k++ ] = z2;
+      data1[ k++ ] = 1; data1[ k++ ] = 0; data1[ k++ ] = 0; data1[ k++ ] = 0.7f;
+      data1[ k++ ] = x0;
+      data1[ k++ ] = y0;
+      data1[ k++ ] = z2;
+      data1[ k++ ] = 1; data1[ k++ ] = 0; data1[ k++ ] = 0; data1[ k++ ] = 0.7f;
+      data1[ k++ ] = x1;
+      data1[ k++ ] = y0;
+      data1[ k++ ] = z2;
+      data1[ k++ ] = 1; data1[ k++ ] = 0; data1[ k++ ] = 0; data1[ k++ ] = 0.7f;
+      data1[ k++ ] = x1;
+      data1[ k++ ] = y0;
+      data1[ k++ ] = z0;
+      data1[ k++ ] = 1; data1[ k++ ] = 0; data1[ k++ ] = 0; data1[ k++ ] = 0.7f;
+      y0 += step;
+    }
+    x0 = x2;
+    z0 = z1;
+    y0 = y1;
+    k = 0;
+    for ( int i=0; i<ny; ++i ) {
+      data2[ k++ ] = x1;
+      data2[ k++ ] = y0;
+      data2[ k++ ] = z2;
+      data2[ k++ ] = 1; data2[ k++ ] = 0; data2[ k++ ] = 0; data2[ k++ ] = 0.7f;
+      data2[ k++ ] = x0;
+      data2[ k++ ] = y0;
+      data2[ k++ ] = z2;
+      data2[ k++ ] = 1; data2[ k++ ] = 0; data2[ k++ ] = 0; data2[ k++ ] = 0.7f;
+      data2[ k++ ] = x1;
+      data2[ k++ ] = y0;
+      data2[ k++ ] = z2;
+      data2[ k++ ] = 1; data2[ k++ ] = 0; data2[ k++ ] = 0; data2[ k++ ] = 0.7f;
+      data2[ k++ ] = x1;
+      data2[ k++ ] = y0;
+      data2[ k++ ] = z0;
+      data2[ k++ ] = 1; data2[ k++ ] = 0; data2[ k++ ] = 0; data2[ k++ ] = 0.7f;
+      y0 += step;
+    }
     
+    TDLog.v("MODEL grid init data N " + nx + " " + nz + " " + ny + " count " + count );
     // FIXME INCREMENTAL : , 0 );
-    glGrid = new GlLines( mContext, GlLines.COLOR_SURVEY, 0 );
+    glGrid = new GlLines( mContext, GlLines.COLOR_SURVEY, 0, false );
     glGrid.setAlpha( 0.5f );
-    // TDLog.v("MODEL grid init data");
     glGrid.initData( data, count ); // , R.raw.line_acolor_vertex, R.raw.line_fragment );
+
+    glVGrid1 = new GlLines( mContext, GlLines.COLOR_SURVEY, 0, false );
+    glVGrid1.setAlpha( 0.5f );
+    glVGrid1.initData( data1, count2 ); // , R.raw.line_acolor_vertex, R.raw.line_fragment );
+
+    glVGrid2 = new GlLines( mContext, GlLines.COLOR_SURVEY, 0, false );
+    glVGrid2.setAlpha( 0.5f );
+    glVGrid2.initData( data2, count2 ); // , R.raw.line_acolor_vertex, R.raw.line_fragment );
   }
       
-  private void makeFrame( float x1, float x2, float z1, float z2, float y1, float y2 )
+  private void makeFrame( float x1, float x2, float z1, float z2, float y1, float y2, float step )
   { 
-    float[] data = new float[ 3*2 * 7 ];
+    int nx = 1 + (int)((x2-x1)/step);
+    int nz = 1 + (int)((z2-z1)/step);
+    int ny = 1 + (int)((y2-y1)/step);
+    int count = 3 + 2 * ny + nx + nz;
+    float[] data = new float[ count*2 * 7 ];
     int k = 0;
     // line y1-y2
     data[ k++ ] = x1;
@@ -909,6 +1003,28 @@ public class GlModel
     data[ k++ ] = y2;
     data[ k++ ] = z2;
     data[ k++ ] = 1; data[ k++ ] = 0; data[ k++ ] = 0; data[ k++ ] = 1.0f;
+    float x0 = x2; // x1 + step;
+    float z0 = z1; // z2 - step;
+    float y0 = y1;
+    for ( int i=0; i<ny; ++i ) {
+      data[ k++ ] = x1;
+      data[ k++ ] = y0;
+      data[ k++ ] = z2;
+      data[ k++ ] = 1; data[ k++ ] = 0; data[ k++ ] = 0; data[ k++ ] = 0.3f;
+      data[ k++ ] = x0;
+      data[ k++ ] = y0;
+      data[ k++ ] = z2;
+      data[ k++ ] = 1; data[ k++ ] = 0; data[ k++ ] = 0; data[ k++ ] = 0.3f;
+      data[ k++ ] = x1;
+      data[ k++ ] = y0;
+      data[ k++ ] = z2;
+      data[ k++ ] = 1; data[ k++ ] = 0; data[ k++ ] = 0; data[ k++ ] = 0.3f;
+      data[ k++ ] = x1;
+      data[ k++ ] = y0;
+      data[ k++ ] = z0;
+      data[ k++ ] = 1; data[ k++ ] = 0; data[ k++ ] = 0; data[ k++ ] = 0.3f;
+      y0 += step;
+    }
 
     // line x1-x2
     data[ k++ ] = x1;
@@ -919,6 +1035,19 @@ public class GlModel
     data[ k++ ] = y1;
     data[ k++ ] = z2;
     data[ k++ ] = 0; data[ k++ ] = 0.7f; data[ k++ ] = 0; data[ k++ ] = 1.0f;
+    x0 = x1;
+    z0 = z2 - step;
+    for ( int i=0; i<nx; ++i ) {
+      data[ k++ ] = x0;
+      data[ k++ ] = y1;
+      data[ k++ ] = z2;
+      data[ k++ ] = 0; data[ k++ ] = 0.7f; data[ k++ ] = 0; data[ k++ ] = 0.6f;
+      data[ k++ ] = x0;
+      data[ k++ ] = y1;
+      data[ k++ ] = z0;
+      data[ k++ ] = 0; data[ k++ ] = 0.7f; data[ k++ ] = 0; data[ k++ ] = 0.6f;
+      x0 += step;
+    }
 
     // line z1-z2
     data[ k++ ] = x1;
@@ -929,18 +1058,32 @@ public class GlModel
     data[ k++ ] = y1;
     data[ k++ ] = z2;
     data[ k++ ] = 0; data[ k++ ] = 0; data[ k++ ] = 1; data[ k++ ] = 1.0f;
+    x0 = x1 + step;
+    z0 = z2;
+    for ( int i=0; i<nz; ++i ) {
+      data[ k++ ] = x1;
+      data[ k++ ] = y1;
+      data[ k++ ] = z0;
+      data[ k++ ] = 0; data[ k++ ] = 0; data[ k++ ] = 1; data[ k++ ] = 0.6f;
+      data[ k++ ] = x0;
+      data[ k++ ] = y1;
+      data[ k++ ] = z0;
+      data[ k++ ] = 0; data[ k++ ] = 0; data[ k++ ] = 1; data[ k++ ] = 0.6f;
+      z0 -= step;
+    }
     
     // FIXME INCREMENTAL : , 0 );
-    glFrame = new GlLines( mContext, GlLines.COLOR_SURVEY, 0);
+    glFrame = new GlLines( mContext, GlLines.COLOR_SURVEY, 0, false );
     glFrame.setAlpha( 0.9f );
     // TDLog.v("MODEL frame init data");
-    glFrame.initData( data, 3 ); // , R.raw.line_acolor_vertex, R.raw.line_fragment );
+    glFrame.initData( data, count ); // , R.raw.line_acolor_vertex, R.raw.line_fragment );
   }
 
   ArrayList< Cave3DShot > legsSurvey;
   ArrayList< Cave3DShot > legsSurface;
   ArrayList< Cave3DShot > legsDuplicate;
   ArrayList< Cave3DShot > legsCommented;
+  ArrayList< Cave3DShot > legsBackshot;
 
   /** create the 3D model
    * @param parser  parser with the 3D data
@@ -958,17 +1101,19 @@ public class GlModel
     mZ0Min  = parser.getCaveZMin();
 	
     // FIXME INCREMENTAL
-    GlLines legs   = new GlLines( mContext, GlLines.COLOR_NONE, 0 );
-    GlLines legsS  = new GlLines( mContext, GlLines.COLOR_NONE, 0 );
-    GlLines legsD  = new GlLines( mContext, GlLines.COLOR_NONE, 0 );
-    GlLines legsC  = new GlLines( mContext, GlLines.COLOR_NONE, 0 );
-    GlLines splays = new GlLines( mContext, GlLines.COLOR_NONE, 0 );
+    GlLines legs   = new GlLines( mContext, GlLines.COLOR_NONE, 0, false );
+    GlLines legsS  = new GlLines( mContext, GlLines.COLOR_NONE, 0, false ); // SURFACE
+    GlLines legsD  = new GlLines( mContext, GlLines.COLOR_NONE, 0, false ); // DUPLICATE
+    GlLines legsC  = new GlLines( mContext, GlLines.COLOR_NONE, 0, false ); // COMMENTED
+    GlLines legsB  = new GlLines( mContext, GlLines.COLOR_NONE, 0, false ); // BACKSHOT
+    GlLines splays = new GlLines( mContext, GlLines.COLOR_NONE, 0, true  );
     GlNames names  = new GlNames( mContext, NAME_INCREMENT );
  
     legsSurvey    = new ArrayList< Cave3DShot >();
     legsSurface   = new ArrayList< Cave3DShot >();
     legsDuplicate = new ArrayList< Cave3DShot >();
     legsCommented = new ArrayList< Cave3DShot >();
+    legsBackshot  = new ArrayList< Cave3DShot >();
 
     // TDLog.v("3D-Model create. surveys " + parser.getSurveyNumber() + " shots " + parser.getShotNumber() + "/" + parser.getSplayNumber() + " stations " + parser.getStationNumber() );
 
@@ -988,6 +1133,9 @@ public class GlModel
       } else if ( leg.isCommented() ) {
         legsCommented.add( leg );
         legsC.addLine( leg.from_station, leg.to_station, color, survey_nr, true, null );
+      } else if ( leg.isBackshot() ) { // BACKSHOT
+        legsBackshot.add( leg );
+        legsB.addLine( leg.from_station, leg.to_station, color, survey_nr, true, null );
       } else {
         legsSurvey.add( leg );
         legs.addLine(  leg.from_station, leg.to_station, color, survey_nr, true, leg ); 
@@ -1005,6 +1153,7 @@ public class GlModel
       legsS.reduceData( mXmed, mYmed, mZmed );
       legsD.reduceData( mXmed, mYmed, mZmed );
       legsC.reduceData( mXmed, mYmed, mZmed );
+      legsB.reduceData( mXmed, mYmed, mZmed );
     }
 
     // TDLog.v("Model center " + mXmed + " " + mYmed + " " + mZmed );
@@ -1013,9 +1162,9 @@ public class GlModel
       int survey_nr = splay.getSurveyNr();
       int color = mParser.getSurveyFromIndex( survey_nr ).getColor();
       if ( splay.from_station != null ) {
-        splays.addLine( splay.from_station, splay.toPoint3D(), color, survey_nr, true, mXmed, mYmed, mZmed, null );
+        splays.addLine( splay.from_station, splay.toPoint3D(), color, survey_nr, true, mXmed, mYmed, mZmed, splay ); // FIXME was null
       } else if ( splay.to_station != null ) {
-        splays.addLine( splay.to_station, splay.toPoint3D(), color, survey_nr, true, mXmed, mYmed, mZmed, null );
+        splays.addLine( splay.to_station, splay.toPoint3D(), color, survey_nr, true, mXmed, mYmed, mZmed, splay ); // FIXME was null
       }
     }
     splays.computeBBox();
@@ -1048,7 +1197,7 @@ public class GlModel
       valid_surface = gl_surface.initData( surface, mXmed, mYmed, mZmed, parser.surfaceFlipped() );
       if ( valid_surface ) {
         if ( parser != null && parser.mBitmap != null ) {
-          Bitmap texture = parser.mBitmap.getBitmap( surface.mEast1, surface.mNorth1, surface.mEast2, surface.mNorth2 );
+          Bitmap texture = parser.mBitmap.getBitmap( surface.east1(), surface.north1(), surface.east2(), surface.north2() );
           if ( texture != null ) {
             gl_surface.setTextureBitmap( texture );
           }
@@ -1064,6 +1213,7 @@ public class GlModel
     legsD.initData( );
     // TDLog.v("MODEL leg commented init data");
     legsC.initData( );
+    legsB.initData( );
     // TDLog.v("MODEL legs init data");
     legs.initData( );
     // TDLog.v("MODEL splays init data");
@@ -1079,6 +1229,7 @@ public class GlModel
       legsS.prepareDepthBuffer( legsSurface );
       legsD.prepareDepthBuffer( legsDuplicate );
       legsC.prepareDepthBuffer( legsCommented );
+      legsB.prepareDepthBuffer( legsBackshot );
     }
 
     mDiameter = legs.diameter();
@@ -1092,6 +1243,7 @@ public class GlModel
       glLegsS  = legsS;
       glLegsD  = legsD;
       glLegsC  = legsC;
+      glLegsB  = legsB;
       glSplays = splays;
       glNames  = names;
     }
@@ -1139,17 +1291,19 @@ public class GlModel
   //   modelCreated = false;
   //   mParser = parser;
   //   mZ0Min  = 0;
-  //   GlLines legs   = new GlLines( mContext, GlLines.COLOR_NONE, LEG_INCREMENT );
-  //   GlLines legsS  = new GlLines( mContext, GlLines.COLOR_NONE, 0 );
-  //   GlLines legsD  = new GlLines( mContext, GlLines.COLOR_NONE, 0 );
-  //   GlLines legsC  = new GlLines( mContext, GlLines.COLOR_NONE, 0 );
-  //   GlLines splays = new GlLines( mContext, GlLines.COLOR_NONE, SPLAY_INCREMENT );
+  //   GlLines legs   = new GlLines( mContext, GlLines.COLOR_NONE, LEG_INCREMENT, false );
+  //   GlLines legsS  = new GlLines( mContext, GlLines.COLOR_NONE, 0, false );
+  //   GlLines legsD  = new GlLines( mContext, GlLines.COLOR_NONE, 0, false );
+  //   GlLines legsC  = new GlLines( mContext, GlLines.COLOR_NONE, 0, false );
+  //   GlLines legsB  = new GlLines( mContext, GlLines.COLOR_NONE, 0, false );
+  //   GlLines splays = new GlLines( mContext, GlLines.COLOR_NONE, SPLAY_INCREMENT, true );
   //   GlNames names  = new GlNames( mContext, NAME_INCREMENT );
 
   //   legsSurvey    = new ArrayList< Cave3DShot >();
   //   legsSurface   = new ArrayList< Cave3DShot >();
   //   legsDuplicate = new ArrayList< Cave3DShot >();
   //   legsCommented = new ArrayList< Cave3DShot >();
+  //   legsBackshot  = new ArrayList< Cave3DShot >();
 
   //   // TDLog.v("GL Model create. shots " + parser.getShotNumber() + "/" + parser.getSplayNumber() + " stations " + parser.getStationNumber() );
   //   legs.initEmptyBBox();
@@ -1171,6 +1325,7 @@ public class GlModel
   //   legsS.initData( );
   //   legsD.initData( );
   //   legsC.initData( );
+  //   legsB.initData( );
   //   legs.initData( );
   //   splays.initData( );
   //   names.initData( );
@@ -1188,6 +1343,7 @@ public class GlModel
   //     glLegsS  = legsS;
   //     glLegsD  = legsD;
   //     glLegsC  = legsC;
+  //     glLegsB  = legsB;
   //     glSplays = splays;
   //     glNames  = names;
   //   }

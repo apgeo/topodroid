@@ -18,7 +18,7 @@ import com.topodroid.ui.TDGreenDot;
 import com.topodroid.num.TDNum;
 import com.topodroid.math.TDVector;
 import com.topodroid.prefs.TDSetting;
-import com.topodroid.common.PlotType;
+import com.topodroid.types.PlotType;
 // import com.topodroid.math.Point2D; // intersection point
 
 // import android.content.res.Configuration;
@@ -35,6 +35,8 @@ import android.graphics.RectF;
 import android.view.Display;
 
 import java.util.List;
+import java.util.Set;
+import java.util.HashSet;
 import java.util.Collections;
 import java.util.ArrayList;
 import java.io.BufferedWriter;
@@ -457,8 +459,18 @@ public class DrawingCommandManager
   // the CURRENT STATION is displayed green
   private DrawingStationName mCurrentStationName = null;
 
+  /** set the current station
+   * @param st   current station
+   */
   void setCurrentStationName( DrawingStationName st ) { mCurrentStationName = st; }
+
+  /** @return the current station
+   */
   DrawingStationName getCurrentStationName( ) { return mCurrentStationName; }
+
+  // /** @return true if the current station is set
+  //  */
+  // boolean hasCurrentStation() { return mCurrentStationName != null; }
 
   // ----------------------------------------------------------------
 
@@ -672,9 +684,10 @@ public class DrawingCommandManager
 
   /** flip the sketch horizontally
    * @param z   current zoom
+   * @param flip_scrap  whether to flip only current scrap
    * @note from ICanvasCommand
    */
-  public void flipXAxis( float z )
+  public void flipXAxis( float z, boolean flip_scrap )
   {
     synchronized( TDPath.mGridsLock ) {
       flipXAxes( mGridStack1 );
@@ -695,15 +708,20 @@ public class DrawingCommandManager
       // for ( DrawingFixedName   fx : mFixeds )   fx.flipXAxis(z);
     }
     synchronized( mSyncScrap ) {
-      for ( Scrap scrap : mScraps ) scrap.flipXAxis( z );
+      if ( flip_scrap ) {
+        if ( mCurrentScrap != null ) mCurrentScrap.flipXAxis( z );
+      } else {
+        for ( Scrap scrap : mScraps ) scrap.flipXAxis( z );
+      }
     }
   }
 
   /** shift the drawing: translate the drawing by (x,y)
    * @param x   X shift
    * @param y   Y shift
+   * @param shift_scrap whether to shift only the current scrap
    */
-  void shiftDrawing( float x, float y )
+  void shiftDrawing( float x, float y, boolean shift_scrap )
   {
     // if ( mStations != null ) {
     //   synchronized( TDPath.mStationsLock ) {
@@ -712,27 +730,36 @@ public class DrawingCommandManager
     //   }
     // }
     synchronized( mSyncScrap ) {
-      for ( Scrap scrap : mScraps ) scrap.shiftDrawing( x, y );
+      if ( shift_scrap ) {
+        if ( mCurrentScrap != null ) mCurrentScrap.shiftDrawing( x, y );
+      } else {
+        for ( Scrap scrap : mScraps ) scrap.shiftDrawing( x, y );
+      }
     }
   }
 
-  /** scale the drawing (by z)
-   * @param z    scale factor
-   */
-  void scaleDrawing( float z )
-  {
-    // if ( mStations != null ) {
-    //   synchronized( TDPath.mStationsLock ) {
-    //     for ( DrawingStationName st : mStations ) st.scaleBy( z );
-    //     for ( DrawingFixedName fx : mFixeds ) fx.scaleBy( z );
-    //   }
-    // }
-    Matrix m = new Matrix();
-    m.postScale(z,z);
-    synchronized( mSyncScrap ) {
-      for ( Scrap scrap : mScraps ) scrap.scaleDrawing( z, m );
-    }
-  }
+  // /** scale the drawing (by z)
+  //  * @param z    scale factor
+  //  * @param shift_scrap whether to scale only the current scrap
+  //  */
+  // void scaleDrawing( float z, boolean scale_scrap )
+  // {
+  //   // if ( mStations != null ) {
+  //   //   synchronized( TDPath.mStationsLock ) {
+  //   //     for ( DrawingStationName st : mStations ) st.scaleBy( z );
+  //   //     for ( DrawingFixedName fx : mFixeds ) fx.scaleBy( z );
+  //   //   }
+  //   // }
+  //   Matrix m = new Matrix();
+  //   m.postScale(z,z);
+  //   synchronized( mSyncScrap ) {
+  //     if ( scale_scrap ) {
+  //       if ( mCurrentScrap != null ) mCurrentScrap.scaleDrawing(z, m );
+  //     } else {
+  //       for ( Scrap scrap : mScraps ) scrap.scaleDrawing( z, m );
+  //     }
+  //   }
+  // }
 
   /** affine transform the drawing
    * @param a    transform A coeff
@@ -741,12 +768,13 @@ public class DrawingCommandManager
    * @param d    transform D coeff
    * @param e    transform E coeff
    * @param f    transform F coeff
+   * @param affine_scrap whether to transform only the current scrap
    *
    * the transformation is
    *   x' = a x + b y + c
    *   y' = d x + e y + f
    */
-  void affineTransformDrawing( float a, float b, float c, float d, float e, float f ) 
+  void affineTransformDrawing( float a, float b, float c, float d, float e, float f, boolean affine_scrap ) 
   {
     Matrix m = new Matrix();
     float[] mm = new float[9];
@@ -755,7 +783,11 @@ public class DrawingCommandManager
     mm[6] = 0; mm[7] = 0; mm[8] = 1;
     m.setValues( mm );
     synchronized( mSyncScrap ) {
-      for ( Scrap scrap : mScraps ) scrap.affineTransformDrawing( mm, m );
+      if ( affine_scrap ) {
+        if ( mCurrentScrap != null ) mCurrentScrap.affineTransformDrawing( mm, m );
+      } else {
+        for ( Scrap scrap : mScraps ) scrap.affineTransformDrawing( mm, m );
+      }
     }
   }
 
@@ -993,7 +1025,7 @@ public class DrawingCommandManager
   /** @return a station name by the name
    * @param name   name of the station
    */
-  DrawingStationName getStation( String name ) 
+  public DrawingStationName getStation( String name ) 
   {
     for ( DrawingStationName st : mStations ) {
       if ( name.equals( st.getName() ) ) return st;
@@ -1171,8 +1203,12 @@ public class DrawingCommandManager
    */
   boolean removeLinePointFromSelection( DrawingLinePath line, LinePoint point ) { return mCurrentScrap.removeLinePointFromSelection( line, point ); }
 
-  List< DrawingPath > splitPlot( ArrayList< PointF > border, boolean remove ) { return mCurrentScrap.splitPlot( border, remove ); }
-    
+  /** split the plot, in the current scrap
+   * @param border    splitting border
+   * @param remove    whether to remove split items
+   * @return the list of (a copy of the) split items
+   */
+  List< DrawingPath > splitPaths( ArrayList< PointF > border, boolean remove ) { return mCurrentScrap.splitPaths( border, remove ); }
 
   /** remove a splay path
    * @param p   splay path (this is the path of the selection point)
@@ -1434,9 +1470,11 @@ public class DrawingCommandManager
   void addDotCommand( DrawingPath path ) 
   { 
     if ( path instanceof DrawingSpecialPath ) { 
+      // TDLog.v("add dot command special");
       setCurrentScrapByIdx( path.mScrap );
-      mCurrentScrap.addSpecialCommand( path ); 
+      mCurrentScrap.addSpecialCommand( (DrawingSpecialPath)path ); 
     } else {
+      // TDLog.v("add dot command normal");
       addCommand( path );
     }
   }
@@ -1471,6 +1509,7 @@ public class DrawingCommandManager
         }
       }
     }
+    // TDLog.v( "Before scraps bounds " + bounds.left + " " + bounds.top + " " + bounds.right + " " + bounds.bottom );
     synchronized( mSyncScrap ) {
       for ( Scrap scrap : mScraps ) scrap.getBitmapBounds( bounds );
     }
@@ -1478,7 +1517,7 @@ public class DrawingCommandManager
     bounds.top    *= scale;
     bounds.right  *= scale;
     bounds.bottom *= scale;
-    // TDLog.v( "scale " + scale + " bounds " + bounds.left + " " + bounds.top + " " + bounds.right + " " + bounds.bottom );
+    // TDLog.v( "After scraps bounds " + bounds.left + " " + bounds.top + " " + bounds.right + " " + bounds.bottom );
     return bounds;
   }
 
@@ -1863,7 +1902,11 @@ public class DrawingCommandManager
       }
       if ( mXSectionOutlines != null && mXSectionOutlines.size() > 0 ) {
         synchronized( TDPath.mXSectionsLock )  {
-          for ( DrawingOutlinePath path : mXSectionOutlines ) path.mPath.draw( canvas, mm, null /* bbox */ );
+          for ( DrawingOutlinePath path : mXSectionOutlines ) {
+            if ( path.isScrapId( mCurrentScrap.mScrapIdx ) ) {
+              path.mPath.draw( canvas, mm, null /* bbox */ );
+            }
+          }
         }
       }
     }
@@ -2230,6 +2273,14 @@ public class DrawingCommandManager
     }
   }
 
+  /** @return the section point of a given x-section
+   * @param scrap_name    X-section fullname
+   */
+  DrawingPointPath findSectionPoint( String scrap_name )
+  {
+    return mCurrentScrap.findSectionPoint( scrap_name );
+  }
+
   /** compute the area of the xsection
    * @return the computed area
    */
@@ -2239,14 +2290,24 @@ public class DrawingCommandManager
    // * @param stations station names
    * @param name     name of parent plot of the xsections
    */
-  void linkSections( String name ) { mCurrentScrap.linkSections( mStations, name ); }
+  void linkSections( String name ) 
+  { 
+    // mCurrentScrap.linkSections( mStations, name );
+    for ( Scrap scrap : mScraps ) {
+      scrap.linkSections( mStations, name );
+    }
+  }
 
   // -------------------------------------------------------------------
   // OUTLINE
 
   /** clear the scrap outlines
    */
-  void clearScrapOutline() { synchronized( mSyncOutline ) { mPlotOutline.clear(); } }
+  void clearPlotOutline() { synchronized( mSyncOutline ) { mPlotOutline.clear(); } }
+
+  /** @return true if there is a plot outline
+   */
+  boolean hasPlotOutline() { return ( mPlotOutline != null && mPlotOutline.size() > 0 ); }
 
   /** add an outline path to the set of outlines
    * @param path    outline path
@@ -2297,7 +2358,10 @@ public class DrawingCommandManager
     List< DrawingOutlinePath > xsection_outlines = Collections.synchronizedList(new ArrayList< DrawingOutlinePath >());
     synchronized( TDPath.mXSectionsLock ) {
       for ( DrawingOutlinePath path : mXSectionOutlines  ) {
-        if ( ! path.isScrapName( name ) ) xsection_outlines.add( path );
+        if ( ! path.isScrapName( name ) ) {
+          TDLog.v("clear XSection outline: retain " + name );
+          xsection_outlines.add( path );
+        }
       }
       mXSectionOutlines.clear(); // not necessary
     }
@@ -2403,4 +2467,65 @@ public class DrawingCommandManager
     for ( Scrap scrap : mScraps ) scrap.shiftXSections( x, y );
   }
 
+  // STATION HIGHLIGHT
+  private DrawingStationName highlightedStation = null;
+
+  /** highlight a station name
+   * @param name   name to highlight, or null
+   * @note if the name does not correspond to any station no station is highlighted
+   */
+  void highlightStation( String name ) 
+  {
+    if ( name == null ) {
+      if ( highlightedStation != null ) {
+        highlightedStation.highlightName( false );
+        highlightedStation = null;
+      }
+    } else {
+      if ( highlightedStation != null ) {
+        if ( highlightedStation.getName().equals( name ) ) return;
+        highlightedStation.highlightName( false );
+      }
+      highlightedStation = getStation( name );
+      if ( highlightedStation != null ) {
+        highlightedStation.highlightName( true );
+      }
+    }
+  }
+
+  /** @return the set of point symbols used in the drawing
+   */
+  public Set<SymbolPoint> getPointSymbols()
+  {
+    Set<SymbolPoint> ret = new HashSet<>();
+    for ( Scrap scrap : mScraps ) scrap.getPointSymbols( ret );
+    return ret;
+  }
+
+  /** @return the set of line symbols used in the drawing
+   */
+  public Set<SymbolLine> getLineSymbols()
+  {
+    Set<SymbolLine> ret = new HashSet<>();
+    for ( Scrap scrap : mScraps ) scrap.getLineSymbols( ret );
+    return ret;
+  }
+
+  /** @return the set of area symbols used in the drawing
+   */
+  public Set<SymbolArea> getAreaSymbols()
+  {
+    Set<SymbolArea> ret = new HashSet<>();
+    for ( Scrap scrap : mScraps ) scrap.getAreaSymbols( ret );
+    return ret;
+  }
+
+  List< DrawingPointPath > getSectionPoints()
+  {
+    ArrayList< DrawingPointPath > ret = new ArrayList<>();
+    for ( Scrap scrap : mScraps ) scrap.addSectionPoints( ret );
+    return ret;
+  }
+
+  
 }

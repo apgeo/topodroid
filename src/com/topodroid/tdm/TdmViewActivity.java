@@ -37,6 +37,7 @@ import android.content.pm.PackageManager;
 // import android.graphics.Paint;
 // import android.graphics.Paint.FontMetrics;
 import android.graphics.PointF;
+import android.graphics.RectF;
 // import android.graphics.Path;
 // import android.view.Menu;
 // import android.view.MenuItem;
@@ -73,6 +74,7 @@ public class TdmViewActivity extends Activity
                                       , OnClickListener
                                       , OnItemClickListener
 {
+
   MyHorizontalListView mListView;
   MyHorizontalButtonView mButtonView1;
 
@@ -128,6 +130,7 @@ public class TdmViewActivity extends Activity
 
     private void changeZoom( float f ) 
     {
+      // TDLog.v("change zoom " + f );
       mDrawingSurface.changeZoom( f );
     }
 
@@ -147,11 +150,25 @@ public class TdmViewActivity extends Activity
     static float sceneToWorldX( float x ) { return x/SCALE_FIX; }
     static float sceneToWorldY( float y ) { return y/SCALE_FIX; }
 
+    void zoomFit( float width, float height )
+    {
+      RectF box = mDrawingSurface.getBoundingBox();
+      float zw = 0.5f * TopoDroidApp.mDisplayWidth / ( box.right - box.left );
+      float zh = 0.5f * TopoDroidApp.mDisplayHeight / ( box.bottom - box.top );
+      float x  = ( box.right + box.left )/2;
+      float y  = ( box.bottom + box.top )/2;
+      TDLog.v("BBox " + box.left + " " + box.right + "   " + box.top + " " + box.bottom + " zw " + zw );
+      float z  = ( zh < zw )? zh : zw;
+      mDrawingSurface.transform( width/(2.0f * z) - x, height/(2.0f * z) - y, z ); // was zoom = 1
+     
+      // mDrawingSurface.changeZoom( zw );
+    }
     
     // --------------------------------------------------------------------------------------
 
     protected void setTheTitle()
     {
+      // TODO
     }
 
     ArrayList< TdmViewCommand > getCommands() { return mDrawingSurface.mCommandManager; }
@@ -208,7 +225,8 @@ public class TdmViewActivity extends Activity
       mMenu.setOnItemClickListener( this );
 
       doStart();
-      mDrawingSurface.transform( width/2.0f, height/2.0f, 1 );
+      zoomFit( width, height );
+      // mDrawingSurface.transform( width/(2.0f * z), height/(2.0f * z), z ); // was zoom = 1 - moved in zoomFit
     }
 
     @Override
@@ -269,12 +287,12 @@ public class TdmViewActivity extends Activity
       // TdmConfig config = mApp.mConfig;
       ArrayList< TdmEquate > equates = TdmConfigActivity.mTdmConfig.getEquates();
 
-      for ( TdmSurvey sr : surveys ) {
-        TDLog.v("VIEW survey >" + sr.getFullName() + "<" );
-      }
-      for ( TdmEquate eq : equates ) {
-        TDLog.v("VIEW equate >" + eq.stationsString() + "<");
-      }
+      // for ( TdmSurvey sr : surveys ) {
+      //   TDLog.v("VIEW survey >" + sr.getFullName() + "<" );
+      // }
+      // for ( TdmEquate eq : equates ) {
+      //   TDLog.v("VIEW equate >" + eq.stationsString() + "<");
+      // }
 
       // TDLog.v( "TdmView nr. surveys " + surveys.size() + " equates " + equates.size() );
 
@@ -425,9 +443,28 @@ public class TdmViewActivity extends Activity
           boolean ret = mDrawingSurface.getSurveyAt( mSaveX, mSaveY, null );
           // TDLog.v( "DOWN at " + mSaveX + " " + mSaveY + " at " + ret );
           if ( ret ) {
-            mWithStation = 1;
-            mSelectedCommand = mDrawingSurface.selectedCommand();
-            setTitle( "TopoDroid Manager " + mDrawingSurface.selectedCommandName() + " " + mDrawingSurface.selectedStationName() );
+            boolean added = false;
+            if ( hasPossibeEquates() ) {
+              TdmViewStation st = mDrawingSurface.selectedStation();
+              List<TdmPossibleEquate> eqs = mDrawingSurface.getPossibleEquates( st );
+              if ( eqs.size() > 0 ) {
+                added = true;
+                for ( TdmPossibleEquate eq : eqs ) {
+                  final String st1 = eq.getStationFullname( 1 );
+                  final String st2 = eq.getStationFullname( 2 );
+                  // TDLog.v("make eqauete <" + st1 + "> <" + st2 + ">" );
+                  makeEquate( st1, st2 );
+                }
+              }
+            }
+            if ( added ) {
+              clearPossibleEquates();
+              computePossibleEquates();
+            } else {
+              mWithStation = 1;
+              mSelectedCommand = mDrawingSurface.selectedCommand();
+              setTitle( "TopoDroid Manager " + mDrawingSurface.selectedCommandName() + " " + mDrawingSurface.selectedStationName() );
+            }
           } else {
             setTitle( "TopoDroid Manager" );
           }
@@ -486,9 +523,10 @@ public class TdmViewActivity extends Activity
 
   // -------------------------------------------------
   boolean onMenu;
-  int mNrButton1 = 4;
+  int mNrButton1 = 5;
   private static int[] izons = { 
     R.drawable.iz_equate,
+    R.drawable.iz_equate_all,
     R.drawable.iz_equates,
     R.drawable.iz_numbers_minus,
     R.drawable.iz_numbers_plus,
@@ -496,6 +534,7 @@ public class TdmViewActivity extends Activity
   };
   private static final int[] help_icons = {
     R.string.help_add_equate,
+    R.string.help_all_equates,
     R.string.help_equates,
     R.string.help_stations_minus,
     R.string.help_stations_plus,
@@ -566,7 +605,7 @@ public class TdmViewActivity extends Activity
     if ( p++ == pos ) {        // CLOSE
       finish();
     } else if ( p++ == pos ) { // HELP
-      new HelpDialog(this, izons, menus, help_icons, help_menus, mNrButton1, help_menus.length, getResources().getString( HELP_PAGE ) ).show();
+      new HelpDialog(this, this, izons, menus, help_icons, help_menus, mNrButton1, help_menus.length, getResources().getString( HELP_PAGE ) ).show();
     }
   }
 
@@ -587,19 +626,13 @@ public class TdmViewActivity extends Activity
       float y = vst1.y + mSelectedCommand.mYoff;
       // TDLog.v( "selected station " + vst1.x + " " + vst1.y + " point " + x + " " + y );
 
-      String st = mDrawingSurface.selectedStationName() + "@" + mDrawingSurface.selectedCommandName();
-      int len = st.length();
-      // while ( len > 0 && st.charAt( len - 1 ) == '.' ) -- len; // 2024-12-22 dropped
-      final String st1 = st.substring(0,len);
+      final String st1 = mDrawingSurface.selectedStationName() + "@" + mDrawingSurface.selectedCommandName();
       if ( mDrawingSurface.getSurveyAt( x, y, mSelectedCommand ) ) {
         // TdmViewCommand cmd2 = mDrawingSurface.selectedCommand();
         // TdmSurvey srv2 = cmd2.mSurvey;
         // TdmViewStation vst2 = mDrawingSurface.selectedStation();
         // TdmStation stn2 = vts2.mStation;
-        st = mDrawingSurface.selectedStationName() + "@" + mDrawingSurface.selectedCommandName();
-        len = st.length();
-        while ( len > 0 && st.charAt( len - 1 ) == '.' ) -- len;
-        final String st2 = st.substring(0,len);
+        final String st2 = mDrawingSurface.selectedStationName() + "@" + mDrawingSurface.selectedCommandName();
 
         // String title = "Equate " + st1 + " with " + st2;
         String title = String.format( getResources().getString( R.string.title_equate_with ), st1, st2 );
@@ -667,8 +700,18 @@ public class TdmViewActivity extends Activity
     int k1 = 0;
     if ( k1 < mNrButton1 && b0 == mButton1[k1++] ) {  // EQUATE
       handleEquate();
+    } else if ( k1 < mNrButton1 && b0 == mButton1[k1++] ) {  // ALL POSSIBLE EQUATES
+      if ( hasPossibeEquates() ) {
+        clearPossibleEquates();
+      } else {
+        computePossibleEquates();
+      }
     } else if ( k1 < mNrButton1 && b0 == mButton1[k1++] ) {  // SHOW EQUATES
-      (new TdmEquatesDialog( this, TdmConfigActivity.mTdmConfig, this )).show();
+      if ( TdmConfigActivity.mTdmConfig.hasEquates() ) {
+        (new TdmEquatesDialog( this, TdmConfigActivity.mTdmConfig, this )).show();
+      } else {
+        TDToast.make( R.string.no_equate );
+      }
     } else if ( k1 < mNrButton1 && b0 == mButton1[k1++] ) {  // FEWER STATIONS
       changeStationRate( -1 );
     } else if ( k1 < mNrButton1 && b0 == mButton1[k1++] ) {  // MORE STATIONS
@@ -702,4 +745,56 @@ public class TdmViewActivity extends Activity
     super.onConfigurationChanged( new_cfg );
     TDLocale.resetTheLocale();
   }
+
+  // POSSIBLE EQUATES -----------------------------------------------
+  /** clear the list of possible equates
+   */
+  void clearPossibleEquates() { mDrawingSurface.clearPossibleEquates(); }
+
+  boolean addPossibleEquate( TdmViewStation st1, TdmViewStation st2 ) { return mDrawingSurface.addPossibleEquate( st1, st2 ); }
+
+  boolean hasPossibeEquates() { return mDrawingSurface.hasPossibeEquates(); }
+
+  
+
+
+
+  /** compute possible equates:
+   * a possible equate is an eqaute between stations of two surveys with the same name
+   */
+  boolean computePossibleEquates()
+  {
+    mDrawingSurface.clearPossibleEquates(); // necessary for recompute
+    ArrayList< TdmViewCommand > commands = getCommands();
+    int nr_surveys = commands.size();
+    if ( nr_surveys <= 1 ) return false;
+    for ( int i=0; i < nr_surveys; ++i ) {
+      TdmViewCommand cmd1 = commands.get(i);
+      List< TdmViewStation > stations1 = cmd1.mStations;
+      for ( int j=i+1; j < nr_surveys; ++j ) {
+        TdmViewCommand cmd2 = commands.get(j);
+        // skip if surveys have an equate 
+        if ( mDrawingSurface.hasEquated( cmd1, cmd2 ) ) continue;
+        List< TdmViewStation > stations2 = cmd2.mStations;
+        ArrayList< TdmViewStation > equated = new ArrayList<>();
+        for ( TdmViewStation st1 : stations1 ) {
+          if ( st1.mEquated ) continue; // skip eqauted stations
+          String name = st1.name();
+          for ( TdmViewStation st2 : stations2 ) {
+            if ( st2.mEquated ) continue;
+            if ( equated.contains( st2 ) ) continue;
+            if ( st2.name().equals( name ) ) {
+              if ( mDrawingSurface.addPossibleEquate( st1, st2 ) ) {
+                equated.add( st2 );
+                break;
+              }
+            }
+          } // stations in survey j
+        } // stations in survey i
+      } // survey j
+    } // survey i
+    // TDLog.v("Possible equates " + mDrawingSurface.nrPossibleEquates() );
+    return mDrawingSurface.hasPossibeEquates();
+  }
+  
 }

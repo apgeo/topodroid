@@ -15,7 +15,7 @@ import com.topodroid.utils.TDLog;
 import com.topodroid.utils.TDFile;
 import com.topodroid.utils.TDMath;
 import com.topodroid.prefs.TDSetting;
-import com.topodroid.common.PlotType;
+import com.topodroid.types.PlotType;
 // import com.topodroid.num.NumStation;
 import com.topodroid.TDX.Archiver;
 import com.topodroid.TDX.GeoReference;
@@ -24,7 +24,9 @@ import com.topodroid.TDX.DrawingPath;
 import com.topodroid.TDX.DrawingPointPath;
 import com.topodroid.TDX.DrawingAudioPath;
 import com.topodroid.TDX.DrawingPhotoPath;
+import com.topodroid.TDX.DrawingPicturePath;
 import com.topodroid.TDX.DrawingPointLinePath;
+import com.topodroid.TDX.DrawingPicturePath; // HB shp extra
 import com.topodroid.TDX.DrawingLinePath;
 import com.topodroid.TDX.DrawingAreaPath;
 import com.topodroid.TDX.DrawingCommandManager;
@@ -103,6 +105,8 @@ public class DrawingShp
           if ( point instanceof DrawingAudioPath ) {
             extras.add( point );
           } else if ( point instanceof DrawingPhotoPath ) {
+            extras.add( point );
+          } else if ( point instanceof DrawingPicturePath) {// HB shp extra
             extras.add( point );
           } else {
             if ( BrushManager.isPointSection( point.mPointType ) ) {

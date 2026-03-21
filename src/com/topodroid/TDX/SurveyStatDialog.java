@@ -67,6 +67,7 @@ class SurveyStatDialog extends MyDialog
       TextView mTextSurface   = (TextView) findViewById(R.id.stat_surface);
       TextView mTextSplay     = (TextView) findViewById(R.id.stat_splay);
       TextView mTextStation   = (TextView) findViewById(R.id.stat_station);
+      TextView mTextSurveyLen = (TextView) findViewById(R.id.stat_survey_len);
       TextView mTextLoop      = (TextView) findViewById(R.id.stat_loop);
       TextView mTextComponent = (TextView) findViewById(R.id.stat_component);
       TextView mTextStddevM   = (TextView) findViewById(R.id.stat_stddev_m);
@@ -78,35 +79,43 @@ class SurveyStatDialog extends MyDialog
       histG = (ImageView) findViewById( R.id.histogramG );
       histM = (ImageView) findViewById( R.id.histogramM );
       histD = (ImageView) findViewById( R.id.histogramD );
-      float g = mStat.averageG*TDSetting.mAccelerationThr/2000; // 2000 = 20 * 100 ie percent/20
-      float m = mStat.averageM*TDSetting.mMagneticThr/2000;
-      float d = TDSetting.mDipThr/20;
-      // TDLog.v( "G " + g + " M " + m + " D " + d );
-      histG.setImageBitmap( makeHistogramBitmap( mStat.G, mStat.nrMGD, mStat.averageG, g, 400, 100, 40, TDColor.BLUE ) );
-      histM.setImageBitmap( makeHistogramBitmap( mStat.M, mStat.nrMGD, mStat.averageM, m, 400, 100, 40, TDColor.BLUE ) );
-      histD.setImageBitmap( makeHistogramBitmap( mStat.D, mStat.nrMGD, mStat.averageD, d, 400, 100, 40, TDColor.BLUE ) );
 
       // mBtnBack = (Button) findViewById(R.id.btn_back);
       // mBtnBack.setOnClickListener( this );
       ( (Button) findViewById(R.id.btn_back) ).setOnClickListener( this );
 
-      mTextLeg.setText( String.format( res.getString(R.string.stat_leg),
-                        mStat.countLeg, mStat.lengthLeg * unit, mStat.extLength * unit, mStat.planLength * unit, unit_str ) );
-      mTextDuplicate.setText( String.format( res.getString(R.string.survey_stat_duplicate),
-                        mStat.countDuplicate, mStat.lengthDuplicate * unit, unit_str ) );
-      mTextSurface.setText( String.format( res.getString(R.string.survey_stat_surface),
-                        mStat.countSurface, mStat.lengthSurface * unit, unit_str ) );
-      mTextSplay.setText( String.format( res.getString(R.string.survey_stat_splay), mStat.countSplay ) );
-      mTextStation.setText( String.format( res.getString(R.string.survey_stat_station), mStat.countStation ) );
-      mTextLoop.setText( String.format( res.getString(R.string.stat_cycle), mStat.countLoop ) );
-      mTextComponent.setText( String.format( res.getString(R.string.stat_component), mStat.countComponent ) );
+      mTextLeg.setText( String.format( resString(R.string.stat_leg), mStat.countLeg, mStat.lengthLeg * unit, mStat.extLength * unit, mStat.planLength * unit, unit_str ) );
+      mTextDuplicate.setText( String.format( resString(R.string.survey_stat_duplicate), mStat.countDuplicate, mStat.lengthDuplicate * unit, unit_str ) );
+      mTextSurface.setText( String.format( resString(R.string.survey_stat_surface), mStat.countSurface, mStat.lengthSurface * unit, unit_str ) );
+      mTextSplay.setText( String.format( resString(R.string.survey_stat_splay), mStat.countSplay ) );
+      mTextStation.setText( String.format( resString(R.string.survey_stat_station), mStat.countStation ) );
+      mTextSurveyLen.setText( String.format( resString(R.string.stat_survey_length), mStat.lengthSurvey * unit, unit_str ) );
+      mTextLoop.setText( String.format( resString(R.string.stat_cycle), mStat.countLoop ) );
+      mTextComponent.setText( String.format( resString(R.string.stat_component), mStat.countComponent ) );
 
-      mTextStddevM.setText( String.format( res.getString(R.string.stat_stddev_m), mStat.stddevM ) );
-      mTextStddevG.setText( String.format( res.getString(R.string.stat_stddev_g), mStat.stddevG ) );
-      mTextStddevD.setText( String.format( res.getString(R.string.stat_stddev_dip), mStat.stddevD, mStat.averageD ) );
+      mTextDevices.setText( String.format( resString(R.string.stat_devices), mStat.deviceNr, mStat.deviceCnt ) );
+      mTextDates.setText( String.format( resString(R.string.stat_dates), TDUtil.millisToDate( mStat.minMillis * 1000 ), TDUtil.millisToDate( mStat.maxMillis * 1000 ) ) );
 
-      mTextDevices.setText( String.format( res.getString(R.string.stat_devices), mStat.deviceNr, mStat.deviceCnt ) );
-      mTextDates.setText( String.format( res.getString(R.string.stat_dates), TDUtil.millisToDate( mStat.minMillis * 1000 ), TDUtil.millisToDate( mStat.maxMillis * 1000 ) ) );
+      // if ( mStat.deviceNr == 1 ) {
+        float g = mStat.averageG*TDSetting.mAccelerationThr/2000; // 2000 = 20 * 100 ie percent/20
+        float m = mStat.averageM*TDSetting.mMagneticThr/2000;
+        float d = TDSetting.mDipThr/20;
+        // TDLog.v( "G " + g + " M " + m + " D " + d );
+        histG.setImageBitmap( makeHistogramBitmap( mStat.G, mStat.nrMGD, mStat.averageG, g, 400, 100, 40, TDColor.BLUE ) );
+        histM.setImageBitmap( makeHistogramBitmap( mStat.M, mStat.nrMGD, mStat.averageM, m, 400, 100, 40, TDColor.BLUE ) );
+        histD.setImageBitmap( makeHistogramBitmap( mStat.D, mStat.nrMGD, mStat.averageD, d, 400, 100, 40, TDColor.BLUE ) );
+        mTextStddevM.setText( String.format( resString(R.string.stat_stddev_m), mStat.stddevM ) );
+        mTextStddevG.setText( String.format( resString(R.string.stat_stddev_g), mStat.stddevG ) );
+        mTextStddevD.setText( String.format( resString(R.string.stat_stddev_dip), mStat.stddevD, mStat.averageD ) );
+      // } else {
+      //   histG.setVisibility( View.GONE );
+      //   histM.setVisibility( View.GONE );
+      //   histD.setVisibility( View.GONE );
+      //   mTextStddevM.setVisibility( View.GONE );
+      //   mTextStddevG.setVisibility( View.GONE );
+      //   mTextStddevD.setVisibility( View.GONE );
+      // }
+
   }
 
     @Override

@@ -11,6 +11,7 @@
  */
 package com.topodroid.tdm;
 
+import com.topodroid.utils.TDLog;
 import com.topodroid.ui.MyDialog;
 import com.topodroid.TDX.TopoDroidAlertDialog;
 import com.topodroid.TDX.TDToast;
@@ -39,7 +40,6 @@ class TdmEquatesDialog extends MyDialog
                       implements OnItemClickListener
                       , OnClickListener
 {
-  Context mContext;
   TdmEquateAdapter mTdmEquateAdapter;
   TdmConfig mConfig;
   TdmViewActivity mActivity;
@@ -49,16 +49,15 @@ class TdmEquatesDialog extends MyDialog
   TdmEquatesDialog( Context context, TdmConfig config, TdmViewActivity activity )
   {
     super( context, null, R.string.TdmEquatesDialog ); // null app
-    mContext = context;
-    mConfig  = config;
+    mConfig   = config;
     mActivity = activity;
     if ( mConfig != null && mConfig.getEquates() != null ) {
       mEquates = mConfig.getEquates();
-    } else {
-      mEquates = new ArrayList< TdmEquate >();
+      TDLog.v("Equates dialog uses config equates " + mEquates.size() );
     }
     // TDLog.v("Equates Dialog size " + mEquates.size() );
   }
+
 
   @Override
   public void onCreate( Bundle savedInstanceState )
@@ -66,10 +65,9 @@ class TdmEquatesDialog extends MyDialog
     super.onCreate( savedInstanceState );
     initLayout( R.layout.tdequates_dialog, R.string.title_equates );
 
-    // Button add  = (Button)findViewById( R.id.button_add );
-    // add.setOnClickListener( this );
-    Button back = (Button)findViewById( R.id.button_back );
-    back.setOnClickListener( this );
+    // ( (Button)findViewById( R.id.button_add ) ).setOnClickListener( this );
+    ( (Button)findViewById( R.id.button_back ) ).setOnClickListener( this );
+    ( (Button)findViewById( R.id.button_clear ) ).setOnClickListener( this );
 
     mList = (ListView) findViewById(R.id.list);
     mList.setDividerHeight( 2 );
@@ -81,10 +79,12 @@ class TdmEquatesDialog extends MyDialog
   void updateList()
   {
     if ( mEquates != null && mEquates.size() > 0 ) {
+      TDLog.v("Equates dialog updates list");
       mTdmEquateAdapter = new TdmEquateAdapter( mContext, R.layout.tdequate_adapter, mEquates );
       mList.setAdapter( mTdmEquateAdapter );
       // mList.invalidate();
     } else {
+      TDLog.v("Equates dialog no equate");
       hide();
       TDToast.make( R.string.no_equate );
       dismiss();
@@ -93,11 +93,14 @@ class TdmEquatesDialog extends MyDialog
 
   void doRemoveEquate( TdmEquate equate )
   {
-    mEquates.remove( equate );
+    // TDLog.v("Remove equate " + equate.stationsString() );
+    mConfig.removeEquate( equate );
     updateList();
     if ( mActivity != null ) mActivity.updateViewEquates();
   }
 
+  /** ask whether to remove an eqaute
+   */
   void askRemoveEquate( final TdmEquate equate )
   {
     TopoDroidAlertDialog.makeAlert( mContext, mContext.getResources(), 
@@ -119,6 +122,15 @@ class TdmEquatesDialog extends MyDialog
     }
   }
 
+  /** clear all equates and close dialog
+   */
+  void clearEquates()
+  {
+    TdmConfigActivity.mTdmConfig.clearEquates();
+    if ( mActivity != null ) mActivity.updateViewEquates();
+    dismiss();
+  }
+
   @Override
   public void onClick( View v ) 
   {
@@ -126,6 +138,15 @@ class TdmEquatesDialog extends MyDialog
     // } else if ( v.getId() == R.id.button_add ) {
     //   mActivity.doEquateAddDialog();
     // }
+    if ( v.getId() == R.id.button_clear ) {
+      TopoDroidAlertDialog.makeAlert( mContext, mContext.getResources(), mContext.getResources().getString( R.string.ask_clear_equates ),
+        new DialogInterface.OnClickListener() {
+          @Override
+          public void onClick( DialogInterface dialog, int btn ) { clearEquates(); }
+        }
+      );
+      return;
+    }
     dismiss();
   }
       

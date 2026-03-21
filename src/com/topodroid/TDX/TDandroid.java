@@ -15,26 +15,34 @@ import com.topodroid.utils.TDLog;
 // import com.topodroid.utils.TDVersion;
 import com.topodroid.prefs.TDSetting;
 
-import android.content.SharedPreferences.Editor;
 
 import android.app.Activity;
+import android.app.ActivityManager;
+import android.app.ActivityManager.MemoryInfo;
+
+import android.content.SharedPreferences.Editor;
 import android.content.ActivityNotFoundException;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.ActivityInfo;
+import android.content.pm.PackageManager;
+import android.content.pm.PackageInfo;
+import android.content.pm.ConfigurationInfo;
+// import android.content.pm.PackageManager.NameNotFoundException;
 
 // import java.lang.reflect.Method;
 
 import android.os.Build;
 import android.os.Environment;
+// import android.os.Build.VERSION_CODES;
 
 import android.provider.Settings;
-import android.net.Uri;
 
-// import android.os.Build.VERSION_CODES;
-import android.content.pm.PackageManager;
-import android.content.pm.PackageInfo;
-// import android.content.pm.PackageManager.NameNotFoundException;
+import android.net.Uri;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
+
+import android.location.LocationManager;
 
 import android.hardware.Sensor;
 import android.widget.Button;
@@ -49,9 +57,10 @@ public class TDandroid
 {
   // final static public boolean BELOW_API_13 = ( Build.VERSION.SDK_INT < Build.VERSION_CODES.HONEYCOMB_MR2 );
   // final static public boolean BELOW_API_15 = ( Build.VERSION.SDK_INT < Build.VERSION_CODES.ICE_CREAM_SANDWICH_MR1 );
-  final static public boolean BELOW_API_18 = ( Build.VERSION.SDK_INT < Build.VERSION_CODES.JELLY_BEAN_MR2 );
-  final static public boolean BELOW_API_19 = ( Build.VERSION.SDK_INT < Build.VERSION_CODES.KITKAT );
-  final static public boolean BELOW_API_21 = ( Build.VERSION.SDK_INT < Build.VERSION_CODES.LOLLIPOP );
+  // final static public boolean BELOW_API_18 = ( Build.VERSION.SDK_INT < Build.VERSION_CODES.JELLY_BEAN_MR2 );
+  // final static public boolean BELOW_API_19 = ( Build.VERSION.SDK_INT < Build.VERSION_CODES.KITKAT );
+  // final static public boolean BELOW_API_21 = ( Build.VERSION.SDK_INT < Build.VERSION_CODES.LOLLIPOP );
+  // minSdkApi = 21
   final static public boolean BELOW_API_23 = ( Build.VERSION.SDK_INT < Build.VERSION_CODES.M );
   final static public boolean BELOW_API_24 = ( Build.VERSION.SDK_INT < Build.VERSION_CODES.N );
   final static public boolean BELOW_API_26 = ( Build.VERSION.SDK_INT < Build.VERSION_CODES.O );
@@ -83,6 +92,7 @@ public class TDandroid
       android.Manifest.permission.BLUETOOTH,            // Bluetooth permissions are normal - no need to request at runtime
       android.Manifest.permission.BLUETOOTH_ADMIN,
       android.Manifest.permission.BLUETOOTH_CONNECT, // API-31
+      android.Manifest.permission.BLUETOOTH_SCAN,    // API-31
       // android.Manifest.permission.INTERNET,
       // android.Manifest.permission.MANAGE_EXTERNAL_STORAGE, // will always be denied from API-30
       android.Manifest.permission.WRITE_EXTERNAL_STORAGE,
@@ -97,6 +107,7 @@ public class TDandroid
       "BLUETOOTH", 
       "BLUETOOTH_ADMIN",
       "BLUETOOTH_CONNECT", // API-31
+      "BLUETOOTH_SCAN",    // CODE-S
       // "MANAGE_EXTERNAL_STORAGE", // API-30
       "WRITE_EXTERNAL_STORAGE",
       "READ_EXTERNAL_STORAGE",
@@ -111,6 +122,7 @@ public class TDandroid
       "BLUETOOTH", 
       "BT_ADMIN",
       "BT_CONNECT", // API-31
+      "BT_SCAN",    // API-31
       // "MANAGE_FILE", // API-30
       "WRITE_FILE",
       "READ_FILE",
@@ -124,16 +136,16 @@ public class TDandroid
   // static final String mPermissionManageExternalStorage = android.Manifest.permission.MANAGE_EXTERNAL_STORAGE; // API-30
   static final String mPermissionManageExternalStorage = "android.permission.MANAGE_EXTERNAL_STORAGE";
 
-  static final int NR_PERMS_D = 5; // 5 API-31 
+  static final int NR_PERMS_D = 6; // 5 API-31 
   static final int NR_PERMS   = NR_PERMS_D + 3;
 
   // private static final int PERM_BT         = 0;
   // private static final int PERM_BT_ADMIN   = 1;
   private static final int PERM_BT_CONNECT  = 2; // 2 API-31, use -1 to fail test and skip \
-  private static final int PERM_WRITE       = 3; 
-  private static final int PERM_READ        = 4; 
-
-  // private static final int PERM_LOCATION   = NR_PERMS_D + 0;
+  private static final int PERM_BT_SCAN     = 3; // 3 API-31
+  private static final int PERM_WRITE       = 4;
+  private static final int PERM_READ        = 5; 
+  private static final int PERM_LOCATION   = NR_PERMS_D + 0;
   private static final int PERM_CAMERA     = NR_PERMS_D + 1; 
   // private static final int PERM_AUDIO      = NR_PERMS_D + 2;
   // private static final int PERM_MEDIA      = NR_PERMS_D + 3;
@@ -166,9 +178,23 @@ public class TDandroid
   }
 
   static boolean MustRestart = false; // whether need to restart app
-  static boolean[] GrantedPermission = { false, false, false, false, false, false, false, false }; // size = NR_PERMS
+  static boolean[] GrantedPermission = { false, false, false, false, false, false, false, false, false }; // size = NR_PERMS
 
   // number of times permissions are requested
+
+  /** @return true if a permission has been granted
+   * @param context context
+   * @param permission permission
+   */
+  private static boolean hasPermission( Context context, String permission )
+  {
+    return ( context.checkSelfPermission( permission ) == PackageManager.PERMISSION_GRANTED );
+  }
+
+  private static boolean hasCallingOrPermission( Context context, String permission )
+  {
+    return ( context.checkCallingOrSelfPermission( permission ) == PackageManager.PERMISSION_GRANTED );
+  }
 
   /** @return the number of permissions that are not granted
    * @param context  context
@@ -177,7 +203,7 @@ public class TDandroid
    */
   static int createPermissions( Context context, Activity activity, int time )
   {
-    // TDLog.v( "PERM create permissions" );
+    TDLog.v( "PERM create permissions" );
     MustRestart = false;
     if ( BELOW_API_23 ) {
       // TDLog.v("PERM create perms: below API-23 - return " );
@@ -196,22 +222,27 @@ public class TDandroid
         continue;
       } 
 
-      if ( k == PERM_CAMERA && BELOW_API_21 ) { // CAMERA only for API >= 21
-        // GrantedPermission[k] = false;
+      if ( k == PERM_BT_SCAN && BELOW_API_31 ) { // BT_SCAN only for API >= 31 - API-31
+        GrantedPermission[k] = true;
         continue;
-      }
+      } 
+
+      // if ( k == PERM_CAMERA && BELOW_API_21 ) { // CAMERA only for API >= 21
+      //   // GrantedPermission[k] = false;
+      //   continue;
+      // }
 
       if ( (k == PERM_WRITE || k == PERM_READ) && (PRIVATE_STORAGE || AT_LEAST_API_33) ) {
         // GrantedPermission[k] = false;
         continue;
       }
 
-      GrantedPermission[k] = ( context.checkSelfPermission( perms[k] ) == PackageManager.PERMISSION_GRANTED );
+      GrantedPermission[k] = hasPermission( context, perms[k] );
       if ( ! GrantedPermission[k] ) {
-        // TDLog.v( "PERM " + permNames[k] + " not granted ");
+        TDLog.v( "PERM " + permNames[k] + " not granted ");
         if ( time > 1 ) {
           activity.requestPermissions( new String[] { perms[k] }, REQUEST_PERMISSIONS );
-          GrantedPermission[k] = ( context.checkSelfPermission( perms[k] ) == PackageManager.PERMISSION_GRANTED );
+          GrantedPermission[k] = hasPermission( context, perms[k] );
           if ( ! GrantedPermission[k] ) ++not_granted;
         } else {
           ++not_granted;
@@ -221,10 +252,10 @@ public class TDandroid
       //   // TDLog.v( "Perm " + permNames[k] + " granted ");
       }
     }
-    // TDLog.v("PERM create perms " + time + ": not granted " + not_granted + " / " + NR_PERMS );
+    TDLog.v("PERM create perms " + time + ": not granted " + not_granted + " / " + NR_PERMS );
 
     if ( not_granted > 0 && time < 3 ) {
-      // TDLog.v( "request perms time " + time );
+      TDLog.v( "request perms time " + time );
       // String[] ask_perms = new String[ not_granted ];
       // int kk = 0;
       // for ( int k = 0; k < NR_PERMS; ++k ) if ( ! GrantedPermission[k] ) ask_perms[kk++] = perms[k];
@@ -282,6 +313,19 @@ public class TDandroid
     }
   }
 
+  /** #return true if can do a BLE scan
+   * from API-23 (Android-6) to API-30 (Android-11) we need LOCATION to do BLE SCAN
+   * from API-31 (Android-12) we need BLUETOOTH_SCAN and BLUETOOTH_CONNECT
+   *
+   * @note it would be better to request parmission at runtime when a BLE scan is performed
+   */
+  static boolean canScanBLE()
+  {
+    return BELOW_API_31 ? GrantedPermission[ PERM_LOCATION ]
+                        : GrantedPermission[ PERM_BT_CONNECT ] && GrantedPermission[ PERM_BT_SCAN ];
+  }
+
+
   /** check if the app has the minimal permissions
    * @param context    context
    * @param activity   activity (unused)
@@ -295,7 +339,7 @@ public class TDandroid
       if ( (k == PERM_WRITE || k == PERM_READ ) && ( PRIVATE_STORAGE || AT_LEAST_API_33 ) ) continue;
       // if ( k == PERM_CAMERA && AT_LEAST_API_21 ) continue; // CAMERA only for API >= 21
       if ( context.checkSelfPermission( perms[k] ) != PackageManager.PERMISSION_GRANTED ) {
-        TDLog.e("TD cannot run because of perm " + permShortNames[k] + " - canRun() returns false" );
+        TDLog.v("TD cannot perm " + permShortNames[k] + " - canRun() returns false" );
         // TDToast.makeLong( permShortNames[k] + " is needed to run. Bye.");
         return false;
       }
@@ -402,14 +446,13 @@ public class TDandroid
     for ( k=0; k<NR_PERMS_D; ++k ) {
       if ( k == PERM_BT_CONNECT && BELOW_API_31 ) {
         // nothing: res = PackageManager.PERMISSION_GRANTED; // API-31
+      } else if ( k == PERM_BT_SCAN && BELOW_API_31 ) {
+        // nothing: res = PackageManager.PERMISSION_GRANTED; // API-31
       } else {
-        int res = context.checkCallingOrSelfPermission( perms[k] );
-        if ( res != PackageManager.PERMISSION_GRANTED ) {
+        if ( ! hasCallingOrPermission( context, perms[k] ) ) {
           // TDLog.v("PERM Check permission " + permNames[k] + " not granted ");
           // TDToast.make( mActivity, "TopoDroid must have " + perms[k] );
           return -1;
-        // } else {
-          // TDLog.v("PERM Check permission " + permNames[k] + " granted ");
         }
       }
     }
@@ -418,13 +461,10 @@ public class TDandroid
     for ( ; k<NR_PERMS; ++k ) {
       // TDLog.v("PERM Check permission " + permNames[k] );
       if ( k == PERM_CAMERA && AT_LEAST_API_21 ) { // CAMERA only for API >= 21
-        int res = context.checkCallingOrSelfPermission( perms[k] );
-        if ( res != PackageManager.PERMISSION_GRANTED ) {
+        if ( ! hasCallingOrPermission( context, perms[k] ) ) {
           // TDLog.v("PERM Check permission " + permNames[k] + " not granted ");
           // TDToast.make( mActivity, "TopoDroid may need " + perms[k] );
           ret += flag;
-        // } else {
-          // TDLog.v("PERM Check permission " + permNames[k] + " granted ");
         }
       }
       flag *= 2;
@@ -440,7 +480,7 @@ public class TDandroid
   {
     // TDLog.v("PERM Check location ");
     PackageManager pm = context.getPackageManager();
-    return ( context.checkCallingOrSelfPermission( android.Manifest.permission.ACCESS_FINE_LOCATION ) == PackageManager.PERMISSION_GRANTED )
+    return hasCallingOrPermission( context, android.Manifest.permission.ACCESS_FINE_LOCATION )
         && pm.hasSystemFeature(PackageManager.FEATURE_LOCATION)
         && pm.hasSystemFeature(PackageManager.FEATURE_LOCATION_GPS);
   }
@@ -453,7 +493,7 @@ public class TDandroid
     // TDLog.v("PERM Check camera ");
     if ( ! AT_LEAST_API_21 ) return false;
     PackageManager pm = context.getPackageManager();
-    return ( context.checkCallingOrSelfPermission( android.Manifest.permission.CAMERA ) == PackageManager.PERMISSION_GRANTED )
+    return hasCallingOrPermission( context, android.Manifest.permission.CAMERA )
         && pm.hasSystemFeature(PackageManager.FEATURE_CAMERA)
         && pm.hasSystemFeature(PackageManager.FEATURE_CAMERA_AUTOFOCUS);
   }
@@ -473,7 +513,7 @@ public class TDandroid
   public static boolean checkMicrophone( Context context )
   {
     // TDLog.v("PERM Check microphone ");
-    return ( context.checkCallingOrSelfPermission( android.Manifest.permission.RECORD_AUDIO ) == PackageManager.PERMISSION_GRANTED )
+    return hasCallingOrPermission( context, android.Manifest.permission.RECORD_AUDIO )
         && context.getPackageManager().hasSystemFeature( PackageManager.FEATURE_MICROPHONE );
   }
 
@@ -484,11 +524,16 @@ public class TDandroid
   {
     // TDLog.v("PERM Check bluetooth ");
     if ( PERM_BT_CONNECT < 0 || BELOW_API_31 ) {
-      return ( context.checkCallingOrSelfPermission( android.Manifest.permission.BLUETOOTH ) == PackageManager.PERMISSION_GRANTED )
+      return hasCallingOrPermission( context, android.Manifest.permission.BLUETOOTH ) 
         && context.getPackageManager().hasSystemFeature( PackageManager.FEATURE_BLUETOOTH );
     } // API-31
-    return ( context.checkCallingOrSelfPermission( android.Manifest.permission.BLUETOOTH ) == PackageManager.PERMISSION_GRANTED )
-        && ( context.checkCallingOrSelfPermission( android.Manifest.permission.BLUETOOTH_CONNECT ) == PackageManager.PERMISSION_GRANTED )
+    if ( PERM_BT_SCAN < 0 || BELOW_API_31 ) {
+      return hasCallingOrPermission( context, android.Manifest.permission.BLUETOOTH ) 
+        && context.getPackageManager().hasSystemFeature( PackageManager.FEATURE_BLUETOOTH );
+        // TODO FINE_LOCATION
+    } // API-31
+    return hasCallingOrPermission( context, android.Manifest.permission.BLUETOOTH ) 
+        && hasCallingOrPermission( context, android.Manifest.permission.BLUETOOTH_CONNECT )
         && context.getPackageManager().hasSystemFeature( PackageManager.FEATURE_BLUETOOTH );
   }
 
@@ -498,7 +543,7 @@ public class TDandroid
   public static boolean checkInternet( Context context )
   {
     // TDLog.v("PERM Check internet ");
-    return ( context.checkCallingOrSelfPermission( android.Manifest.permission.INTERNET ) == PackageManager.PERMISSION_GRANTED );
+    return hasCallingOrPermission( context, android.Manifest.permission.INTERNET );
   }
 
   /** @return true if bluetooth LE is available
@@ -507,7 +552,7 @@ public class TDandroid
    */
   static boolean checkBluetoothLE( Context context )
   {
-    if ( BELOW_API_18 ) return false;
+    // if ( BELOW_API_18 ) return false;
     return context.getPackageManager().hasSystemFeature( PackageManager.FEATURE_BLUETOOTH_LE );
   }
 
@@ -665,5 +710,55 @@ public class TDandroid
     return intent;
   }
 
+  /** @return true if the Android is online
+   * @param ctx  context
+   */
+  public static boolean isOnline( Context ctx )
+  {
+    ConnectivityManager cm = (ConnectivityManager)ctx.getSystemService( Context.CONNECTIVITY_SERVICE );
+    if ( cm == null ) return false;
+    NetworkInfo net_info = cm.getActiveNetworkInfo();
+    return ( net_info != null && net_info.isConnectedOrConnecting() );
+  }
+
+  public static boolean hasLocation( Context ctx )
+  {
+    LocationManager lm = (LocationManager)ctx.getSystemService( Context.LOCATION_SERVICE );
+    boolean gps_enabled = lm.isProviderEnabled( LocationManager.GPS_PROVIDER );
+    // boolean network_enabled = lm.isProviderEnabled( LocationManager.NETWORK_PROVIDER );
+    return gps_enabled;
+  }
+
+  /** check if arch arm64_v8a is supported
+   */
+  public static boolean isArm64_v8aSupported()
+  {
+    for ( String abi : Build.SUPPORTED_ABIS ) {
+      if ( abi.equals("arm64-v8a") ) return true;
+    }
+    return false;
+  }
+
+  
+  /** @return the levl of AI support
+   * 2 - E4B on GPU
+   * 1 - E4B on CPU
+   * 0 - no support
+   */
+  public static int getAIsupport( Context ctx )
+  {
+    ActivityManager am = (ActivityManager)ctx.getSystemService( Context.ACTIVITY_SERVICE );
+    MemoryInfo mi = new MemoryInfo();
+    am.getMemoryInfo( mi );
+    double ram = mi.totalMem / (double)(1024 * 1024 * 1024 ); // [GB]
+    int openGL_version = am.getDeviceConfigurationInfo().reqGlEsVersion;
+    boolean canGPU = openGL_version >= 0x30001;
+    TDLog.v("RAM " + ram + " OpenGL version " + String.format("%x", openGL_version ) );
+
+    if ( ram > 7.5 && canGPU ) return 2;
+    if ( ram > 5.5 ) return 1;
+    return 0;
+  }
+    
 }
   

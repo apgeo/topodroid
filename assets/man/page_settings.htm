@@ -1,7 +1,10 @@
 <html><body>
 <h1>TopoDroid SETTINGS</h1>
 
-<h2>Index</h2>
+TopoDroid has a large number of settings, which are arranged in sections and subsections.
+Seldom used settings are collected under "second" sections.<br>
+Settings can be exported and imported. It is possible to restrict the export/import to specific categories of settings.<br>
+The "AI" button in the <i>Settings Window</i> opens a dialog for the AI-guided change to the settings.<br>
 <ul>
   <li><a href="#main">Main</a></li>
   <li><a href="#import_export">Import/Export</a></li>
@@ -31,14 +34,14 @@
       <li><a href="#wall_model">Wall model</a></li>
     </ul>
   </li>
-  <li><a href="#custom_main">Custom main</a>
+  <li><a href="#second_main">Second main</a>
     <ul>
-      <li><a href="#custom_survey_data">Custom Survey Data</a></li>
-      <li><a href="#custom_splay_data">Custom Splay data</a></li>
-      <li><a href="#custom_sketching">Custom Sketching</a></li>
-      <li><a href="#custom_lines">Custom Lines</a></li>
-      <li><a href="#custom_devices">Custom Devices</a></li>
-      <li><a href="#custom_import_export">Custom import/export</a></li>
+      <li><a href="#second_survey_data">Second Survey Data</a></li>
+      <li><a href="#second_splay_data">Second Splay data</a></li>
+      <li><a href="#second_sketching">Second Sketching</a></li>
+      <li><a href="#second_lines">Second Lines</a></li>
+      <li><a href="#second_devices">Second Devices</a></li>
+      <li><a href="#second_import_export">Second import/export</a></li>
     </ul>
   </li>
   <li><a href="#settings_import_export">Settings import/export</a></li>
@@ -51,7 +54,7 @@
   <!-- li><a href="page_cwd.htm">Work directory.</a> Default "unset" (ie "TopoDroid")</li -->
   <li><i>Text size</i>: size of the text in lists. &gt;= 1. [14]</li>
   <li><i>Buttons size</i> {small, normal, medium, large, huge}. [normal]</li>
-  <li><i>Activity level</i> {basic, normal, advanced, expert, tester}. [normal]</li>
+  <li><i>Usage profile</i> {basic, normal, advanced, expert, tester}. [normal]</li>
   <!-- li>Co-surveying service. Default OFF</li -->
   <li><i>User manual</i>: available translations. To change this setting from english to something else TopoDroid needs internet access {English, Spanish, Italian, Russian, hungarian, French, Portuguese, Chinese}.</li>
   <li>App <a href="page_language.htm">language</a> {default, English, Spanish, Italian, Russian, hungarian, French, Portuguese, Chinese}. Default "default" (i.e. system locale)</li>
@@ -68,7 +71,7 @@
     <li><i>Data export format</i>: default data export type {cave,cav,csv,csx,dat,dxf,grt,gtx,srv,sur,svg,svx,th,top,tro} [none]</li>
     <li><i>Sketch export format</i>: default sketch export type {none,th,csx,dxf,svg,xvi} [none]</li>
     <li><i>Sketch auto-export format</i> [none]</li>
-    <li>Compass <i>LRUD splay angle</i>. LRUD minimum splay-leg angle.</li>
+    <li><i>Compass</i> <i>LRUD splay angle</i>. LRUD minimum splay-leg angle.</li>
     <li><i>UD splay clino</i>: Up/Down minimum splay clino. [0&deg;]</li>
     <li><i>LR splay clino</i>: Left/Right maximum splay clino. [90&deg;]</li>
     <li><i>Point spacing</i>: distance between line points</li>
@@ -77,78 +80,84 @@
 <li>Enable: sets which export format options are available at the export dialog.
   Supported formats:
   <ul>
-    <li>Compass (DAT)</li>
-    <li>cSurvey (CSX)</li>
-    <li>GHTopo (GTX)</li>
-    <li>Polygon (CAVE)</li>
-    <li>Survex (SVX)</li>
-    <li>Therion (TH)</li>
-    <li>Topo (CAV)</li>
-    <li>TopoRobot (TAB)</li>
-    <li>VisualTopo (TRO, TROX)</li>
-    <li>Walls (SRV)</li>
-    <li>Winkarst (SUR)</li>
-    <li>CSV</li>
-    <li>DXF</li>
-    <li>KML</li>
-    <li>GPX</li>
+    <li><i>Compass</i> (DAT)</li>
+    <li><i>cSurvey</i> (CSX)</li>
+    <!-- li><i>GHTopo</i> (GTX)</li -->
+    <li><i>Polygon</i> (CAVE)</li>
+    <li><i>Survex</i> (SVX)</li>
+    <li><i>Therion</i> (TH)</li>
+    <li><i>Topo</i> (CAV)</li>
+    <li><i>TopoRobot</i> (TAB)</li>
+    <li><i>VisualTopo</i> (TRO, TROX)</li>
+    <li><i>Walls</i> (SRV)</li>
+    <li><i>Winkarst</i> (SUR)</li>
+    <li><i>CSV</i></li>
+    <li><i>DXF</i></li>
+    <li><i>KML</i></li>
+    <li><i>GPX</i></li>
   </ul>
 </li>
 <li>Import:
   <ul>
-    <li><a href="page_pt_cmap.htm">PocketTopo color map</a>: map of PocketTopo colours to TopoDroid types</li>
-    <li><i>Estimate LR extend</i> on import of Compass and VisualTopo files. [yes]</li>
-    <!-- li>Import datamode: normal or diving. Diving applies only to Compass. [normal]</li -->
+    <li><a href="page_pt_cmap.htm">PocketTopo color map</a>: map of <i>PocketTopo</i> colours to TopoDroid types</li>
+    <li><i>Estimate LR extend</i> on import of <i>Compass</i> and <i>VisualTopo</i> files. [yes]</li>
+    <!-- li>Import datamode: normal or diving. Diving applies only to <i>Compass</i>. [normal]</li -->
   </ul>
 </li>
-<li>Survex export:
+<li><i>Survex</i> export:
   <ul>
-    <li><i>Survex/Topo line termination</i>: end-of-line {Linux,Windows}. [Linux]</li>
+    <li><i>Line separator</i>: end-of-line chracters {Linux,Windows}. [Linux]</li>
     <li><i>Survex splays station</i>: add splays TO station. [no]</li>
-    <li><i>Survex/Therion LRUD</i>: Add LRUD to the export. [no]</li>
+    <li><i>LRUD</i>: add LRUD to the export. [no]</li>
   </ul>
 </li>
-<li>Therion export:
+<li><i>Therion</i> export:
   <ul>
-    <li><i>Therion config</i>: create thconfig [no]</li> 
-    <li><i>Therion maps first</i>: put Therion map commands before survey data. [no]</li>
-    <li><i>Splays</i>: add splay lines to Therion scraps. [yes]</li>
-    <li><i>Survex/Therion LRUD</i>: add LRUD to the export. [no]</li>
+    <li><i>Config</i>: create <i>Therion</i> thconfig file [no]</li>
+    <li><i>Maps first</i>: put <i>Therion</i> map commands before survey data. [no]</li>
+    <li><i>Splays</i>: add splay lines to <i>Therion</i> scraps. [yes]</li>
+    <li><i>LRUD</i>: add LRUD to the export. [no]</li>
     <li><i>Therion scale</i>: export scale. [1:100]</li>
     <li><i>xvi image</i>: insert reference to xvi image in th2 files</li>
   </ul>
 </li>
-<li>cSurvey export:
+<li><i>cSurvey</i> export:
   <ul>
     <li><i>Station prefix</i> [none]</li>
     <li><i>Media export</i> [no]</li>
   </ul>
 </li>
-<li>Compass export:
+<li><i>Compass</i> export:
   <ul>
-    <li>Compass <i>station prefix</i>. [no]</li>
-    <li><i>Compass splays</i>: add splays to Compass files</li>
-    <li><i>Compass swap LR</i>: swap Left and Right on Compass export. [no]</li>
+    <li><i>Compass</i> <i>station prefix</i>. [no]</li>
+    <li><i>Splays</i>: add splays to <i>Compass</i> files</li>
+    <li><i>Swap LR</i>: swap Left and Right on <i>Compass</i> export. [no]</li>
   </ul>
 </li>
-<li>VisualTopo export:
+<li><i>Polygon</i> export:
   <ul>
-    <li><i>VisualTopo splays</i>: add splays to VisualTopo files</li>
+    <li><i>LRUD</i>: include LRUD</li>
+    <li><i>Splays</i>: add splays to <i>Polygon</i> files</li>
+  </ul>
+</li>
+<li><i>VisualTopo</i> export:
+  <ul>
+    <li><i>Splays</i>: add splays to <i>VisualTopo</i> files</li>
     <li><i>LRUD at FROM</i> station</li>
     <li><i>Trox format</i>: file format, tro or trox</li>
   </ul>
 </li>
-<li>Walls export:
+<li><i>Walls</i> export:
   <ul>
-    <li><i>Walls splays</i>: include splays in Walls files</li>
+    <li><i>Splays</i>: include splays in <i>Walls</i> files</li>
   </ul>
 </li>
-<li>SVG export:
+<li><i>SVG</i> export:
   <ul>
-    <li><i>SVG roundtrip</i>: round-trip ready SVG export [no]</li>
-    <li><i>Grid</i>: add sketch grid to SVG export. [no]</li>
+    <li><i>SVG roundtrip</i>: round-trip ready <i>SVG</i> export [no]</li>
+    <li><i>Grid</i>: add sketch grid to <i>SVG</i> export. [no]</li>
     <li><i>Line orientation</i> [no]</li>
-    <li><i>SVG splays</i>: include splays. [no]</li>
+    <li><i>Splays</i>: include splays. [no]</li>
     <li><i>Point stroke</i> [0.5]</li>
     <li><i>Label stroke</i> [1.5]</li>
     <li><i>Line stroke</i> [2.5]</li>
@@ -157,21 +166,21 @@
     <li><i>Orientation tick</i> size. [12]</li>
     <li><i>Station size</i> [32]</li>
     <li><i>Label size</i> [48]</li>
-    <li><i>SVG program</i>: target SVG program. Inkscape or Illustrator</li>
+    <li><i>SVG program</i>: target SVG program. <i>Inkscape</i> or <i>Illustrator</i></li>
   </ul>
 </li>
-<li>Shapefile export:<br>
+<li><i>Shapefile</i> export:<br>
   <ul>
   <li><i>Georeferenced sketch</i>: export georeferenced plan-sketch [no]</li>
   </ul>
 </li>
-<li>DXF export:
+<li><i>DXF</i> export:
   <ul>
     <li><i>DXF splay endpoints</i> [yes]</li>
     <li><i>DXF version</i> {6,12,16}. [6]</li>
-    <li><i>DXF splines</i>: use splines for Bezier segments</li>
-    <li><i>DXF reference</i>: X-Y axes are DXF sketch export</li>
-    <li><i>Scrap layers</i>: DXF layers by scraps</li>
+    <li><i>Splines</i>: use splines for Bezier segments</li>
+    <li><i>Reference</i>: X-Y axes are <i>DXF</i> sketch export</li>
+    <li><i>Scrap layers</i>: <i>DXF</i> layers by scraps</li>
   </ul>
 </li>
 <!-- li>PNG:<br>
@@ -183,22 +192,22 @@
   <li>Stations: add stations</li>
   </ul>
 </li -->
-<li>KML export:
+<li><i>KML</i> export:
   <ul>
-    <li><i>KML stations</i>: add stations to KML export. [yes]</li>
-    <li><i>KML splays</i>: add splays to KML export. [no]</li>
+    <li><i>KML stations</i>: add stations to <i>KML</i> export. [yes]</li>
+    <li><i>KML splays</i>: add splays to <i>KML</i> export. [no]</li>
   </ul>
 </li>
-<li>GPX export:<br>
+<li><i>GPX</i> export:<br>
   <ul>
-    <li><i>GPX single track</i> export [yes]</li>
+    <li><i>Single track</i> export data as single <i>GPX</i> track [yes]</li>
   </ul>
 </li>
-<li>CSV export:<br>
+<li><i>CSV</i> export:<br>
   <ul>
     <li><i>Complete CSV</i>: export whole data to csv. [no]</li>
-    <li><i>CSV separator</i>: field separator [pipe]</li>
-    <li><i>CSV eol</i>: line separator [line-feed]</li>
+    <li><i>Separator</i>: field separator [pipe]</li>
+    <li><i>Line separator</i>: line separator [line-feed]</li>
   </ul>
 </li>
 </ul>
@@ -209,10 +218,10 @@
 <ul>
   <li><i>Team</i>: default survey team. By default it is unset. When you create a new survey you must enter the team.</li>
   <li><i>Stations policy</i>: survey stations name assignment policy {none, splay+fore, splay+back, fore+splay, back+splay, back+splay+fore, tripod, magn.anomaly}.
-    The number of choices varies with the activity level.
+    The number of choices varies with the usage profile.
     Default "splay+fore".</li>
   <li><i>Station names</i>: {alphanumeric,numeric}. [alphanumeric]</li>
-  <li><i>Initial station name</i>: by default it is unset, and the program uses "0".</li>
+  <li><i>Initial station name</i>: by default it is unset, and the program uses "0". Special characters are not allowed.</li>
   <li><i>Thumbnails size</i>: photo thumbnails size [80,400]. [200 pxl]</li>
   <li><i>Editable stations</i>: inline-editable stations [no]</li>
   <li><i>Sketch origin</i>: origin in common to all sketches or not</li>
@@ -254,7 +263,7 @@
   <li><i>Neg. altitudes</i>: allow negative altitudes</li>
   <li><i>Editable altitude</i></li>
   <li><i>Fine-position</i>: fine position time in seconds</li>
-  <li><i>GNSS app</i>: preferred GNSS app {non-specified, Mobile Topographer, GPX Recorder, GPS Position, GPSTest, GPS Logger} [non-specified]</li>
+  <li><i>GNSS app</i>: preferred GNSS app {non-specified, Mobile Topographer, <i>GPX</i> Recorder, GPS Position, GPSTest, GPS Logger} [non-specified]</li>
 </ul>
 
 <hr style="height:1px;background-color:black;">
@@ -278,6 +287,8 @@
   <li><i>Midline check</i>: check if stations are attached to midline. [yes]</li>
   <li><i>Leg extend check</i>: check if leg extends are set [yes]</li>
   <li><i>Toolbar size</i>: recent tool number {3, 4, 5, 6}. [4]</li>
+  <li><i>Toolbar update</i>: how new tools are inserted in the toolbar: put at front, replace oldest, or drop oldest and put at the front [replace oldest]</li>
+  <li><i>Sketch cache</i> [yes]</li>
 </ul>
 
 <hr style="height:1px;background-color:black;">
@@ -288,6 +299,7 @@
   <li><i>Point tools scale</i> [1.2]</li>
   <li><i>Labels size</i> [24 pxl]</li>
   <li><i>Labels scaling</i> [no]</li>
+  <li><i>Section point offset</i> [20 pxl]</li>
 </ul>
 
 <hr style="height:1px;background-color:black;">
@@ -301,7 +313,7 @@
   <li><i>Close closed lines</i>: whether to close lines of "closed" type. [yes]</li>
   <li><i>Slope line l-size</i>: section lines "direction tick" size [1,20]. Default 8 [x unit]</li>
   <li><i>Section line tick size</i>: size of the section line tick</li>
-  <li><i>Section points</i>: add Therion section point to section line. [yes]</li>
+  <li><i>Section points</i>: add <i>Therion</i> section point to section line. [yes]</li>
   <!-- li><i>Line join</i>: enable line join (closed lines cannot be joined)</li -->
   <li><i>Area border visibility</i> area border default visibility [yes]</li>
 </ul>
@@ -344,7 +356,7 @@
   <li><i>Algorithm error</i>: calibration algorithm termination error. [0.000001]</li>
   <li><i>Algorithm iterations</i>: calibration maximum iterations. [200]</li>
   <li><i>Download remote data</i>: download remote calibration data immediately</li>
-  <li><i>Raw data</i>: show calibration raw data. {None, Decimal, Hex, G Decimal, G Hex, M Decimal, M Hex} [None]</li>
+  <li><i>Raw data</i>: show calibration raw data. {None, G-M Decimal, G-M Hex, G Decimal, G Hex, M Decimal, M Hex} [None]</li>
   <!-- li>Default calibration algorithm {auto,linear,non-linear}. [auto]</li -->
   <!-- li>Parameters for the min-algo: alpha, beta, gamma, delta</li -->
 </ul>
@@ -362,7 +374,7 @@
   <li><i>Station dialog</i>: show station dialog instead of box [no].</li>
   <li><i>Top grid</i>: grid over instead of below model [no].</li>
   <li><i>Grid extent</i> [10 cells]</li>
-  <li><i>Visible names</i>: whether station name are always visible even when the survey is hidden (above Android 9) [no]</li>
+  <li><i>Visible names</i>: whether station names are always visible even when the survey is hidden (above Android 9) [no]</li>
 </ul>
 
 <hr style="height:1px;background-color:black;">
@@ -409,21 +421,21 @@
 
 <hr style="height:2px;background-color:black;">
 
-<h2 id="custom_main">Custom main</h2>
+<h2 id="second_main">Second main</h2>
 <ul>
   <li><i>Single back</i>: whether to close windows with single back [no]</li>
-  <li><i>Navigation bar</i>: whether navigation bar is hidden and it is shown with a slide-up [no]</li>
+  <li><i>Navigation bar</i>: whether the navigation bar is hidden and is only shown with a slide-up [no]</li>
   <li><i>Palettes</i>: additional palettes menu [no]</li>
-  <li><i>Keyboard</i>. Enable <a href="page_keypad.htm">custom keyboards</a> instead of Android default keyboard [no]</li>
+  <li><i>Keyboard</i>. Enable <a href="page_keypad.htm">second keyboards</a> instead of Android default keyboard [no]</li>
   <li><i>No keyboard cursor</i> [yes]</li>
   <li><i>Packets log</i> [no]</li>
-  <li><i>Sketch editing</i>: Therion th2 editing [no]</li>
+  <li><i>Sketch editing</i>: <i>Therion</i> th2 editing [no]</li>
   <!-- li>Developer mode</li -->
 </ul>
 
 <hr style="height:1px;background-color:black;">
 
-<h3 id="custom_survey_data">Custom Survey Data</h3>
+<h3 id="second_survey_data">Second Survey Data</h3>
 <ul>
   <li><i>Diving mode</i></li>
   <li><i>Backsight splay</i>: check if first splay after new leg should be considered a backsight leg (only for forward policy with leg after splays: failure of backsight check is highlighted violet). [no]</li>
@@ -437,7 +449,8 @@
   <li><i>Loop threshold</i>: loop selective closure threshold (percent of loop length)</li>
   <li><i>Android compass</i>: enable Android compass/clino</li>
   <li><i>Shot direction timer</i>: shot direction timer countdown. [10 s]</li>
-  <li><i>Timer-beep volume</i>: shot direction timer beep volume [10,100]. [50%]</li>
+  <li><i>Beep volume</i>: beep volume for shot direction timer and leg feedback [10,100%]. [50%]</li>
+  <li><i>Beep length</i>: beep duration for leg feedback [milliseconds]. [500]</li>
   <li><i>Blunder shots</i>: skip blunder leg-shots</li>
   <li><i>Splay station re-assign</i>: maintain assigned splay stations on renumbering</li>
   <li><i>Splay group-rename</i>: splay group-station assign only forward</li> 
@@ -445,7 +458,7 @@
 
 <hr style="height:1px;background-color:black;">
 
-<h3 id="custom_splay_data">Custom Splay data</h3>
+<h3 id="second_splay_data">Second Splay data</h3>
 <ul>
   <li>Splay classes [no]</li>
   <li>Splay coloring: none, color-picker, color-palette [none]</li>
@@ -461,7 +474,7 @@
 
 <hr style="height:1px;background-color:black;">
 
-<h3 id="custom_sketching">Custom Sketching</h3>
+<h3 id="second_sketching">Second Sketching</h3>
 <ul>
   <li><i>Sketch shift/scale</i> [no]</li>
   <li><i>Sketch split/merge</i> (split, copy, outlines, merge) [no]</li>
@@ -476,11 +489,12 @@
   <li><i>Slant x-sections</i> [no]</li>
   <li><i>Oblique projected</i>: maximum oblique projected angle [0&deg;]</li>
   <li><i>Line ends-cut</i>: number of points to drop from the line ends when tracing stylus-only [0]</li> 
+  <li><i>Zoom-fit bound</i>: zoom-fit minimum "scale" [0.1]</li> 
 </ul>
 
 <hr style="height:1px;background-color:black;">
 
-<h3 id="custom_lines">Custom Lines</h3>
+<h3 id="second_lines">Second Lines</h3>
 <ul>
   <li><i>Straightening angle</i> [45&deg;]</li>
   <li><i>Interpolation accuracy</i>: for Bezier lines</li>
@@ -497,12 +511,12 @@
 
 <hr style="height:1px;background-color:black;">
 
-<h3 id="custom_devices">Custom Devices</h3>
+<h3 id="second_devices">Second Devices</h3>
 <ul>
   <li><i>BT aliases</i>: manually set BT aliases for measurement devices.</li>
   <li><i>unnamed devices</i> [no] </li>
   <li><i>Connection delay</i> [0 sec]</li>
-  <li><i>Two-DistoX survey</i>: enable surveys with two DistoXs [no]</li>
+  <li><i>Double-Device survey</i>: enable surveys with two DistoXs [no]</li>
   <li><i>Data pause</i>: pause after data download [250 msec]</li>
   <li><i>Data ready wait delay</i>: waiting delay for data to be ready [500 msec]</li>
   <li><i>Laser pause</i> [2000 msec]</li>
@@ -516,7 +530,7 @@
 
 <hr style="height:1px;background-color:black;">
 
-<h3 id="custom_import_export">Custom import/export</h3>
+<h3 id="second_import_export">Second import/export</h3>
 
 <ul>
   <li><i>Zipped symbols files</i>: store/load symbol files to/from zip archives</li>

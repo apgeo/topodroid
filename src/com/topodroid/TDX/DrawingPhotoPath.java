@@ -73,11 +73,16 @@ public class DrawingPhotoPath extends DrawingPointPath
 
   /** set the photo size
    * @param size   new photo size (horizontal width) [m]
+   * @return true if the picture size has changed
    */
-  void setPhotoSize( float size ) 
+  boolean setPhotoSize( float size ) 
   { 
     // mPhotoSize = size;
-    if ( mPicture != null ) mPicture.mPhotoSize = size;
+    if ( mPicture != null && mPicture.mPhotoSize != size ) {
+      mPicture.setPhotoSize( size );
+      return true;
+    }
+    return false;
   }
 
   /** @return the size of the picture of this photo
@@ -251,6 +256,11 @@ public class DrawingPhotoPath extends DrawingPointPath
   {
     TopoDroidApp.mData.deletePhotoRecord( TDInstance.sid, mId );
     TDFile.deleteFile( TDPath.getSurveyJpgFile( TDInstance.survey, Long.toString( mId ) ) );
+    String png = TDPath.getSurveyPngFile( TDInstance.survey, Long.toString( mId ) );
+    if ( TDFile.hasTopoDroidFile( png ) ) {
+      TDFile.deleteFile( png );
+    }
+    
   }
 }
 

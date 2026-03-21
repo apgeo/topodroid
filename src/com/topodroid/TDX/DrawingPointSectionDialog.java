@@ -17,7 +17,7 @@ import com.topodroid.utils.TDUtil;
 // import com.topodroid.ui.MyOrientationWidget;
 import com.topodroid.ui.MyDialog;
 import com.topodroid.prefs.TDSetting;
-import com.topodroid.common.PointScale;
+import com.topodroid.types.PointScale;
 
 import android.os.Bundle;
 import android.content.Context;
@@ -85,8 +85,7 @@ class DrawingPointSectionDialog extends MyDialog
   {
     super.onCreate(savedInstanceState);
     
-    initLayout(R.layout.drawing_point_section_dialog,
-            mContext.getResources().getString(R.string.POINT) + " " + BrushManager.getPointName( mPoint.mPointType ) );
+    initLayout(R.layout.drawing_point_section_dialog, resString(R.string.POINT) + " " + BrushManager.getPointName( mPoint.mPointType ) );
 
     // mTVtype = (TextView) findViewById( R.id.point_type );
     mEToptions = (TextView) findViewById( R.id.point_options );
@@ -189,8 +188,6 @@ class DrawingPointSectionDialog extends MyDialog
   public void onClick(View v) 
   {
     Button b = (Button)v;
-    // TDLog.Log( TDLog.LOG_INPUT, "DrawingPointSectionDialog onClick() " + b.getText().toString() );
-
     if ( b == mBtnOk ) {
       if ( mBtnScaleXS.isChecked() )      mPoint.setScale( PointScale.SCALE_XS );
       else if ( mBtnScaleS.isChecked() )  mPoint.setScale( PointScale.SCALE_S  );
@@ -202,7 +199,7 @@ class DrawingPointSectionDialog extends MyDialog
 
       if ( mXSectionName != null ) {
         if ( TDLevel.overAdvanced && mHasXSectionOutline != mCBxsection.isChecked() ) {
-          mParent.setXSectionOutline( mXSectionName, mCBxsection.isChecked(), mPoint.cx, mPoint.cy );
+          mParent.setXSectionOutline( mXSectionName, mPoint.mScrap, mCBxsection.isChecked(), mPoint.cx, mPoint.cy );
         }
       }
 

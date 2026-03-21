@@ -3,7 +3,7 @@
  * @author marco corvi
  * @date jan. 2017
  *
- * @brief TopoDroid quick cam drawing surface
+ * @brief TopoDroid quick cam drawing surface (old camera)
  * --------------------------------------------------------
  *  Copyright This software is distributed under GPL-3.0 or later
  *  See the file COPYING.
@@ -58,6 +58,7 @@ public class QCamDrawingSurface extends SurfaceView
   private Camera.ShutterCallback mShutter;
   private Display mDisplay = null;
   private byte[] mJpegData;
+  private byte[] mRawData;
 
   private OrientationEventListener mOrientationListener = null;
   private int mOrientation = 0;
@@ -81,7 +82,6 @@ public class QCamDrawingSurface extends SurfaceView
   {
     super(context, attrs);
     mContext = context;
-    // TDLog.v( "QCam Surface cstr" );
     mHolder = getHolder();
     mHolder.addCallback(this);
     // mHolder.setType(SurfaceHolder.SURFACE_TYPE_PUSH_BUFFERS); // required on android <= API-11
@@ -89,6 +89,7 @@ public class QCamDrawingSurface extends SurfaceView
     mQCam = null;
     mCamera   = null;
     mJpegData = null;
+    mRawData  = null;
 
     createCallbacks();
 
@@ -98,11 +99,16 @@ public class QCamDrawingSurface extends SurfaceView
     } catch ( ClassCastException e ) {
       TDLog.e( e.getMessage() );
     }
+    // TDLog.v("QCAM Surface cstr");
   }
 
   /** @return the JPEG data buffer
    */
   byte[] getJpegData() { return mJpegData; }
+
+  /** @return the RAW data buffer
+   */
+  byte[] getRawData() { return mRawData; }
 
 
   /** called when the surface is changed
@@ -138,14 +144,14 @@ public class QCamDrawingSurface extends SurfaceView
       mOrientationListener.enable();
       int w = mContext.getResources().getDisplayMetrics().widthPixels;  
       int h = mContext.getResources().getDisplayMetrics().heightPixels;
-      // TDLog.v("QCAM display " + w + " x " + h );
+      // TDLog.v("QCAM surface display " + w + " x " + h );
       if ( w > 1928 ) w = 1928;
       if ( h > 1080 ) h = 1080;
       setMinimumWidth(  w );
       setMinimumHeight( h );
       startPreview();
     } catch (Exception e) {
-      TDLog.e( "QCAM Error setting camera preview: " + e.getMessage());
+      TDLog.e( "QCAM surface Error setting camera preview: " + e.getMessage());
     }
   }
 
@@ -154,7 +160,7 @@ public class QCamDrawingSurface extends SurfaceView
    */
   public void surfaceDestroyed(SurfaceHolder holder) // release the camera preview in QCamCompass
   {
-    // TDLog.v( "surface destroyed " );
+    // TDLog.v( "QCAM surface destroyed " );
     if ( mOrientationListener != null ) mOrientationListener.disable();
     stop();
     close();
@@ -170,7 +176,7 @@ public class QCamDrawingSurface extends SurfaceView
     int o = mContext.getResources().getConfiguration().orientation; // this is reported only 1 (PORTRAIT) or 2 (LANDSCAPE)
     if ( mDisplay != null ) {
       int r = mDisplay.getRotation(); // 0: up, 1: left, 3: right 2: down
-      // TDLog.v("QCAM display rotation " + r + " orientation " + o );
+      // TDLog.v("QCAM surface display rotation " + r + " orientation " + o );
       if ( r == 0 ) {
         mCamera.setDisplayOrientation( ExifInfo.ORIENTATION_RIGHT );
       } else if ( r == 1 ) {
@@ -181,7 +187,7 @@ public class QCamDrawingSurface extends SurfaceView
         mCamera.setDisplayOrientation( 270 );
       }
     } else {
-      // TDLog.v("QCAM orientation " + o );
+      // TDLog.v("QCAM surface orientation " + o );
       // CameraInfo info = new CameraInfo(); // info.orientation is fixed to the value that has been set (90)
       // mCamera.getCameraInfo( 0, info );
       // Camera.Parameters params = mCamera.getParameters();
@@ -205,7 +211,7 @@ public class QCamDrawingSurface extends SurfaceView
   boolean takePicture( int orientation )
   {
     // TDLog.Log( TDLog.LOG_PHOTO, "QCAM surface take picture. Orientation " + orientation );
-    // TDLog.v("QCAM take picture orientation " + orientation ); 
+    // TDLog.v("QCAM surface take picture orientation " + orientation ); 
     boolean ret = false;
     if ( mCamera != null ) {
       try {
@@ -213,7 +219,7 @@ public class QCamDrawingSurface extends SurfaceView
         mCamera.takePicture( mShutter, mRaw, null, mJpeg);
         ret = true;
       } catch ( RuntimeException e ) {
-        TDLog.e("QCAM Error take picture " + e.getMessage() );
+        TDLog.e("QCAM surface Error take picture " + e.getMessage() );
       }
     }
     // mQCam.enableButtons( true );
@@ -238,7 +244,7 @@ public class QCamDrawingSurface extends SurfaceView
       int max = params.getMaxZoom();
       int zoom = params.getZoom() + delta_zoom;
       if ( zoom > 0 && zoom < max ) {
-        // TDLog.v("DistoX-QCAM", "set zoom " + zoom + "/" + max );
+        // TDLog.v("QCAM surface. set zoom " + zoom + "/" + max );
         params.setZoom( zoom );
         mCamera.setParameters( params );
       }
@@ -249,7 +255,6 @@ public class QCamDrawingSurface extends SurfaceView
    */
   void close()
   {
-    // TDLog.Log( TDLog.LOG_PHOTO, "QCAM surface close");
     // TDLog.v( "QCAM surface close");
     // if ( mOrientationListener != null ) mOrientationListener.disable( );
     if ( mCamera != null ) {
@@ -264,7 +269,6 @@ public class QCamDrawingSurface extends SurfaceView
   //  */
   // private boolean open()
   // {
-  //   // TDLog.Log( TDLog.LOG_PHOTO, "QCAM surface open");
   //   // TDLog.v( "QCAM surface open");
   //   close();
   //   try {
@@ -276,26 +280,26 @@ public class QCamDrawingSurface extends SurfaceView
   //     List< Integer > formats = params.getSupportedPreviewFormats();
   //     for ( Integer fmt : formats ) {
   //       if ( fmt.intValue() == ImageFormat.JPEG ) {
-  //         // TDLog.v( "Set preview format JPEG" );
+  //         // TDLog.v( "QCAM surface Set preview format JPEG" );
   //         params.setPreviewFormat( ImageFormat.JPEG );
   //       }
-  //       // TDLog.v( "QCamPreview formats " + fmt );
+  //       // TDLog.v( "QCAM surface Preview formats " + fmt );
   //     }
   //     mCamera.setParameters( params );
   //     mCamera.setPreviewCallback( mPreviewCallback );
   //     int format = params.getPreviewFormat();
-  //     // TDLog.v( "QCamPreview Format " + format );
+  //     // TDLog.v( "QCAM surface Preview Format " + format );
   //     // mOrientationListener = new MyOrientationListener( mContext, params );
   //     Camera.Size size = params.getPreviewSize();
   //     // mWidth  = size.width;
   //     // mHeight = size.height;
-  //     // TDLog.v( "QCam preview size " + size.width + " " + size.height );
+  //     // TDLog.v( "QCAM surface preview size " + size.width + " " + size.height );
   //     // setMinimumWidth( size.width );
   //     // setMinimumHeight( size.height );
   //     try {
   //       mCamera.setDisplayOrientation( 90 );
   //     } catch ( IOException e ) {
-  //       TDLog.e( "QCAM cannot set preview display " + e.getMessage() );
+  //       TDLog.e( "QCAM surface cannot set preview display " + e.getMessage() );
   //     }
   //     // if ( mOrientationListener != null ) mOrientationListener.enable( );
   //     startPreview();
@@ -303,7 +307,7 @@ public class QCamDrawingSurface extends SurfaceView
   //   } catch ( RuntimeException e ) { // fail to connect to camera service
   //     if ( mCamera != null ) mCamera.release();
   //     mCamera = null;
-  //     TDLog.e( "QCAM error: " + e.getMessage() );
+  //     TDLog.e( "QCAM surface error: " + e.getMessage() );
   //   }
   //   return false;
   // }
@@ -313,7 +317,7 @@ public class QCamDrawingSurface extends SurfaceView
    */
   void startPreview()
   {
-    // TDLog.v("QCAM preview start");
+    // TDLog.v("QCAM surface preview start");
     if ( mCamera != null ) {
       try { // start preview with new settings
         // mCamera.setDisplayOrientation( ExifInfo.ORIENTATION_RIGHT );
@@ -322,7 +326,7 @@ public class QCamDrawingSurface extends SurfaceView
         // if ( mOrientationListener != null ) mOrientationListener.enable( );
         mCamera.startPreview();
       } catch ( Exception e ) {
-        TDLog.e( "QCAM Error start preview: " + e.getMessage());
+        TDLog.e( "QCAM surface Error start preview: " + e.getMessage());
       }
     }
   }
@@ -332,14 +336,14 @@ public class QCamDrawingSurface extends SurfaceView
    */
   private void stop()
   {
-    // TDLog.v("QCAM preview stop");
+    // TDLog.v("QCAM surface preview stop");
     // if ( mOrientationListener != null ) mOrientationListener.disable( );
     if ( mCamera != null ) {
       try { // stop preview before making changes
         mCamera.stopPreview();
       } catch ( Exception e ) {
         // ignore: tried to stop a non-existent preview
-        TDLog.e( "QCAM Error stop preview: " + e.getMessage());
+        TDLog.e( "QCAM surface Error stop preview: " + e.getMessage());
       }
     }
   }
@@ -351,23 +355,24 @@ public class QCamDrawingSurface extends SurfaceView
   {
     mShutter = new ShutterCallback() {
       public void onShutter( ) {
-        // TDLog.v( "Shutter callback " );
+        // TDLog.v( "QCAM surface Shutter callback " );
       }
     };
     mRaw = new PictureCallback() {
       public void onPictureTaken( byte[] data, Camera c ) {
-        // TDLog.v( "Picture Raw callback data " + ((data==null)? "null" : data.length) );
+        // TDLog.v( "QCAM surface Picture Raw callback data " + ((data==null)? "null" : data.length) );
+        mRawData = data;
       }
     };
     mJpeg = new PictureCallback() {
       public void onPictureTaken( byte[] data, Camera c ) { 
-        // TDLog.v( "Picture JPEG callback data " + ((data==null)? "null" : data.length) );
+        // TDLog.v( "QCAM surface Picture JPEG callback data " + ((data==null)? "null" : data.length) );
         mJpegData = data;
       }
     };
     mPreviewCallback = new PreviewCallback() { // called every time startPreview
         public void onPreviewFrame(byte[] data, Camera c ) {
-          // TDLog.v("on preview frame");
+          // TDLog.v("QCAM surface on preview frame");
         }
     };
   }

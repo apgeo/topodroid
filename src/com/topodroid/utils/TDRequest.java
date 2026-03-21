@@ -17,7 +17,7 @@ public class TDRequest
   public static final int REQUEST_ENABLE_BT = 2;
   public static final int INFO_ACTIVITY_SHOTWINDOW     = 3;
   // private static final int EXTERNAL_ACTIVITY = 4;
-  // public static final int REQUEST_DEVICE    = 5; 
+  public static final int REQUEST_DEVICE    = 5; 
   // public static final int QCAM_COMPASS_DRAWWINDOW  = 6;
   public static final int PLOT_RELOAD = 7;
   public static final int REQUEST_GET_IMPORT         = 8;
@@ -31,6 +31,7 @@ public class TDRequest
   public static final int REQUEST_GPS_TEST           = 16; // csv
   public static final int REQUEST_GPS_LOGGER         = 17; // csv
   public static final int REQUEST_GPS_POINT          = 18; // plain text
+  public static final int REQUEST_READ_NAMES         = 19; // plain text
 
   // public static final int REQUEST_TREE_URI = 20;
 

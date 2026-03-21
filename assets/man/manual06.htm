@@ -32,11 +32,12 @@ Shot data foreground color:
 <li>[orange] blank shots, i.e, shots with the stations not set yet</li>
 <li>[yellow]: back-leg (backsight policy)</li>
 <li>[violet]: blank leg</li>
+<li>[red]: tampered shot</li>
 </ol><p>
 
 Shot data background color:
 <ul>
-<li>[reddish] <a href="page_accuracy.htm">unreliable</a> shots, i.e. shots with "abnormal" field intensities (only DistoX2)</li>
+<li>[reddish] <a href="page_accuracy.htm">unreliable</a> shots, i.e. shots with "abnormal" field intensities (only DistoX2 and Cavway)</li>
 <li>[orange] short leg</li>
 <li>[gray] commented shot</li>
 </ul><p>
@@ -160,23 +161,24 @@ If the 3D modelling is enabled there is also a button to create a new 3D model, 
     <li><i>Minimum leg length</i>: shorter legs are highlighted with an orange background [default 0 m]</li>
     <li><i>Leg minimum shots</i>: minimum number of close consecutive shots for a leg [default 3, min 2, max 4] [E]</li>
     <li><i>Shot vertical-extend threshold</i>: the azimuth span around the perpendicular to the reference azimuth for the <a href="page_azimuth.htm">shot "extend"</a> to be vertical [default 10, min 0, max 90] (used both for legs and splays) [N]</li>
-    <li><i>Leg WENS threshold</i> (Therion "vthreshold"): the LRUD for manually entered shots are considered West-East-North-South when the shot inclination exceeds the WENS threshold [default 80, min 0, max 90] [N]</li>
+    <li><i>Leg WENS threshold</i> (<i>Therion</i> "vthreshold"): the LRUD for manually entered shots are considered West-East-North-South when the shot inclination exceeds the WENS threshold [default 80, min 0, max 90] [N]</li>
     <li><i>Manual extend reference</i>: either manual L/R or relative to the <a href="page_azimuth.htm">extend reference</a> azimuth [default relative] [A]</li>
     <li>whether to show <i>prev/next buttons</i> in the shot edit dialog [default yes] [A]</li>
     <li><i>Backsight</i> fields in the shot manual input dialog [N] [default no] [A]</li>
     <li><i>Leg-shot feedback</i>: feedback on leg-shot recognition: "none", "sound" or "haptic" [default "none"] [N]</li>
     <li><i>Backshot DistoX</i>: DistoX in "backshot" mode [default no] [N]</li>
     <li><i>Loop closure</i> error compensation. It is advisable not to do the compensation, as this allows to see graphically the mis-closures, and spot possible survey errors [default "none"]  [N]</li>
-    <li><i>Timer</i>: seconds of delay before measuring directions with the Android sensors [default 10, min 0] [N]</li>
-    <li><i>Beep volume</i>: timer beep volume [N] [default 50, min 10, max 100] [N]</li>
+    <li><i>Timer</i>: number of seconds of delay before measuring directions with the Android sensors [default 10, min 0] [E]</li>
+    <li><i>Beep volume</i>: beep volume, for manual shot timer and leg feedback [default 50, min 10, max 100%] [E]</li>
+    <li><i>Beep length</i>: beep duration, for leg feedback [default 500 ms] [E]</li>
     </ul>
-  </li>  
-  <li><i>LOCATION <a href="page_fixed_list.htm">settings</a></i></li>  
+  </li>
+  <li><i>LOCATION <a href="page_fixed_list.htm">settings</a></i></li>
   <li><i>ACCURACY <a href="page_accuracy.htm">settings</a></i></li>
 </ul><br><p>
 
 <div style="font-size:90%">
-<a href="page_geek.htm">Custom settings</a>: <i>Recent shots and their timeout</i>, <i>Fractional extend</i>, <i>Splay classes and coloring</i>, <i>Diving mode</i>, <i>Sensors</i>.
+<a href="page_geek.htm">Secondary settings</a>: <i>Recent shots and their timeout</i>, <i>Fractional extend</i>, <i>Splay classes and coloring</i>, <i>Diving mode</i>, <i>Sensors</i>.
 </div><br><p>
 
 To exit the <u>Survey Data window</u> double tap on the <i>BACK</i> button of your device.<br>

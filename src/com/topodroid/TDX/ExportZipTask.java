@@ -27,6 +27,7 @@ class ExportZipTask extends AsyncTask< Void, Void, Boolean >
   // private final String   mSaved;
   private final TopoDroidApp mApp;
   private final Uri mUri;
+  private final boolean mToast;
   
   /** cstr
    * @param context   context (unused)
@@ -35,13 +36,16 @@ class ExportZipTask extends AsyncTask< Void, Void, Boolean >
    * @note if uri is null the zip is exported in the default path (topodroid/zip/survey.zip)
    *       currently (v. 6.3.0) uri is always null
    */
-  ExportZipTask( Context context, TopoDroidApp app, Uri uri )
+  ExportZipTask( Context context, TopoDroidApp app, Uri uri, boolean toast )
   {
     mApp   = app;
     mUri   = uri;
+    mToast = toast;
     // mSaved    = context.getResources().getString( R.string.zip_saved );
   }
 
+  /** export survey ZIP in foreground - run on the calling thread
+   */
   boolean doInForeground( )
   {
     mArchiver = new Archiver( );
@@ -57,7 +61,7 @@ class ExportZipTask extends AsyncTask< Void, Void, Boolean >
   protected Boolean doInBackground( Void... args )
   {
     // TopoDroidApp.doExportDataSync( TDSetting.mExportShotsFormat );
-    TDLog.v("export zip task exec ...");
+    // TDLog.v("export zip task exec ...");
     mArchiver = new Archiver( );
     return mArchiver.archiveSurvey( mApp, mUri );
   }
@@ -71,16 +75,15 @@ class ExportZipTask extends AsyncTask< Void, Void, Boolean >
   @Override
   protected void onPostExecute( Boolean res )
   {
-    TDLog.v("Export zip task post-exec res " + res );
+    // TDLog.v("Export zip task post-exec res " + res );
     if ( res ) {
       // TDToast.make( mSaved + " " + mArchiver.getZipname() );
-      TDToast.make( R.string.zip_saved );
-      if ( TDSetting.mZipShare ) {
-        TDLog.v("share zip");
-        mApp.shareZip( mUri );
+      if ( mToast ) TDToast.make( R.string.zip_saved );
+      if ( TDSetting.mExportDataShare ) { // was mZipShare
+        mApp.shareZip( );
       }
     } else {
-      TDToast.makeBad( R.string.zip_failed );
+      if ( mToast ) TDToast.makeBad( R.string.zip_failed );
     }
   }
 }

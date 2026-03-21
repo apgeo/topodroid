@@ -98,15 +98,25 @@
       android:layout_height="wrap_content"
       android:text="@string/export_grid"
       />
-    <CheckBox android:id="@+id/svg_linedir"
+    <CheckBox android:id="@+id/svg_origin"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/export_origin"
+        />
+    <CheckBox android:id="@+id/svg_stations"
       android:layout_width="match_parent" 
       android:layout_height="wrap_content"
-      android:text="@string/export_linedir"
+      android:text="@string/export_stations"
       />
     <CheckBox android:id="@+id/svg_splays"
       android:layout_width="match_parent" 
       android:layout_height="wrap_content"
       android:text="@string/export_splays"
+      />
+    <CheckBox android:id="@+id/svg_linedir"
+      android:layout_width="match_parent" 
+      android:layout_height="wrap_content"
+      android:text="@string/export_linedir"
       />
     <CheckBox android:id="@+id/svg_xsections"
       android:layout_width="match_parent" 
@@ -492,6 +502,12 @@
       android:text="@string/export_splays"
       />
   </LinearLayout>
+  <CheckBox android:id="@+id/export_share"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginTop="@dimen/margintiny"
+    android:text="@string/export_share"
+    />
       				  
   <LinearLayout android:id="@+id/help"
     android:layout_width="match_parent" 

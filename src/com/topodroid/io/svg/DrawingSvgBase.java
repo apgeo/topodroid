@@ -39,6 +39,8 @@ import com.topodroid.TDX.DrawingCommandManager;
 import com.topodroid.TDX.LinePoint;
 import com.topodroid.TDX.BrushManager;
 import com.topodroid.TDX.SymbolPoint;
+import com.topodroid.TDX.SymbolLine;
+import com.topodroid.TDX.SymbolArea;
 import com.topodroid.TDX.SymbolLibrary;
 import com.topodroid.TDX.TDInstance;
 import com.topodroid.TDX.ICanvasCommand;
@@ -142,6 +144,13 @@ public class DrawingSvgBase
     pw.format(Locale.US, "%s cx=\"%.2f\" cy=\"%.2f\" ", prefix, x*TDSetting.mToSvg, y*TDSetting.mToSvg );
   }
 
+  static protected void printMarkerWithXY( PrintWriter pw, String marker, float x, float y, String css )
+  {
+    x *= TDSetting.mToSvg;
+    y *= TDSetting.mToSvg;
+    pw.format(Locale.US, "  <path d=\"M %.2f %.2f L %.2f %.2f\" marker-start=\"url(#%s)\" class=\"%s\" />\n", x, y, x, y+0.01f, marker, css );
+  } 
+
   /** print a segment with the closing angle-bracket
    * @param pw   writer
    * @param x1    X coord of the first point
@@ -170,9 +179,13 @@ public class DrawingSvgBase
   /** @return the string hex RGB-color of a path
    * @param path   path
    */
-  static protected String pathToColor( DrawingPath path )
+  static protected String pathToColor( DrawingPath path ) { return pathToColor( path.color() ); }
+
+  /** @return the string hex RGB-color of a color
+   * @param color color
+   */
+  static protected String pathToColor( int color )
   {
-    int color = path.color();
     int red = ( color >> 16 ) & 0xff;
     int grn = ( color >>  8 ) & 0xff;
     int blu = ( color       ) & 0xff;
@@ -204,6 +217,19 @@ public class DrawingSvgBase
     return xsections;
   }
 
+  /** print out the lines of a grid
+   * @param out     output writer
+   * @param grid    grid lines
+   * @param id      grid ID / CSS class
+   * @param color   lines color
+   * @param opacity lines opacity
+   * @param xoff    X offset
+   * @param yoff    Y offset
+   * @param xmin    bounding box start X 
+   * @param xmax    bounding box end X
+   * @param ymin    bounding box start Y
+   * @param ymax    bounding box end Y
+   */
   static protected void printSvgGrid( BufferedWriter out, List< DrawingPath > grid, String id, String color, float opacity, 
                                       float xoff, float yoff, float xmin, float xmax, float ymin, float ymax )
   {
@@ -211,7 +237,11 @@ public class DrawingSvgBase
       StringWriter sw = new StringWriter();
       PrintWriter pw  = new PrintWriter(sw);
       pw.format(Locale.US, "<g id=\"%s\"\n", id );
-      pw.format(Locale.US, " style=\"fill:none;stroke-opacity:%.1f;stroke-width=%.2f;stroke:#666666\" >\n", opacity, TDSetting.mSvgGridStroke );
+      // if ( TDSetting.mFixmeClass ) { // FIXME_CLASS
+        pw.format(Locale.US, " class=\"%s\" >\n", id );
+      // } else {
+      //   pw.format(Locale.US, " style=\"fill:none;stroke-opacity:%.1f;stroke-width=%.2f;stroke:#%s\" >\n", opacity, TDSetting.mSvgGridStroke, color );
+      // }
       for ( DrawingPath p : grid ) {
         float x1 = xmin;
         float x2 = xmax;
@@ -224,7 +254,12 @@ public class DrawingSvgBase
           if (p.y1 < ymin || p.y2 > ymax ) continue;
           y1 = y2 = p.y1;
         }
-        pw.format(Locale.US, "  <path stroke-width=\"%.2f\" stroke=\"#%s\" d=\"", TDSetting.mSvgGridStroke, color );
+        // if ( TDSetting.mFixmeClass ) { // FIXME_CLASS
+          // pw.format(Locale.US, "  <path class=\"%s\" d=\"", id ); 
+          pw.format(Locale.US, "  <path d=\"" ); 
+        // } else {
+        //   pw.format(Locale.US, "  <path stroke-width=\"%.2f\" stroke=\"#%s\" d=\"", TDSetting.mSvgGridStroke, color );
+        // }
         printPoint( pw, "M",  xoff+x1, yoff+y1 );
         printPoint( pw, " L", xoff+x2, yoff+y2 );
         pw.format("\" />\n");
@@ -248,7 +283,11 @@ public class DrawingSvgBase
     if ( name.equals( SymbolLibrary.LABEL ) ) {
       printPointWithXY( pw, "<text", xoff+label.cx, yoff+label.cy );
       pw.format(Locale.US, " font-size=\"%.1f\"", TDSetting.mSvgLabelSize * scale );
-      pw.format(Locale.US, " style=\"fill:black;stroke:black;stroke-width:%.2f\">%s</text>\n", TDSetting.mSvgLabelStroke, label.mPointText );
+      // if ( TDSetting.mFixmeClass ) { // FIXME_CLASS
+        pw.format(Locale.US, " class=\"label\">%s</text>\n", label.mPointText );
+      // } else {
+      //   pw.format(Locale.US, " style=\"fill:black;stroke:black;stroke-width:%.2f\">%s</text>\n", TDSetting.mSvgLabelStroke, label.mPointText );
+      // }
     }
   }
   // <text
@@ -266,8 +305,12 @@ public class DrawingSvgBase
    */
   static protected void toSvg( PrintWriter pw, DrawingLinePath line, String color, float xoff, float yoff ) 
   {
-    String th_name = line.getThName( ); 
-    pw.format(Locale.US, "  <path stroke=\"%s\" stroke-width=\"%.2f\" fill=\"none\" class=\"%s\"", color, TDSetting.mSvgLineStroke, th_name );
+    String th_name = line.getFullThNameEscapedColon( ); 
+    // if ( TDSetting.mFixmeClass ) { // FIXME_CLASS
+      pw.format(Locale.US, "  <path class=\"l_%s\"", th_name );
+    // } else {
+    //   pw.format(Locale.US, "  <path stroke=\"%s\" stroke-width=\"%.2f\" fill=\"none\" class=\"l_%s\"", color, TDSetting.mSvgLineStroke, th_name );
+    // }
     if ( th_name.equals( SymbolLibrary.ARROW ) )                pw.format(" marker-end=\"url(#Triangle)\"");
     else if ( th_name.equals( SymbolLibrary.SECTION ) )         pw.format(" stroke-dasharray=\"5 3\"");
     else if ( th_name.equals( SymbolLibrary.FAULT ) )           pw.format(" stroke-dasharray=\"8 4\"");
@@ -295,7 +338,13 @@ public class DrawingSvgBase
    */
   static protected void toSvg( PrintWriter pw, DrawingAreaPath area, String color, float xoff, float yoff )
   {
-    pw.format(Locale.US, "  <path stroke=\"black\" stroke-width=\"%.2f\" fill=\"%s\" fill-opacity=\"0.5\" ", TDSetting.mSvgLineStroke, color );
+    String th_name = area.getFullThNameEscapedColon( ); 
+    // if ( TDSetting.mFixmeClass ) { // FIXME_CLASS
+      pw.format(Locale.US, "  <path class=\"a_%s\"", th_name );
+    // } else {
+    //   pw.format(Locale.US, "  <path stroke=\"black\" stroke-width=\"%.2f\" fill=\"%s\" fill-opacity=\"0.5\" class=\"a_%s\" ",
+    //     TDSetting.mSvgLineStroke, color, th_name );
+    // }
     toSvgPointLine( pw, area, xoff, yoff, true ); // area borders are closed
     pw.format(" />\n");
   }
@@ -321,12 +370,21 @@ public class DrawingSvgBase
   static private void toSvgStation( PrintWriter pw, String name, String color, float x, float y )
   {
     pw.format("<g id=\"station_%s\">\n", name);
-    pw.format("<text font-size=\"%d\" fill=\"%s\" stroke=\"none\" text-anchor=\"middle\" id=\"%s\"", TDSetting.mSvgStationSize, color, name );
+    // if ( TDSetting.mFixmeClass ) { // FIXME_CLASS
+      pw.format("<text class=\"stations\" fill=\"%s\" id=\"s_%s\"", color, name );
+    // } else {
+    //   pw.format("<text font-size=\"%d\" fill=\"%s\" stroke=\"none\" text-anchor=\"middle\" id=\"s_%s\"", TDSetting.mSvgStationSize, color, name );
+    // }
     printPointWithXY( pw, "", x, y + (POINT_RADIUS * 1.5f) );
     pw.format(">%s</text>\n", name );
-    printPointWithCXCY( pw, "<circle", x, y );
-    pw.format(Locale.US, " r=\"%.2f\" ", (float)(POINT_RADIUS / 5) );
-    pw.format(Locale.US, " style=\"fill:none;stroke:black;stroke-width:%.2f\" />\n", TDSetting.mSvgPointStroke );
+    printMarkerWithXY( pw, "Station", x, y, "triangle" );
+    // printPointWithCXCY( pw, "<circle", x, y );
+    // pw.format(Locale.US, " r=\"%.2f\" ", (float)(POINT_RADIUS / 5) );
+    // // if ( TDSetting.mFixmeClass ) {
+    //   pw.format(Locale.US, " class=\"circle_point\" />\n" );
+    // // } else {
+    // //   pw.format(Locale.US, " style=\"fill:none;stroke:black;stroke-width:%.2f\" />\n", TDSetting.mSvgPointStroke );
+    // // }
     pw.write( end_grp ); // station_
   }
 
@@ -373,7 +431,7 @@ public class DrawingSvgBase
   {
     int idx = point.mPointType;
     float scale = point.getScaleValue();
-    String name = point.getThName( );
+    String name = point.getFullThNameEscapedColon( );
     // TDLog.v( "SVG point " + name + " at " + point.cx + " " + point.cy );
     pw.format("<!-- point %s -->\n", name );
     if ( name.equals( SymbolLibrary.LABEL ) ) {
@@ -386,7 +444,11 @@ public class DrawingSvgBase
       // printPointWithXY( pw, "<text", xoff+point.cx, yoff+point.cy );
       printPointWithXY( pw, "<text", 0, 0 );
       pw.format(Locale.US, " font-size=\"%.2f\"", TDSetting.mSvgLabelSize * scale );
-      pw.format(Locale.US, " style=\"fill:black;stroke:black;stroke-width:%.2f\"", TDSetting.mSvgLabelStroke * scale );
+      // if ( TDSetting.mFixmeClass ) { // FIXME_CLASS
+        pw.format( " class=\"p_label\"" );
+      // } else {
+      //   pw.format(Locale.US, " style=\"fill:black;stroke:black;stroke-width:%.2f\"", TDSetting.mSvgLabelStroke * scale );
+      // }
       printMatrix( pw, c, s, (xoff+point.cx), (yoff+point.cy) );
       pw.format( " >%s</text>\n", label.mPointText );
     // } else if ( name.equals("continuation") ) {
@@ -400,8 +462,11 @@ public class DrawingSvgBase
     } else {
       SymbolPoint sp = (SymbolPoint)BrushManager.getPointByIndex( idx );
       if ( sp != null ) {
-        
-        pw.format(Locale.US, "<g style=\"fill:none;stroke:%s;stroke-width:%.2f\" >\n", color, TDSetting.mSvgPointStroke );
+        // if ( TDSetting.mFixmeClass ) { // FIXME_CLASS
+          pw.format(Locale.US, "<g class=\"point\" style=\"stroke:%s\" >\n", color );
+        // } else {
+        //   pw.format(Locale.US, "<g style=\"fill:none;stroke:%s;stroke-width:%.2f\" >\n", color, TDSetting.mSvgPointStroke );
+        // }
         // pw.format(Locale.US, "<g transform=\"translate(%.2f,%.2f), scale(%d), rotate(%.2f)\">\n", 
         //   (xoff+point.cx)*TDSetting.mToSvg, (yoff+point.cy)*TDSetting.mToSvg, POINT_SCALE, point.mOrientation );
 
@@ -411,14 +476,21 @@ public class DrawingSvgBase
         pw.format(Locale.US, "<g" );
         printMatrix( pw, c, s, (xoff+point.cx), (yoff+point.cy) );
         pw.format(Locale.US, " >\n" );
-
-        pw.format( "%s\n", sp.getSvg() );
+        // pw.format( "%s\n", sp.getSvg() );
+        // float a = (float)( point.mOrientation ) / 2.0f;
+        float x = 0.1f;
+        float y = 0.0f;
+        pw.format(Locale.US, "  <path d=\"M 0 0 L %.2f %.2f\" marker-start=\"url(#%s)\" />\n", x, y, name ); 
         pw.format( end_grp );
         pw.format( end_grp );
       } else {
         printPointWithCXCY( pw, "<circle", xoff+point.cx, yoff+point.cy );
         pw.format(Locale.US, " r=\"%.2f\" ", POINT_RADIUS * scale );
-        pw.format(Locale.US, " style=\"fill:none;stroke:black;stroke-width:%.2f\" />\n", TDSetting.mSvgPointStroke );
+        // if ( TDSetting.mFixmeClass ) {
+          pw.format(Locale.US, " class=\"circle_point\" />\n" );
+        // } else {
+        //   pw.format(Locale.US, " style=\"fill:none;stroke:black;stroke-width:%.2f\" />\n", TDSetting.mSvgPointStroke );
+        // }
       }
     }
   }
@@ -549,7 +621,7 @@ public class DrawingSvgBase
           if ( BrushManager.isPointSection( point.mPointType ) ) {
             groupedPaths.xsectionsPoints.add( point );
           } else {
-            String pointTypeName = TDSetting.mSvgGroups ? point.getFullThName() : ALL;
+            String pointTypeName = TDSetting.mSvgGroups ? point.getFullThNameEscapedColon() : ALL;
             if ( ! groupedPaths.points.containsKey( pointTypeName ) ) {
               groupedPaths.points.put( pointTypeName, new ArrayList< DrawingPath >() );
             }
@@ -558,7 +630,7 @@ public class DrawingSvgBase
           break;
         case DrawingPath.DRAWING_PATH_LINE:
           DrawingLinePath line = (DrawingLinePath)path;
-          String lineTypeName = TDSetting.mSvgGroups ? line.getFullThName() : ALL;
+          String lineTypeName = TDSetting.mSvgGroups ? line.getFullThNameEscapedColon() : ALL;
           if ( ! groupedPaths.lines.containsKey( lineTypeName ) ) {
             groupedPaths.lines.put( lineTypeName, new ArrayList< DrawingPath >() );
           }
@@ -566,7 +638,7 @@ public class DrawingSvgBase
           break;
         case DrawingPath.DRAWING_PATH_AREA:
           DrawingAreaPath area = (DrawingAreaPath)path;
-          String areaTypeName = TDSetting.mSvgGroups ? area.getFullThName() : ALL;
+          String areaTypeName = TDSetting.mSvgGroups ? area.getFullThNameEscapedColon() : ALL;
           if ( ! groupedPaths.areas.containsKey( areaTypeName ) ) {
             groupedPaths.areas.put( areaTypeName, new ArrayList< DrawingPath >() );
           }
@@ -694,7 +766,11 @@ public class DrawingSvgBase
             final PrintWriter pw52  = new PrintWriter(sw52);
             printPointWithCXCY( pw52, "<circle", xoff+xx, yoff+yy );
             pw52.format(Locale.US, " r=\"%d\" ", RADIUS );
-            pw52.format(Locale.US, " style=\"fill:grey;stroke:black;stroke-width:%.2f\" />\n", TDSetting.mSvgLabelStroke );
+            // if ( TDSetting.mFixmeClass ) {
+              pw52.format(Locale.US, " class=\"circle_label\" />\n" );
+            // } else {
+            //   pw52.format(Locale.US, " style=\"fill:grey;stroke:black;stroke-width:%.2f\" />\n", TDSetting.mSvgLabelStroke );
+            // }
             out.write( sw52.getBuffer().toString() );
           }
         }
@@ -737,6 +813,40 @@ public class DrawingSvgBase
     printSvgGrid( out, plot.getGrid100(), "grid100", "333333", 0.8f, xoff, yoff, xmin, xmax, ymin, ymax );
     out.write( end_grp ); // grid
   }
+
+  /** 
+   * @param out   output writer
+   * @param x     X position (offset.X + center.X)
+   * @param y     Y position
+   */
+  protected void writeOrigin( BufferedWriter out, float x, float y )
+  {
+    float delta = TDSetting.mSvgStationSize * 0.8f;
+    // TDLog.v( "SVG grid");
+    StringWriter sw = new StringWriter();
+    PrintWriter pw  = new PrintWriter(sw);
+    // if ( TDSetting.mFixmeClass ) { // FIXME_CLASS
+      // pw.format(Locale.US, "  <path class=\"%s\" d=\"", id ); 
+      pw.format(Locale.US, "  <path d=\"" ); 
+    // } else {
+    //   pw.format(Locale.US, "  <path stroke-width=\"%.2f\" stroke=\"#%s\" d=\"", TDSetting.mSvgGridStroke, "ff9900" );
+    // }
+    printPoint( pw, "M",  x+delta, y );
+    printPoint( pw, " L", x-delta, y );
+    printPoint( pw, "M",  x, y+delta );
+    printPoint( pw, " L", x, y-delta );
+    pw.format("\" />\n");
+    try {
+      out.write("<g id=\"origin\" class=\"origin\"\n" );
+      out.write("  style=\"fill:none;stroke-opacity:0.8\" >\n");
+      out.write( sw.getBuffer().toString() );
+      out.write( end_grp ); // origin
+      out.flush();
+    } catch ( IOException e ) {
+      TDLog.e( "SVG origin io-exception " + e.getMessage() );
+    }
+  }
+ 
  
   // strings
 
@@ -744,4 +854,106 @@ public class DrawingSvgBase
 
   protected static final String sodipodi = "  <sodipodi:namedview pagecolor=\"#ffffff\" bordercolor=\"#666666\" borderopacity=\"1\" objecttolerance=\"10\" gridtolerance=\"10\" guidetolerance=\"10\" inkscape:pageopacity=\"0\" inkscape:pageshadow=\"2\" inkscape:window-width=\"auto\" inkscape:window-height=\"auto\" id=\"namedview48\" showgrid=\"false\" inkscape:zoom=\"1\" inkscape:cx=\"auto\" inkscape:cy=\"auto\" inkscape:window-x=\"0\" inkscape:window-y=\"0\" inkscape:window-maximized=\"1\" inkscape:current-layer=\"w2d_Walls_shp\" showborder=\"false\"/>\n";
 
+
+  /** write styles and markers
+   * @param out    writer
+   * @param pts    set of point symbols used in the sketch
+   * @param lns    set of line symbols used in the sketch
+   * @param ars    set of area symbols used in the sketch
+   */
+  protected void writeDefs( BufferedWriter out, Set<SymbolPoint> pts, Set<SymbolLine> lns, Set<SymbolArea> ars ) throws IOException
+  {
+    // TDLog.v("SVG scale " + TDSetting.mToSvg );
+    // scale 1:100 corresponds to mToSvg 1.8897638
+    //       1:200                       0.9448819
+    String grid_width  = String.format( Locale.US, "stroke-width: %.2f; fill: none; } \n", TDSetting.mSvgGridStroke );
+    String label_width = String.format( Locale.US, "stroke-width: %.2f; } \n", TDSetting.mSvgLabelStroke );
+    String point_width = String.format( Locale.US, "stroke-width: %.2f; } \n", TDSetting.mSvgPointStroke );
+    String triangle_width = String.format( Locale.US, "stroke-width: %.2f; } \n", TDSetting.mSvgPointStroke );
+    String shot_width  = String.format( Locale.US, "stroke-width: %.2f; } \n", TDSetting.mSvgShotStroke );
+    String text_size   = String.format( Locale.US, "font-size: %d; } \n", TDSetting.mSvgStationSize );
+
+    String end_stroke_width = String.format( Locale.US, "stroke-width=\"%.2f\" />\n", TDSetting.mSvgShotStroke );
+
+    out.write( "  <defs>\n");
+    out.write( "    <style type=\"text/css\" id=\"style_grid\"> \n"); // FIXME_CLASS
+    out.write( "      .grid1 { stroke: #999999; stroke-opacity: 0.4; ");   out.write( grid_width );
+    out.write( "      .grid10 { stroke: #666666; stroke-opacity: 0.6; ");  out.write( grid_width );
+    out.write( "      .grid100 { stroke: #333333; stroke-opacity: 0.8; "); out.write( grid_width );
+    out.write( "      .origin { stroke: #ffcc00; stroke-opacity: 0.8; "); out.write( grid_width );
+    out.write( "      .p_label { stroke: black; fill: black; "); out.write( label_width );
+    out.write( "      .point { stroke: black; fill: none; " );   out.write( point_width );
+    out.write( "      .legs { stroke: #882222; stroke-opacity: 0.6; fill: none; "); out.write( shot_width );
+    out.write( "      .splays { stroke: grey; stroke-opacity: 0.4; fill: none; "); out.write( shot_width ); 
+    out.write( "      .h-splays { stroke: lightseagreen; stroke-opacity: 0.4; fill: none; "); out.write( shot_width );
+    out.write( "      .v-splays { stroke: lightsteelgreen; stroke-opacity: 0.4; fill: none; "); out.write( shot_width );
+    out.write( "      .x-splays { stroke: lightseablue; stroke-opacity: 0.4; fill: none; "); out.write( shot_width );
+    out.write( "      .splays_f { stroke: #ffee44; stroke-opacity: 0.4; fill: none; "); out.write( shot_width );
+    out.write( "      .splays_r { stroke: #ee44ff; stroke-opacity: 0.4; fill: none; "); out.write( shot_width );
+    out.write( "      .splays_b { stroke: #66ccee; stroke-opacity: 0.4; fill: none; "); out.write( shot_width );
+    out.write( "      .splays_g { stroke: #77ff77; stroke-opacity: 0.4; fill: none; "); out.write( shot_width );
+    out.write( "      .stations { stroke: none; text-anchor: middle; "); out.write( text_size );
+    out.write( "      .triangle { stroke: red;  fill: none; ");          out.write( triangle_width );
+    out.write( "      .circle_point { stroke: black;  fill: none; ");    out.write( point_width );
+    out.write( "      .circle_label { stroke: black;  fill: grey; ");    out.write( label_width );
+    // if ( TDSetting.mFixmeClass ) { // FIXME_CLASS
+      float line_stroke = TDSetting.mSvgLineStroke;
+      for ( SymbolLine ln : lns ) {
+        out.write( 
+          String.format( Locale.US, "      .l_%s { stroke: %s; stroke-width: %.2f; fill: none; } \n",
+          ln.getFullThNameEscapedColon(), pathToColor( ln.getColor( 0 ) ), line_stroke ) );
+      }
+      for ( SymbolArea ar : ars ) {
+
+        String color = pathToColor( ar.getColor( 0 ) );
+        out.write( 
+          String.format( Locale.US, "      .a_%s { stroke: %s; stroke-width: %.2f; fill: %s; fill-opacity: 0.5; } \n",
+          ar.getFullThNameEscapedColon(), color, line_stroke, color ) );
+      }
+    // }
+    out.write( "    </style> \n");
+    out.write( "    <marker id=\"Station\" viewBox=\"0 0 100 100\" refX=\"50\" refY=\"50\" \n"); 
+    out.write( "      markerUnits=\"strokeWidth\" markerWidth=\"40\" markerHeight=\"24\" orient=\"0\" >\n");
+    out.write( "      <path d=\"M 0 80 L 100 80 L 50 0 z\" stroke=\"black\" fill=\"none\" "); out.write( end_stroke_width );
+    out.write( "    </marker>\n");
+    out.write( "    <marker id=\"Triangle\" viewBox=\"0 0 10 10\" refX=\"0\" refY=\"5\" \n");
+    out.write( "      markerUnits=\"strokeWidth\" markerWidth=\"4\" markerHeight=\"3\" orient=\"auto\" >\n");
+    out.write( "      <path d=\"M 0 0 L 10 5 L 0 10 z\" />\n");
+    out.write( "    </marker>\n"); 
+    out.write( "    <marker id=\"Circle\" markerWidth=\"20\" markerHeight=\"20\" viewBox=\"0 0 40 40\" refX=\"10\" refY=\"10\">\n");
+    out.write( "      <circle cx=\"10\" cy=\"10\" r=\"10\" fill=\"red\" />\n");
+    out.write( "    </marker>\n"); 
+    // if ( TDSetting.mSvgLineDirection ) {
+      StringWriter swD = new StringWriter();
+      PrintWriter pwD  = new PrintWriter(swD);
+      pwD.format("    <marker id=\"dir\" viewBox=\"0 0 10 30\"  orient=\"auto\"");
+      pwD.format("       markerUnits=\"strokeWidth\" markerWidth=\"4\" refX=\"0\" refY=\"30\"");
+      pwD.format(Locale.US, "      markerHeight=\"30\" stroke=\"#cccc3a\" stroke-width=\"%.2f\" fill=\"none\" >\n", TDSetting.mSvgLineDirStroke );
+      pwD.format("      <line x1=\"0\" y1=\"0\" x2=\"0\" y2=\"30\" />\n" );
+      pwD.format("    </marker>\n");
+      pwD.format("    <marker id=\"rev\" viewBox=\"0 0 10 30\"  orient=\"auto\"");
+      pwD.format("      markerUnits=\"strokeWidth\" markerWidth=\"4\" refX=\"0\" refY=\"0\"");
+      pwD.format(Locale.US, "      markerHeight=\"30\" stroke=\"#cccc3a\" stroke-width=\"%.2f\" fill=\"none\" >\n", TDSetting.mSvgLineDirStroke );
+      pwD.format("      <line x1=\"0\" y1=\"0\" x2=\"0\" y2=\"30\" />\n" );
+      pwD.format("    </marker>\n");
+      out.write( swD.getBuffer().toString() );
+    // }
+    out.flush();
+
+    for ( SymbolPoint pt : pts ) {
+      String name = pt.getFullThNameEscapedColon();
+      int color = pt.getColor( 0xff000000 );
+      String stroke = String.format( Locale.US, "stroke-width=\"0.3\" fill=\"none\" stroke=\"%s\" />\n", pathToColor( color ) );
+      // TDLog.v("SVG point marker " + pt.getFullThNameEscapedColon() );
+      // "    <marker id=\"" + name + "\" markerWidth=\"40\" markerHeight=\"40\" viewBox=\"0 0 40 40\" refX=\"20\" refY=\"20\" orient=\"auto\" markerUnits=\"strokeWidth\" >\n");
+      out.write(
+        String.format(Locale.US, "    <marker id=\"%s\" markerWidth=\"%d\" markerHeight=\"%d\" viewBox=\"%s\" refX=\"%d\" refY=\"%d\" orient=\"auto\" markerUnits=\"strokeWidth\" >\n",
+        name, SymbolPoint.SVG_M_SIDE, SymbolPoint.SVG_M_SIDE, SymbolPoint.SVG_M_VBOX, SymbolPoint.SVG_M_REF, SymbolPoint.SVG_M_REF ) );
+      out.write( "      " );
+      out.write( pt.getSvg().replaceAll("/>", stroke ) );
+      out.write( "    </marker>\n");
+    }
+    out.write( "  </defs>\n");
+    out.flush();
+  }
 }

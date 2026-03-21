@@ -3,7 +3,7 @@
  * @author marco corvi
  * @date jan. 2017
  *
- * @brief TopoDroid quick cam drawing surface
+ * @brief TopoDroid quick cam cross drawing 
  * --------------------------------------------------------
  *  Copyright This software is distributed under GPL-3.0 or later
  *  See the file COPYING.
@@ -11,7 +11,7 @@
  */
 package com.topodroid.TDX;
 
-// import com.topodroid.utils.TDLog;
+import com.topodroid.utils.TDLog;
 
 import android.content.Context;
 
@@ -33,8 +33,12 @@ class QCamBox extends View
     mWhite.setColor( 0xffffffff );
     mWhite.setStrokeWidth( 2 );
     mWhite.setStyle(Paint.Style.FILL_AND_STROKE);
+    TDLog.v("QCAM box cstr");
   }
 
+  /** draw a cross centered at (x,y) with a gap of half-size d in the middle
+   * @param canvas  canvas where to draw 
+   */
   @Override
   protected void onDraw( Canvas canvas )
   {

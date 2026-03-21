@@ -1,8 +1,8 @@
 <html><body>
-<h3>[15] 3D VIEWER (Cave3D)</h3>
+<h3>[15] 3D VIEWER</h3>
 
 TopoDroid 3D viewer is designed for use in cave and it does not require internet connection.<br>
-It can load also other file formats: Therion (th, thconfig), Loch (lox), Compass (dat, mak), Survex (3d), and VisualTopo (tro, trox).<br><p>
+It can load also other file formats: <i>Therion</i> (th, thconfig), <i>Loch</i> (lox), <i>Compass</i> (dat, mak), <i>Survex</i> (3d), and <i>VisualTopo</i> (tro, trox).<br><p>
 
 The 3D model can be opened either from a menu in the <i>Data Window</i>, or a button in the
 <i>Survey Info Window</i>.<br>
@@ -35,7 +35,7 @@ geo-referenced in the same coordinate system.
 <li><img style="border:1px solid black" width="36" height="36" src="btn_3d_splays_none.png"><img style="border:1px solid black" width="36" height="36" src="btn_3d_splays_line.png"><img style="border:1px solid black" width="36" height="36" src="btn_3d_splays_point.png"> <i>Splays</i>: hide or show splays, as segments or endpoints.</li>
 <li><img style="border:1px solid black" width="36" height="36" src="btn_3d_wall_no.png"><img style="border:1px solid black" width="36" height="36" src="btn_3d_wall.png"> <i>Walls</i>: hide or show walls (if created).</li>
 <li><img style="border:1px solid black" width="36" height="36" src="btn_3d_surface_off.png"><img style="border:1px solid black" width="36" height="36" src="btn_3d_surface_on.png"> <i>Surface</i>: hide or show surface DEM (if present).</li>
-<li><img style="border:1px solid black" width="36" height="36" src="btn_3d_color.png"><img style="border:1px solid black" width="36" height="36" src="btn_3d_color_survey.png"><img style="border:1px solid black" width="36" height="36" src="btn_3d_color_depth.png"><img style="border:1px solid black" width="36" height="36" src="btn_3d_color_surface.png"> <i>Color</i>: midline color-coding: white, by-survey, denivelation, or surface.</li>
+<li><img style="border:1px solid black" width="36" height="36" src="btn_3d_color.png"><img style="border:1px solid black" width="36" height="36" src="btn_3d_color_survey.png"><img style="border:1px solid black" width="36" height="36" src="btn_3d_color_depth.png"><img style="border:1px solid black" width="36" height="36" src="btn_3d_color_surface.png"> <i>Color</i>: midline color-coding: white, by-survey, denivelation, or depth below the surface.</li>
 <li><img style="border:1px solid black" width="36" height="36" src="btn_3d_frame_grid.png"><img style="border:1px solid black" width="36" height="36" src="btn_3d_frame_axes.png"><img style="border:1px solid black" width="36" height="36" src="btn_3d_frame_no.png"> <i>Frame</i>: XY grid with vertical line, or XYZ axes, or none.</li>
 </ul><br>
 The button icons are adjusted to the state of the program.
@@ -137,11 +137,20 @@ the equator.<br><p>
 If the model is georeferenced the KML, GPX and shapefile exports are in WGS84 geographic coordinates.<br><p>
 
 <b>GRID/FRAME</b><br>
-The cartesian grid/frame lines are green (west-east), blue (south-north), and red (vertical).<br>
+It is possible to display a grid/frame of the cartesian axes:<br>
+<ul>
+<li>no grid/frame</li>
+<li>horizontal (East-North) grid with the vertical axis</li>
+<li>horizontal (East-North) grid with the vertical axis and level lines<li>
+<li>East and North axes with the vertical axis and level lines<li>
+</ul><br>
+
+The grid/frame lines are green (west-east), blue (south-north), and red (vertical).<br>
 In perspective the grid lines look greenish to the north/south because the green lines stack together closer.
 And it looks blueish to the west/east.
 To help distinguish the for cardinal directions, the grid lines get slightly reddish at the west-south corner.<br>
 By default the cartesian grid is below the survey, but it can be set above it (optionally).
+The line spacing (grid cell size) can be checked in the info dialog.
 <br><p>
 
 <b>SURVEY</b><br>
@@ -149,17 +158,20 @@ The survey splays can be hidden, displayed as lines or endpoints.<br>
 The survey legs can be uncolored or colored by survey, by denivelation (red-to-blue) or by
 the depth beneath the surface (blue-to-red) if the model has a DEM surface.<br>
 
-When uncolored the survey legs are white, the surface legs green, the duplicate legs orange, 
+When uncolored the survey legs are white, the surface legs green, the duplicate legs orange,
 and the commented legs light blue.<br>
 
 The "surface", "duplicate", and "commented" legs can be turned on/off with the <i>leg dialog</i> which
 is opened by a long-tap on the <i>Frame</i> button (last).
 <br><p>
 
+When colored by survey the flagged splay are colored according to their flag, as in the plan/profile views.
+<br><p>
+
 <b>WALLS</b><br>
 The wall model is not computed automatically when the file is opened, but it must be
 requested by the user through the "wall" menu.
-There are two general models, <i>simple hull</i>, and <i>pseudo convex-hull</i>, 
+There are two general models, <i>simple hull</i>, and <i>pseudo convex-hull</i>,
 and the "debug-only" <i>powercrust</i> model.
 The first two are suitable when the splay are not dense. The last one is for dense splays.<br>
 
@@ -175,12 +187,14 @@ along the survey (profile view). Their display is enabled through the "walls" me
 
 <b>SURFACE</b><br>
 For Topodroid models, a surface (Digital Elevation Model) can be added from a DEM file.
-If externally loaded Therion or Loch models contain surface data (Digital Elevation Model and optionally a texture), the surface can be displayed either gray or with the texture.<br>
-The surface dialog has a button to load a DEM from a file. The supported formats are ascii (.asc or .ascii) and Therion grid (.grid).<br>
+If externally loaded <i>Therion</i> or Loch models contain surface data (Digital Elevation Model and optionally a texture), the surface can be displayed either gray or with the texture.<br>
+The surface dialog has a button to load a DEM from a file.
+The supported formats are ascii (.asc or .ascii) and <i>Therion</i> grid (.grid).
+Furthermore, there is experimental support for HGT files.<br>
 Only the relevant portion of the DEM file is loaded. The DEM extent must cover the area of the model.<br>
 
 <p>
-The Esri ASCII Format must use a header like in the following example:<br>
+Files in <b>Esri ASCII Format</b> must have a header like in the following example:<br>
 <pre>
   ncols 374
   nrows 225
@@ -192,19 +206,18 @@ The Esri ASCII Format must use a header like in the following example:<br>
   ...
 </pre>
 If the number of rows or columns is negative, the data is in reverse order. This option is not included in the original Esri format!<br><p>
-  
-A Therion grid file must use a header like in the following example and may contain comments on lines starting with "#":<br>
+
+<b>Therion grid</b> files must use a header like in the following example and may contain comments on lines starting with "#":<br>
 <pre>
   grid 7.444608 46.947922 0.000213 0.000213 374 225
   567.1 567.2 ...
   ...
 </pre>
+<br><p>
 
-<p>Coordinate Reference Systems (CRS):</p>
-<p>
+<b>Coordinate Reference Systems (CRS):</b><br>
 The fixed stations of the survey and the DEM data file must all be in the same (cartographic) Coordinate Reference System.<br>
 By default, WGS84 is used, so the coordinates and cell size must be entered in degrees (with six or more decimals for good accuracy).<br>
-</p>
 <p>
 To use a different CRS, all fixed stations must be transformed into that other CRS using the "Convert" button in the respective "Geo-Points" dialog.
 Notice: the separately available app "Proj4" must be installed as well (do not use the version from Play Store but the more current one from the Topodroid Website).
@@ -229,9 +242,9 @@ The OSM texture (WGS84) can be loaded only for surveys and cave projects opened 
 The texture displays the OSM lines.
 <br><p>
 
-<b>Note</b>. Texture GeoTiff file are read by native code, thus the storage pathname (ususlly ending with ':') needs to be
-replaced by the filesystem pathname (usually "/sdcard/"): if this is not properly specified the GeoTiff texture 
-fails to load. The GeoTiff filename with "storage" prefix is shown is a toast message.<br><p>
+<b>Note</b>. Texture GeoTiff files are read by native code, thus the storage pathname (usually ending with ':') needs to be
+replaced by the filesystem pathname (usually "/sdcard/"): if this is not properly specified, the GeoTiff texture
+fails to load. The GeoTiff filename with "storage" prefix is shown as a toast message.<br><p>
 
 It is possible to visualize a point (yellow dot) on the surface by entering the East/North coordinates in the CRS of the model.<br>
 
@@ -240,7 +253,7 @@ If the app has permission to use the "Location" service, and this service is ena
 get surface point with the Android GNSS.<br>
 given permissions to use it.<br>
 The app displays the last 10 points.
-<br><p> 
+<br><p>
 
 <b>STATION ACTIONS</b><br>
 By default, when the stations are displayed, they can be selected tapping on the station point or name.<br>
@@ -251,7 +264,7 @@ The selected station is highlighted red, and its coordinates are shown in a blue
 If the model has a DEM, the depth of the station below the surface is included.<br>
 To unselect the station tap the "close" button in the <i>station bar</i>.<br><p>
 
-<img style="border:1px solid black" width="36" height="36" src="btn_3d_measure_ruler_off.png"><img style="border:1px solid black" width="36" height="36" src="btn_3d_measure_ruler_on.png"> 
+<img style="border:1px solid black" width="36" height="36" src="btn_3d_measure_ruler_off.png"><img style="border:1px solid black" width="36" height="36" src="btn_3d_measure_ruler_on.png">
 To measure distances between the selected station and another station, check the "measure" button in the <i>station bar</i>,
 and tap on the other station.
 The 3D distance between the two stations, its East, North, and vertical components, and the plane 2D distance are
@@ -261,7 +274,7 @@ and the "cave" distance is also shown
 and the cave-path between them is highlighted green.<br>
 Optionally, the values can be displayed in a brief message box instead of a dialog.  <br><p>
 
-<img style="border:1px solid black" width="36" height="36" src="btn_3d_measure_station_off.png"><img style="border:1px solid black" width="36" height="36" src="btn_3d_measure_station_on.png"> When the "station" button in the <i>station bar</i> is checked, the station position on the screen 
+<img style="border:1px solid black" width="36" height="36" src="btn_3d_measure_station_off.png"><img style="border:1px solid black" width="36" height="36" src="btn_3d_measure_station_on.png"> When the "station" button in the <i>station bar</i> is checked, the station position on the screen
 if fixed under rotations and the
 selected station is highlighted orange.
 <br><p>
@@ -283,6 +296,6 @@ Finally there is a button to rebind the point icons, if they go black.
 
 
 <a href="manual14.htm">&lt; Cave Projects</a> |
-<a href="manual16.htm">Index &gt;</a> 
+<a href="manual16.htm">Index &gt;</a>
 
 </body></html>

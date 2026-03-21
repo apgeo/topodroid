@@ -18,7 +18,7 @@ import com.topodroid.ui.MyDialog;
 import com.topodroid.ui.TDLayout;
 import com.topodroid.ui.TDImage;
 import com.topodroid.prefs.TDSetting;
-import com.topodroid.common.PlotType;
+import com.topodroid.types.PlotType;
 
 // import java.io.File; // JPEG FILE
 // import java.io.IOException;
@@ -65,8 +65,8 @@ class DrawingLineSectionDialog extends MyDialog
   private ImageView mIVimage;   // photo image
   private boolean mHSection;
   private boolean mExists;
-  private boolean canTakePhoto;     // whether the xsection can have a photo
-  private float mTT; // intersection abscissa
+  private boolean canTakePhoto; // whether the xsection can have a photo
+  private float mTT;            // intersection abscissa - or 2 for multileg xsections
 
   private TDImage mTdImage = null;
 
@@ -126,6 +126,7 @@ class DrawingLineSectionDialog extends MyDialog
         // TDLog.v("Section Line: start <" + mFrom + "> view <" + mTo + "> azimuth " + mAzimuth + " clino " + mClino ); 
       }
     }
+    TDLog.v( "Drawing Line Section Dialog: intercept " + mTT + " (" + tt0 + ")" ); 
     canTakePhoto = ( mTT <= 1.0 ) && TDandroid.checkCamera( context );
     // TDLog.v( "line id " + mId );
   }
@@ -138,17 +139,17 @@ class DrawingLineSectionDialog extends MyDialog
     // cannot use initLayout
     if ( mFrom != null && mTo != null ) {
       initLayout( R.layout.drawing_line_section_dialog,
-        String.format( mParent.getResources().getString( R.string.title_draw_line ), mLine.getThName( ) ) + " " + mFrom + " " + mTo );
+        String.format( resString( R.string.title_draw_line ), mLine.getThName( ) ) + " " + mFrom + " " + mTo );
     } else if ( mFrom != null ) {
       initLayout( R.layout.drawing_line_section_dialog, 
-        String.format( mParent.getResources().getString( R.string.title_draw_line ), mLine.getThName( ) ) + " " + mFrom );
+        String.format( resString( R.string.title_draw_line ), mLine.getThName( ) ) + " " + mFrom );
     } else {
       initLayout( R.layout.drawing_line_section_dialog, 
-        String.format( mParent.getResources().getString( R.string.title_draw_line_no_stations ), mLine.getThName( ) ) );
+        String.format( resString( R.string.title_draw_line_no_stations ), mLine.getThName( ) ) );
     }
 
     mTVoptions = (TextView) findViewById( R.id.line_options );
-    mTVoptions.setText( String.format( mContext.getResources().getString( R.string.fmt_id ), mId ) );
+    mTVoptions.setText( String.format( resString( R.string.fmt_id ), mId ) );
 
     TextView tv_azimuth = (TextView) findViewById( R.id.line_azimuth );
     TextView tv_date    = (TextView) findViewById( R.id.line_date );
@@ -189,7 +190,7 @@ class DrawingLineSectionDialog extends MyDialog
       // File imagefile = TDFile.getTopoDroidFile( mFilename ); // JPEG FILE
       if ( TDFile.hasMSfile( subdir, filename ) ) { // if ( imagefile.exists() )
 	mTdImage = new TDImage( mFilename );
-        tv_azimuth.setText( String.format( mContext.getResources().getString( R.string.photo_azimuth_clino ), mTdImage.azimuth(), mTdImage.clino() ) );
+        tv_azimuth.setText( String.format( resString( R.string.photo_azimuth_clino ), mTdImage.azimuth(), mTdImage.clino() ) );
         String date = mTdImage.date();
         tv_date.setText( (date != null)? date : "" );
 
@@ -229,11 +230,9 @@ class DrawingLineSectionDialog extends MyDialog
    */
   public void onClick(View v) 
   {
-    // TDLog.Log( TDLog.LOG_INPUT, "Drawing Line Section Dialog onClick() " + b.getText().toString() );
-
     if ( v.getId() == R.id.line_image ) {
       if ( mTdImage != null ) {
-        (new PhotoViewDialog( mContext, mFilename )).show();
+        (new PhotoViewDialog( mContext, mFilename, null )).show(); // null title
       }
       return;
     } else if ( v.getId() == R.id.button_cancel ) {
@@ -241,10 +240,11 @@ class DrawingLineSectionDialog extends MyDialog
       return;
     } else {
       long type = mHSection ? PlotType.PLOT_H_SECTION : PlotType.PLOT_SECTION;
-      mNick = ( mETnick.getText() != null )? mETnick.getText().toString() : "";
+      mNick = ( mETnick.getText() != null )? mETnick.getText().toString() : ""; // FIXME NOSPACES ?
       MyCheckBox cb = (MyCheckBox)v;
       if ( canTakePhoto && cb == mBtnFoto ) {
-        mParent.makePhotoXSection( mLine, mId, type, mFrom, mTo, mNick, mAzimuth, mClino );
+        // TODO mCenter for multileg xsection
+        mParent.makePhotoXSection( mLine, mId, type, mFrom, mTo, mNick, mAzimuth, mClino, mTT );
       } else if ( cb == mBtnDraw ) {
         mParent.makePlotXSection( mLine, mId, type, mFrom, mTo, mNick, mAzimuth, mClino, mTT, mCenter );
       } else if ( cb == mBtnErase ) {

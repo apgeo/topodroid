@@ -12,6 +12,7 @@
 package com.topodroid.TDX;
 
 // import com.topodroid.utils.TDLog;
+import com.topodroid.utils.TDUtil;
 import com.topodroid.ui.MyDialog;
 import com.topodroid.ui.TDImage;
 
@@ -53,18 +54,25 @@ class PhotoEditDialog extends MyDialog
   PhotoEditDialog( Context context, PhotoListDialog parent, PhotoInfo photo )
   {
     super( context, null, R.string.PhotoEditDialog ); // null app
-    // TDLog.v("photo edit dialog id " + photo.id );
     mParent = parent;
     mPhoto  = photo;
-    // mFilename = filename;
-    if ( mPhoto.getItemType() == MediaInfo.TYPE_XSECTION ) {
-      mFilename = TDPath.getSurveyJpgFile( TDInstance.survey, mPhoto.mItemName );
+    // TDLog.v("photo edit dialog id " + photo.id + " ref. type " + photo.getRefType() );
+    if ( mPhoto.getRefType() == MediaInfo.TYPE_XSECTION ) {
+      if ( mPhoto.mFormat == PhotoInfo.FORMAT_JPEG ) {
+        mFilename = TDPath.getSurveyJpgFile( TDInstance.survey, mPhoto.mItemName );
+      } else {
+        mFilename = TDPath.getSurveyPngFile( TDInstance.survey, mPhoto.mItemName );
+      }
     } else {
-      mFilename = TDPath.getSurveyJpgFile( TDInstance.survey, Long.toString(mPhoto.id) );
+      if ( mPhoto.mFormat == PhotoInfo.FORMAT_JPEG ) {
+        mFilename = TDPath.getSurveyJpgFile( TDInstance.survey, Long.toString(mPhoto.id) );
+      } else {
+        mFilename = TDPath.getSurveyPngFile( TDInstance.survey, Long.toString(mPhoto.id) );
+      }
     }
     mGeoCode  = mPhoto.getGeoCode();
-    mAtShot   = ( mPhoto.getItemType() == MediaInfo.TYPE_SHOT );
-    // TDLog.v("PhotoEditDialog " + mFilename);
+    mAtShot   = ( mPhoto.getRefType() == MediaInfo.TYPE_SHOT );
+    // TDLog.v("PhotoEditDialog file " + mFilename + " at shot " + mAtShot );
     mTdImage = new TDImage( mFilename );
     // TDLog.v( "photo edit dialog: " + photo.debugString() + " image width " + mTdImage.width() );
     // TDLog.v( "photo edit dialog: " + mFilename );
@@ -92,7 +100,7 @@ class PhotoEditDialog extends MyDialog
     // TDLog.v( "photo edit dialog on create. Azimuth " + a + " Clino " + c );
 
     ((TextView) findViewById( R.id.photo_azimuth )).setText(
-       String.format( mContext.getResources().getString( R.string.photo_azimuth_clino ), a, c ) );
+       String.format( resString( R.string.photo_azimuth_clino ), a, c ) );
     ((TextView) findViewById( R.id.photo_date )).setText( mPhoto.mDate );
 
     if ( mPhoto.mComment != null ) {
@@ -132,20 +140,14 @@ class PhotoEditDialog extends MyDialog
   @Override
   public void onClick(View v) 
   {
-    // Button b = (Button) v;
-    // TDLog.Log( TDLog.LOG_INPUT, "PhotoEditDialog onClick() " + b.getText().toString() );
-
     int vid = v.getId();
     if ( vid == R.id.photo_ok ) {
-      if ( mETcomment.getText() == null ) {
-        mParent.updatePhoto( mPhoto, "", mGeoCode );
-      } else {
-        mParent.updatePhoto( mPhoto, mETcomment.getText().toString(), mGeoCode );
-      }
+      mParent.updatePhoto( mPhoto, TDUtil.getTextOrEmpty( mETcomment ), mGeoCode ); 
     } else if ( vid == R.id.photo_delete ) {
       mParent.dropPhoto( mPhoto );
     } else if ( vid == R.id.photo_image ) {
-      (new PhotoViewDialog( mContext, mPhoto )).show();
+      // (new PhotoViewDialog( mContext, mPhoto )).show();
+      (new PhotoViewDialog( mContext, mFilename, mPhoto.mTitle )).show();
       return;
     } else if ( vid == R.id.photo_geocode ) {
       (new GeoCodeDialog( mContext, this, mGeoCode )).show();

@@ -14,7 +14,7 @@ package com.topodroid.TDX;
 
 // import com.topodroid.utils.TDLog;
 import com.topodroid.prefs.TDSetting;
-import com.topodroid.common.LegType;
+import com.topodroid.types.LegType;
 
 import java.util.List;
 import java.util.Set;
@@ -83,7 +83,8 @@ class StationNameBacksight extends StationName
     // TDLog.v( "FROM " + from + " TO " + to + " NEXT " + next + " STATION " + station + " increment " + increment );
 
     for ( DBlock blk : list ) {
-      if ( blk.mId == blk0.mId ) continue;
+      if ( blk.mId == blk0.mId || blk.isSecLeg() ) continue; // 20250719 replaces
+      // if ( blk.mId == blk0.mId ) continue;
       if ( blk.isSplay() ) {
         if ( TDSetting.mSplayStation || blk.mFrom.length() == 0 ) { // mSplayStation 
           setSplayName( blk, station );
@@ -98,7 +99,8 @@ class StationNameBacksight extends StationName
           p_to = oldFrom; 
           from = to;
           station = from;
-	  mData.updateShotLegFlag( blk.mId, mSid, LegType.BACK, DBlock.FLAG_DUPLICATE );
+          long flag = blk.resetFlag( DBlock.FLAG_BACKSHOT ); // BACKSHOT DBlock.FLAG_DUPLICATE
+	  mData.updateShotLegFlag( blk.mId, mSid, LegType.BACK, flag );
         } else {  // forward
           if ( increment ) {
             from = to;
@@ -149,6 +151,10 @@ class StationNameBacksight extends StationName
     // TDLog.v( "FROM " + from + " TO " + to + " STATION " + station );
 
     for ( DBlock blk : list ) {
+      if ( blk.isSecLeg() && prev != null && ! prev.isSplay() ) { // 20250719 new test
+        // TDLog.v("20250719 skip block marked sec-leg: " + blk.mId + " prev " + ( prev==null? "null" : prev.mId ) );
+        continue; 
+      }
       if ( blk.mFrom.length() == 0 ) {
         if ( blk.mTo.length() == 0 ) {
           if ( prev == null ) { // blk is (possibly) splay
@@ -176,7 +182,8 @@ class StationNameBacksight extends StationName
                   prev_to = oldFrom;   // 1
                   station = from;
 	          // TDLog.v( "set " + prev.mId + " back leg and dup ");
-	          mData.updateShotLegFlag( prev.mId, mSid, LegType.BACK, DBlock.FLAG_DUPLICATE );
+                  long flag = blk.resetFlag( DBlock.FLAG_BACKSHOT ); // BACKSHOT DBlock.FLAG_DUPLICATE
+	          mData.updateShotLegFlag( prev.mId, mSid, LegType.BACK, flag );
                 } else {               // 2 backsight forward shot from--to
                   // prev_to = to;     // 3
                   oldFrom = from;      // 2

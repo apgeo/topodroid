@@ -23,6 +23,9 @@ import android.content.BroadcastReceiver;
 
 import android.bluetooth.BluetoothDevice;
 
+// FIXME DROP_PAIRING
+// class PairingRequest { }
+//
 public class PairingRequest extends BroadcastReceiver
 {
 

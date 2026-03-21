@@ -31,6 +31,8 @@ import java.time.DateTimeException; // API-26
 
 // import android.content.Context;
 
+import android.widget.EditText;
+
 public class TDUtil
 {
   public static final long ZERO = 32768;
@@ -119,36 +121,36 @@ public class TDUtil
     }
   }
 
+  /** @return the inpuy string with special characters replaced
+   *          N.B. empty string is ok
+   * @param s input string
+   */
   public static String toStationFromName( String s )
   {
     if ( s == null ) return null;
-    return s.replaceAll("\\s+", "_").replaceAll("/", "-").replaceAll("\\*", "+").replaceAll("\\\\", "").replaceAll(":","-");
+    s = TDString.replaceSpecials( s );
+    // TDLog.v("From station <" + s + ">");
+    return s;
   }
 
+  /** @return the inpuy string with special characters replaced
+   *          if the string becomes "." or "-" return the empty string
+   * @param s input string
+   */
   public static String toStationToName( String s )
   {
     if ( s == null ) return null;
-    s = s.replaceAll("\\s+", "_").replaceAll("/", "-").replaceAll("\\*", "+").replaceAll("\\\\", "").replaceAll(":","-");
+    s = TDString.replaceSpecials( s );
+    // TDLog.v("To station <" + s + ">");
     if ( s.equals(".") || s.equals("-") ) return "";
     return s;
   }
 
   public static boolean isStationName( String s )
   {
-    if ( s == null || s.length() == 0 ) return true;
+    if ( TDString.isNullOrEmpty( s ) ) return true;
     int ch = s.codePointAt( s.length() - 1);
-    return ( Character.isAlphabetic( ch ) || Character.isDigit( ch ) || ch == '.' || ch == '@' );
-  }
-
-  public static String noSpaces( String s )
-  {
-    return ( s == null )? null 
-      : s.trim().replaceAll("\\s+", "_").replaceAll("/", "-").replaceAll("\\*", "+").replaceAll("\\\\", "").replaceAll(":","-");
-  }
-
-  public static String dropSpaces( String s )
-  {
-    return ( s == null )? null : TDString.noSpace( s.trim() );
+    return ( Character.isAlphabetic( ch ) || Character.isDigit( ch ) || ch == '.' || ch == '@' || ch == '-' || ch == '_' );
   }
 
   // sort strings by name (alphabetical order)
@@ -164,6 +166,32 @@ public class TDUtil
   }
 
   // DATE and TIME -------------------------------------------------------------
+
+  // /** @return the current time [milliseconds after the epoch]
+  //  */
+  // public static long getMillis()
+  // {
+  //   Date date = new Date();
+  //   return date.getTime();
+  // }
+
+  /** @return the current time [seconds after the epoch]
+   */
+  public static long getSeconds()
+  {
+    Date date = new Date();
+    return date.getTime() / 1000L; // round down
+  }
+
+  /** @return a date string in TopoDroid date format yyyy.mm.dd
+   * @param s  input date string 
+   * The input date string can use either space, slash, colon, or dash in place of dot
+   */
+  public static String stringToDate( String s )
+  {
+    return ( s == null )? null 
+      :  s.trim().replaceAll("\\s+", ".").replaceAll("-", ".").replaceAll("/", ".").replaceAll(":",".");
+  }
 
   /** @return the current (today) date - format "yyyy.mm.dd"
    * @note month mm ranges from 01 to 12
@@ -363,7 +391,7 @@ public class TDUtil
     return date.substring(6,10) + "." + date.substring(3,5) + "." + date.substring(0,2);
   }
 
-  /** @return the time in seconds since the age
+  /** @return the time in milli-seconds since the epoch
    */
   public static long time()
   {
@@ -377,6 +405,25 @@ public class TDUtil
     return System.currentTimeMillis() / 1000L;
   }
 
+  /** @return the topodroid timestamp (sec) from a date
+   * @param date   topodroid date YYYY.MM.DD
+   */
+  public static long dateToTimestamp( String date )
+  {
+    try {
+      int year = Integer.parseInt( date.substring(0,4) );
+      int month = Integer.parseInt( date. substring(6,7) );
+      if ( date.charAt(5) == '1' ) month += 10;
+      int day = ( date.charAt(8) == '0' )? Integer.parseInt( date.substring(9,10) ) : Integer.parseInt( date.substring(8,10) );
+      TDLog.v("Date to seconds: " + year + " " + month + " " + day );
+      GregorianCalendar cal = new GregorianCalendar( year, month-1, day );
+      return cal.getTimeInMillis() / 1000L;
+    } catch ( NumberFormatException e ) {
+      // ???
+    }
+    return 0;
+  }
+
   /** @return the date from the millis
    * @param millis    millis
    */
@@ -384,6 +431,17 @@ public class TDUtil
   {
     GregorianCalendar calendar = new GregorianCalendar();
     calendar.setTimeInMillis( millis );
+    return String.format(Locale.US, "%04d-%02d-%02d", calendar.get( Calendar.YEAR ), 1+calendar.get( Calendar.MONTH ), calendar.get( Calendar.DAY_OF_MONTH ) );
+  }
+
+  /** @return the date from a timestamp [seconds]
+   * @param time  timestamp [s]
+   * @note almost same as millisToDate
+   */
+  public static String timestampToDate( long time )
+  {
+    GregorianCalendar calendar = new GregorianCalendar();
+    calendar.setTimeInMillis( time * 1000L );
     return String.format(Locale.US, "%04d-%02d-%02d", calendar.get( Calendar.YEAR ), 1+calendar.get( Calendar.MONTH ), calendar.get( Calendar.DAY_OF_MONTH ) );
   }
 
@@ -396,16 +454,6 @@ public class TDUtil
     calendar.setTimeInMillis( time * 1000L );
     return String.format(Locale.US, "%04d-%02d-%02d %02d:%02d:%02d", calendar.get( Calendar.YEAR ), 1+calendar.get( Calendar.MONTH ), calendar.get( Calendar.DAY_OF_MONTH ),
       calendar.get( Calendar.HOUR_OF_DAY ), calendar.get( Calendar.MINUTE ), (int)(calendar.get( Calendar.SECOND )) );
-  }
-
-  /** @return the date from a timestamp
-   * @param time  timestamp [s]
-   */
-  public static String timestampToDate( long time )
-  {
-    GregorianCalendar calendar = new GregorianCalendar();
-    calendar.setTimeInMillis( time * 1000L );
-    return String.format(Locale.US, "%04d-%02d-%02d", calendar.get( Calendar.YEAR ), 1+calendar.get( Calendar.MONTH ), calendar.get( Calendar.DAY_OF_MONTH ) );
   }
 
   /** @return the current year
@@ -522,6 +570,25 @@ public class TDUtil
   public static int randomPastel()
   {
     return PASTEL[ mRandom.nextInt( 12 ) ];
+  }
+
+  // EDITTEXT ------------------------------------------
+
+  /** @return the content of the edittext or empty string
+   * @oaram et   edittext
+   */
+  public static String getTextOrEmpty( EditText et )
+  {
+    return ( et.getText() == null )? "" : et.getText().toString().trim();
+  }
+
+  /** @return the content of the edittext or null if empty
+   * @oaram et   edittext
+   */
+  public static String getTextOrNull(  EditText et )
+  {
+    String ret = ( et.getText() == null )? null : et.getText().toString().trim();
+    return ( TDString.isNullOrEmpty( ret ) )? null : ret;
   }
 
 

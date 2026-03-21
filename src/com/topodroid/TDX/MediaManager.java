@@ -29,12 +29,13 @@ class MediaManager
 
   private long    mPhotoId = -1;
   private long    mAudioId = 0;  // audio-negative id
+  private String  mTitle;        // photo title
   private String  mComment;
   private String  mCode;
   private float   mSize = 1;     // photo size (horizontal width) [m]
   private int     mCamera = PhotoInfo.CAMERA_UNDEFINED;
-  private long    mItemId;   // photo/sensor reference item ID: shot ID or plot ID
-  private long    mItemType; // reference item type
+  private long    mItemId;  // photo/sensor reference item ID: shot ID or plot ID
+  private int     mRefType; // reference item type
   // private File    mImageFile;
   // private File    mAudioFile;
   private String  mImageFilepath;
@@ -55,18 +56,20 @@ class MediaManager
    * @param camera   camera type
    * @param code     geomorphology code
    * @param rettype  reference item type
+   * @note called by ShotWindow and DrawingWindow
    */
-  long prepareNextPhoto( long item_id, String comment, float size, int camera, String code, long reftype )
+  long prepareNextPhoto( long item_id, String title, String comment, float size, int camera, String code, int reftype )
   {
     mItemId   = item_id;
-    mItemType = reftype;
+    mRefType  = reftype;
+    mTitle    = title;
     mComment  = comment;
     mCode     = code;
     mSize     = size;
     mCamera   = camera;
     mPhotoId  = mData.nextPhotoId( TDInstance.sid );
-    TDLog.v("Media Manager prepare photo id " + mPhotoId );
     mImageFilepath = TDPath.getSurveyJpgFile( TDInstance.survey, Long.toString(mPhotoId) ); // photo file is "survey/id.jpg"
+    TDLog.v("Media Manager prepare photo id " + mPhotoId );
     // mImageFile = TDFile.getTopoDroidFile( mImageFilepath );
     return mPhotoId;
   }
@@ -77,14 +80,15 @@ class MediaManager
    * @param reftype    reference item type (always TYPE_PLOT)
    * @note this is used only be DrawingWindow which calls it with item_id = pid
    */
-  long prepareNextAudio( long item_id, String comment, long reftype )
+  long prepareNextAudio( long item_id, String comment, int reftype )
   {
     mItemId   = item_id;
-    mItemType = reftype;
+    mRefType  = reftype;
+    mTitle    = null;
     mComment  = comment;
     mCode     = null;
-    mAudioId  = mData.nextAudioId( TDInstance.sid ); // , mItemId, mItemType );
-    String audio_name = MediaInfo.getMediaName( mAudioId, (int)mItemType );
+    mAudioId  = mData.nextAudioId( TDInstance.sid ); // , mItemId, mRefType  );
+    String audio_name = MediaInfo.getMediaName( mAudioId, mRefType  );
     mAudioFilepath = TDPath.getSurveyWavFile( TDInstance.survey, audio_name ); // audio file is "survey/idX.wav"
     // mAudioFile = TDFile.getTopoDroidFile( mAudioFilepath );
     return mAudioId;
@@ -107,10 +111,10 @@ class MediaManager
    * @param id    item ID
    * @param reftype reference item type
    */
-  void setReferenceItem( long id, long reftype )
+  void setReferenceItem( long id, int reftype )
   {
-    mItemId   = id;
-    mItemType = reftype;
+    mItemId  = id;
+    mRefType = reftype;
   }
 
   /** @return reference item ID
@@ -119,7 +123,11 @@ class MediaManager
 
   /** @return the reference item type, either TYPE_SHOT or TYPE_PLOT
    */
-  long getItemType() { return mItemType; }
+  int getRefType() { return mRefType ; }
+
+  /** @return media title
+   */
+  String getTitle() { return mTitle; }
 
   /** @return media comment
    */
@@ -130,25 +138,25 @@ class MediaManager
    */
   void setComment( String comment ) { mComment = comment; }
 
-  /** @return media geomorphology code
+  /** @return current media geomorphology code
    */
   String getCode() { return mCode; }
 
-  /** @return photo size (horizontal width) [m]
+  /** @return current photo size (horizontal width) [m]
    */
   float getPhotoSize() { return mSize; }
 
-  /** @return photo ID
+  /** @return current photo ID
    */
   long getPhotoId() { return mPhotoId; }
 
-  /** @return audio ID
+  /** @return current audio ID
    */
   long getAudioId() { return mAudioId; }
 
   // File getImageFile() { return mImageFile; }
 
-  /** @return the photo file full path
+  /** @return the current photo file full path
    */
   String getImageFilepath() { return mImageFilepath; } 
 
@@ -194,8 +202,9 @@ class MediaManager
   //   return ret;
   // }
 
-  // void insertPhoto()
+  // boolean insertPhoto()
   // {
+  //   return false;
   // }
 
 }

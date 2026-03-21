@@ -41,12 +41,20 @@ import android.graphics.Matrix;
 
 public class SymbolPoint extends Symbol
 {
+  static final private float SVG_M_OFF   = 10;
+  static final private float SVG_M_SCALE = 2;
+  static final public  int    SVG_M_SIDE = 40;           // marker side
+  static final public  int    SVG_M_REF  = 20;           // marker reference point (X or Y)
+  static final public  String SVG_M_VBOX = "0 0 40 40";  // marker viewBox
+ 
   static final private float dxfScale = 0.05f; // 1 / 20 TopoDroid has 20 units = 1 m
   static final private float csxScale = 5.00f;
   static final private float csxdxfScale = csxScale * dxfScale;
   Paint  mPaint;
   Path   mPath;
-  Path   mOrigPath; // PRIVATE
+  // private Path   mOrigPath;
+  private String mPathStr = null;
+  // private Path   mScaledPath;
   String mName;
   private SymbolPointDxf mDxf;
   private String mSvg;
@@ -118,12 +126,30 @@ public class SymbolPoint extends Symbol
   @Override public Path getPath( ) { return mPath; }
 
   /** @return the point original path
+   * @NOTE origPath could be stored with the path is computed
+   * @NOTE used by SimbolPointLibrary to get the original path before therion scale is applied
    */
-  Path getOrigPath( ) { return mOrigPath; }
+  Path getOrigPath( )
+  {
+    return makeScaledPath( mPathStr, TDSetting.mUnitIcons );
+  }
+
+  /** @return the point scaled path
+   * @NOTE used for symbol tollbar, picker, enabler 
+   * scaledPath could be precomputed, if recomputed every time symbolSize setting changes
+   */
+  public Path getScaledPath()
+  {
+    return makeScaledPath( mPathStr, TDSetting.mSymbolSize );
+  }
  
   /** @return the point paint
    */
   @Override public Paint getPaint( ) { return mPaint; }
+
+  // /** @return the point color - default to black = use Symbol::getColor
+  //  */
+  // @Override public int getColor() { return (mPaint == null)? 0 : mPaint.getColor(); }
 
   /** cstr
    * @param pathname file path
@@ -157,8 +183,10 @@ public class SymbolPoint extends Symbol
     mName  = n1;
     mDxf   = null;
     mPaint = makePaint( c1, Paint.Style.STROKE ); // FIXME style
-    makePointPath( path );
-    mOrigPath = new Path( mPath );
+    makePointPath( path, TDSetting.mUnitIcons );
+    // mOrigPath = new Path( mPath );
+    mPathStr  = path;
+    // mScaledPath = makeScaledPath( path, TDSetting.mSymbolSize );
     
     mOrientable  = orientable;
     mHasText     = 0;
@@ -185,8 +213,10 @@ public class SymbolPoint extends Symbol
     mName  = n1;
     mDxf   = null;
     mPaint = makePaint( c1, Paint.Style.STROKE ); //FIXME style
-    makePointPath( path );
-    mOrigPath = new Path( mPath );
+    makePointPath( path, TDSetting.mUnitIcons );
+    // mOrigPath = new Path( mPath );
+    mPathStr  = path;
+    // mScaledPath = makeScaledPath( path, TDSetting.mSymbolSize );
 
     mOrientable  = orientable;
     mHasText     = has_text;
@@ -400,8 +430,10 @@ public class SymbolPoint extends Symbol
                   setThName( th_name ); // this sets prefix (if necessary) and name
                   mGroup  = group;
                   mPaint  = makePaint( color, style );
-                  makePointPath( path );
-                  mOrigPath = new Path( mPath );
+                  makePointPath( path, TDSetting.mUnitIcons );
+                  // mOrigPath = new Path( mPath );
+                  mPathStr  = path;
+                  // mScaledPath = makeScaledPath( path, TDSetting.mSymbolSize );
                   mDefaultOptions = options;
                   // TDLog.v("POINT " + "Name " + mName + " ThName " + getThName() );
                   // mPoint1 = new SymbolPointBasic( name, th_name, null, fname, color, path );
@@ -453,7 +485,7 @@ public class SymbolPoint extends Symbol
    *     - "addCircle X Y R"
    *     - "arcTo X1 Y1 X2 Y2 A0 DA"
    */
-  private void makePointPath( String path )
+  private void makePointPath( String path, float unit )
   {
     String p_name = TDSetting.mAcadLayer ? "0" : "P_" + getThName().replace(':', '-'); // "0" = block // HBX
     int i_color = DxfColor.rgbToIndex( getColor() ); // HBX
@@ -480,7 +512,6 @@ public class SymbolPoint extends Symbol
 
     float x00=0, y00=0;  // last drawn point1
 
-    float unit = TDSetting.mUnitIcons;
     mPath = new Path();
     String[] vals = path.split(" ");
     int s = vals.length;
@@ -497,7 +528,7 @@ public class SymbolPoint extends Symbol
             x00 = x0 * dxfScale;
             y00 = y0 * dxfScale;
 
-            pv1.format(Locale.US, "M %.2f %.2f ", x00*csxScale, y00*csxScale );
+            pv1.format(Locale.US, "M %.2f %.2f ", (x00*csxScale+SVG_M_OFF)*SVG_M_SCALE, (y00*csxScale+SVG_M_OFF)*SVG_M_SCALE );
           }
         } catch ( NumberFormatException e ) {
           TDLog.e( path + " parse moveTo error" );
@@ -520,7 +551,7 @@ public class SymbolPoint extends Symbol
             x00 = x01;
             y00 = y01;
             
-            pv1.format(Locale.US, "L %.2f %.2f ", x00*csxScale, y00*csxScale );
+            pv1.format(Locale.US, "L %.2f %.2f ", (x00*csxScale+SVG_M_OFF)*SVG_M_SCALE, (y00*csxScale+SVG_M_OFF)*SVG_M_SCALE );
           }
         } catch ( NumberFormatException e ) {
           TDLog.e( path + " parse lineTo error" );
@@ -606,7 +637,9 @@ public class SymbolPoint extends Symbol
             y00 = y2 * dxfScale;
 
             pv1.format(Locale.US, "C %.2f %.2f %.2f %.2f %.2f %.2f ",
-               x0*csxdxfScale, y0*csxdxfScale, x1*csxdxfScale, y1*csxdxfScale, x2*csxdxfScale, y2*csxdxfScale );
+               (x0*csxdxfScale+SVG_M_OFF)*SVG_M_SCALE, (y0*csxdxfScale+SVG_M_OFF)*SVG_M_SCALE, 
+               (x1*csxdxfScale+SVG_M_OFF)*SVG_M_SCALE, (y1*csxdxfScale+SVG_M_OFF)*SVG_M_SCALE,
+               (x2*csxdxfScale+SVG_M_OFF)*SVG_M_SCALE, (y2*csxdxfScale+SVG_M_OFF)*SVG_M_SCALE );
           }
         } catch ( NumberFormatException e ) {
           TDLog.e( path + " parse cubicTo error" );
@@ -634,7 +667,7 @@ public class SymbolPoint extends Symbol
             //   x0*csxdxfScale, y0*csxdxfScale, x1*csxdxfScale );
             pv3.format(Locale.US,
               "<circle cx=\"%.2f\" cy=\"%.2f\" r=\"%.2f\" />",
-              x0*csxdxfScale, y0*csxdxfScale, x1*csxdxfScale );
+              (x0*csxdxfScale+SVG_M_OFF)*SVG_M_SCALE, (y0*csxdxfScale+SVG_M_OFF)*SVG_M_SCALE, x1*csxdxfScale*SVG_M_SCALE );
           }
         } catch ( NumberFormatException e ) {
           TDLog.e( path + " parse circle error" );
@@ -684,16 +717,123 @@ public class SymbolPoint extends Symbol
             y00 = (cy + ry * TDMath.sind( x2+y2 ) )* dxfScale;
             
             // mode to (x00, y00)
-            pv1.format(Locale.US, "M %.2f %.2f ", x0i*csxScale, y0i*csxScale );
-            pv1.format(Locale.US, "A %.2f %.2f 0 1 %.2f %.2f ", rx*csxdxfScale, ry*csxdxfScale, x00*csxScale, y00*csxScale );
+            pv1.format(Locale.US, "M %.2f %.2f ", (x0i*csxScale+SVG_M_OFF)*SVG_M_SCALE, (y0i*csxScale+SVG_M_OFF)*SVG_M_SCALE );
+            pv1.format(Locale.US, "A %.2f %.2f 0 1 %.2f %.2f ", 
+              (rx*csxdxfScale+SVG_M_OFF)*SVG_M_SCALE, (ry*csxdxfScale+SVG_M_OFF)*SVG_M_SCALE, (x00*csxScale+SVG_M_OFF)*SVG_M_SCALE, (y00*csxScale+SVG_M_OFF)*SVG_M_SCALE );
           }
         } catch ( NumberFormatException e ) {
           TDLog.e( path + " parse arcTo error" );
         }
       }
     }
-    mSvg = "<path d=\"" + sv1.getBuffer().toString() + "\"/> " + sv3.getBuffer().toString();
+    mSvg = "<path d=\"" + sv1.getBuffer().toString() + "\" />" + sv3.getBuffer().toString();
     mXvi = sv4.getBuffer().toString();
+  }
+
+  static private Path makeScaledPath( String path, float unit )
+  {
+    Path ret = new Path();
+    String[] vals = path.split(" ");
+    int s = vals.length;
+    for ( int k = 0; k<s; ++k ) {
+      float x0=0, y0=0, x1=0, y1=0, x2=0, y2=0;
+      if ( "moveTo".equals( vals[k] ) ) {
+        try {
+          ++k; while ( k < s && vals[k].length() == 0 ) ++k;
+          if ( k < s ) { x0 = Float.parseFloat( vals[k] ); }
+          ++k; while ( k < s && vals[k].length() == 0 ) ++k;
+          if ( k < s ) {
+            y0 = Float.parseFloat( vals[k] );
+            ret.moveTo( x0*unit, y0*unit );
+          }
+        } catch ( NumberFormatException e ) {
+          TDLog.e( path + " parse moveTo error" );
+        }
+      } else if ( "lineTo".equals( vals[k] ) ) {      
+        try {
+          ++k; while ( k < s && vals[k].length() == 0 ) ++k;
+          if ( k < s ) { x0 = Float.parseFloat( vals[k] ); }
+          ++k; while ( k < s && vals[k].length() == 0 ) ++k;
+          if ( k < s ) { 
+            y0 = Float.parseFloat( vals[k] ); 
+            ret.lineTo( x0*unit, y0*unit );
+          }
+        } catch ( NumberFormatException e ) {
+          TDLog.e( path + " parse lineTo error" );
+        }
+      } else if ( "cubicTo".equals( vals[k] ) ) {
+        // cp1x cp1y cp2x cp2y p2x p2y
+        try {
+          ++k; while ( k < s && vals[k].length() == 0 ) ++k;  // CP1
+          if ( k < s ) { x0 = Float.parseFloat( vals[k] ); }
+          ++k; while ( k < s && vals[k].length() == 0 ) ++k;
+          if ( k < s ) { y0 = Float.parseFloat( vals[k] ); }
+
+          ++k; while ( k < s && vals[k].length() == 0 ) ++k;  // CP2
+          if ( k < s ) { x1 = Float.parseFloat( vals[k] ); }
+          ++k; while ( k < s && vals[k].length() == 0 ) ++k;
+          if ( k < s ) { y1 = Float.parseFloat( vals[k] ); }
+
+          ++k; while ( k < s && vals[k].length() == 0 ) ++k;  // P2
+          if ( k < s ) { x2 = Float.parseFloat( vals[k] ); }
+          ++k; while ( k < s && vals[k].length() == 0 ) ++k;
+          if ( k < s ) { 
+            y2 = Float.parseFloat( vals[k] ); 
+            ret.cubicTo( x0*unit, y0*unit, x1*unit, y1*unit, x2*unit, y2*unit );
+          }
+        } catch ( NumberFormatException e ) {
+          TDLog.e( path + " parse cubicTo error" );
+        }
+      } else if ( "addCircle".equals( vals[k] ) ) {
+        try {
+          ++k; while ( k < s && vals[k].length() == 0 ) ++k;
+          if ( k < s ) { x0 = Float.parseFloat( vals[k] ); }  // center X coord
+          ++k; while ( k < s && vals[k].length() == 0 ) ++k;
+          if ( k < s ) { y0 = Float.parseFloat( vals[k] ); }  // center Y coord
+          ++k; while ( k < s && vals[k].length() == 0 ) ++k;
+          if ( k < s ) {
+            x1 = Float.parseFloat( vals[k] );                 // radius
+            ret.addCircle( x0*unit, y0*unit, x1*unit, Path.Direction.CCW );
+          }
+        } catch ( NumberFormatException e ) {
+          TDLog.e( path + " parse circle error" );
+        }
+      } else if ( "arcTo".equals( vals[k] ) ) {
+        // (x0,y0) top-left corner of rect
+        // (x1,y1) bottom-right corner of rect
+        // x2 start-angle [degrees]
+        // y2 sweep angle (clockwise) [degrees]
+        // 
+        //    (x0,y0) +-----=-----+
+        //            |     |     |
+        //            |=====+=====| 0 angle (?)
+        //            |     |     | | sweep direction
+        //            +-----=-----+ V
+        //
+        try {
+          ++k; while ( k < s && vals[k].length() == 0 ) ++k; // RECTANGLE first endpoint
+          if ( k < s ) { x0 = Float.parseFloat( vals[k] ); }
+          ++k; while ( k < s && vals[k].length() == 0 ) ++k;
+          if ( k < s ) { y0 = Float.parseFloat( vals[k] ); }
+
+          ++k; while ( k < s && vals[k].length() == 0 ) ++k; // RECTANGLE second endpoint
+          if ( k < s ) { x1 = Float.parseFloat( vals[k] ); }
+          ++k; while ( k < s && vals[k].length() == 0 ) ++k;
+          if ( k < s ) { y1 = Float.parseFloat( vals[k] ); }
+
+          ++k; while ( k < s && vals[k].length() == 0 ) ++k;  // FROM, TT angles [deg]
+          if ( k < s ) { x2 = Float.parseFloat( vals[k] ); }
+          ++k; while ( k < s && vals[k].length() == 0 ) ++k;
+          if ( k < s ) { 
+            y2 = Float.parseFloat( vals[k] ); 
+            ret.arcTo( new RectF(x0*unit, y0*unit, x1*unit, y1*unit), x2, y2 );
+          }
+        } catch ( NumberFormatException e ) {
+          TDLog.e( path + " parse arcTo error" );
+        }
+      }
+    }
+    return ret;
   }
 
   /** @return a paint

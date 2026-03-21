@@ -12,6 +12,7 @@
 package com.topodroid.ui;
 
 import com.topodroid.help.UserManualActivity;
+import com.topodroid.utils.TDUtil;
 import com.topodroid.TDX.TopoDroidApp;
 import com.topodroid.TDX.R;
 // import com.topodroid.utils.TDLog;
@@ -33,6 +34,7 @@ import android.view.Window;
 import android.view.WindowManager;
 
 import android.widget.LinearLayout;
+import android.widget.EditText;
 import android.widget.Button;
 
 
@@ -53,7 +55,7 @@ public class MyDialog extends Dialog
     mContext = context;
     mApp     = app;
     if ( help_resource != 0 ) {
-      mHelpPage = mContext.getResources().getString( help_resource );
+      mHelpPage = resString( help_resource );
     }
   }
 
@@ -205,5 +207,23 @@ public class MyDialog extends Dialog
    */
   public void doInit( boolean landscape ) { /* nothing */ }
 
+  /** @return a resource string
+   * @param r   resource id
+   */
+  protected String resString( int r ) { return mContext.getResources().getString( r ); }
+
+  /** @return true if two edittetxt contains equal strings
+   * @param e1  first edittext (FROM)
+   * @param e2  second edittext (TO)
+   */
+  protected static boolean sameString( EditText e1, EditText e2 )  // protected should be enough
+  {
+    if ( e1.getText() == null ) return false;
+    String s1 = TDUtil.toStationFromName( e1.getText().toString() );
+    if ( s1.length()== 0 ) return false;
+    if ( e2.getText() == null ) return false;
+    return s1.equals( TDUtil.toStationToName( e2.getText().toString() ) );
+  }
+    
 
 }

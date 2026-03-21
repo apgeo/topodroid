@@ -11,7 +11,7 @@
  */
 package com.topodroid.num;
 
-import com.topodroid.common.PlotType;
+import com.topodroid.types.PlotType;
 
 import java.util.Stack;
 import java.util.List;
@@ -198,6 +198,13 @@ class NumStationSet
       }
     }
     return ret;
+  }
+
+  /** clear the stations barrier/hidden flag
+   */
+  void clearBarrierAndHidden()
+  {
+    for ( NumStation st : mStations ) st.clearBarrierAndHidden();
   }
   
   /** initialize the search of the shortest path

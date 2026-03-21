@@ -20,6 +20,7 @@ import com.topodroid.math.Point2D;
 import com.topodroid.prefs.TDSetting;
 
 import java.util.List;
+import java.util.Set;
 import java.util.ArrayList;
 import java.util.Collections;
 
@@ -783,7 +784,7 @@ public class Scrap
    * @param border  given border
    * @param remove  whether to drop the paths that are inside the border from this scrap
    */
-  List< DrawingPath > splitPlot( ArrayList< PointF > border, boolean remove ) 
+  List< DrawingPath > splitPaths( ArrayList< PointF > border, boolean remove ) 
   {
     ArrayList< DrawingPath > paths = new ArrayList<>();
     synchronized( TDPath.mCommandsLock ) {
@@ -897,9 +898,12 @@ public class Scrap
   /** add a drawing special item 
    * @param path    drawing special item
    */
-  void addSpecialCommand( DrawingPath path ) 
+  void addSpecialCommand( DrawingSpecialPath path ) 
   {
-    if ( mCurrentStack.size() > 0 ) return;
+    if ( mCurrentStack.size() > 0 ) {
+      // TDLog.v("stack not empty " + mCurrentStack.size() + " dot " +  path.isSpecialType( DrawingSpecialPath.SPECIAL_DOT ));
+      if ( ! path.isSpecialType( DrawingSpecialPath.SPECIAL_DOT ) ) return;
+    }
     mRedoStack.clear(); 
     synchronized( TDPath.mCommandsLock ) {
       mCurrentStack.add( path );
@@ -922,6 +926,7 @@ public class Scrap
       synchronized( TDPath.mCommandsLock ) {
         for ( ICanvasCommand cmd : mCurrentStack ) {
           cmd.computeBounds( b, true );
+          // TDLog.v("command bounds X " + b.left + " " + b.right + " Y " + b.top + " " + b.bottom );
           // bounds.union( b );
           union( bounds, b );
         }
@@ -1870,21 +1875,22 @@ public class Scrap
     }
   }
 
-  void scaleDrawing( float z, Matrix m )
-  {
-    if ( mCurrentStack != null ){
-      synchronized( TDPath.mCommandsLock ) {
-        for ( ICanvasCommand cmd : mCurrentStack ) {
-          cmd.scalePathBy( z, m );
-        }
-      }
-    }
-    if ( mSelection != null ) {
-      synchronized( TDPath.mSelectionLock ) {
-        mSelection.scaleSelectionBy( z, m );
-      }
-    }
-  }
+  // NOT USED
+  // void scaleDrawing( float z, Matrix m )
+  // {
+  //   if ( mCurrentStack != null ){
+  //     synchronized( TDPath.mCommandsLock ) {
+  //       for ( ICanvasCommand cmd : mCurrentStack ) {
+  //         cmd.scalePathBy( z, m );
+  //       }
+  //     }
+  //   }
+  //   if ( mSelection != null ) {
+  //     synchronized( TDPath.mSelectionLock ) {
+  //       mSelection.scaleSelectionBy( z, m );
+  //     }
+  //   }
+  // }
 
   void affineTransformDrawing( float[] mm, Matrix m )
   {
@@ -2766,7 +2772,7 @@ public class Scrap
           // get the line/station
           String scrap = TDUtil.replacePrefix( TDInstance.survey, p.getOption( TDString.OPTION_SCRAP ) );
           if ( scrap != null ) {
-            // TDLog.v( "link xsection: point scrap " + scrap );
+            TDLog.v( "link xsection: point scrap " + scrap );
             int pos = scrap.lastIndexOf( "-xx" );
             if ( pos > 0 ) {
               String id = scrap.substring(pos+1); // line id
@@ -3572,7 +3578,7 @@ public class Scrap
     for ( ICanvasCommand cmd : mCurrentStack ) {
       if ( cmd instanceof DrawingSpecialPath ) {
         DrawingSpecialPath special = (DrawingSpecialPath)cmd;
-        if ( special.isType( type ) ) return special;
+        if ( special.isSpecialType( type ) ) return special;
       }
     }
     return null;
@@ -3593,6 +3599,83 @@ public class Scrap
         if ( BrushManager.isPointSection( point.mPointType ) ) point.shiftBy( x, y );
       }
     }
+  }
+
+  /** add the point symbols of this scrap to the set
+   * @param set   set of point symbols (no duplicate)
+   */
+  void getPointSymbols( Set<SymbolPoint> set )
+  {
+    for ( ICanvasCommand cmd : mCurrentStack ) {
+      if ( cmd instanceof DrawingPointPath ) {
+        DrawingPointPath point = (DrawingPointPath)cmd;
+        if ( BrushManager.isPointLabel( point.mPointType ) ) continue;
+        if ( BrushManager.isPointSection( point.mPointType ) ) continue;
+        if ( BrushManager.isPointPicture( point.mPointType ) ) continue;
+        // if ( BrushManager.isPointMedia( point.mPointType ) ) continue;
+        SymbolPoint pt = BrushManager.getPointByIndex( point.mPointType );
+        set.add( pt );
+      }
+    }
+  }
+
+  /** add the line symbols of this scrap to the set
+   * @param set   set of line symbols (no duplicate)
+   */
+  void getLineSymbols( Set<SymbolLine> set )
+  {
+    for ( ICanvasCommand cmd : mCurrentStack ) {
+      if ( cmd instanceof DrawingLinePath ) {
+        DrawingLinePath line = (DrawingLinePath)cmd;
+        // if ( BrushManager.isLineSection( line.mLineType ) ) continue;
+        SymbolLine ln = BrushManager.getLineByIndex( line.mLineType );
+        set.add( ln );
+      }
+    }
+  }
+
+  /** add the area symbols of this scrap to the set
+   * @param set   set of area symbols (no duplicate)
+   */
+  void getAreaSymbols( Set<SymbolArea> set )
+  {
+    for ( ICanvasCommand cmd : mCurrentStack ) {
+      if ( cmd instanceof DrawingAreaPath ) {
+        DrawingAreaPath area = (DrawingAreaPath)cmd;
+        // if ( BrushManager.isAreaXXX( area.mAreaType ) ) continue;
+        SymbolArea ar = BrushManager.getAreaByIndex( area.mAreaType );
+        set.add( ar );
+      }
+    }
+  }
+
+  /** add section points to the list
+   * @param ret   list of section points (to be filled)
+   */
+  void addSectionPoints( List< DrawingPointPath > ret )
+  {
+    for ( ICanvasCommand cmd : mCurrentStack ) {
+      if ( cmd instanceof DrawingPointPath ) {
+        DrawingPointPath path = (DrawingPointPath)cmd;
+        if ( BrushManager.isPointSection( path.mPointType )  ) ret.add( path );
+      }
+    }
+  }
+
+  /** @return the section point of a given x-section, or null if not found
+   * @param scrap_name    X-section fullname
+   */
+  DrawingPointPath findSectionPoint( String scrap_name )
+  {
+    for ( ICanvasCommand cmd : mCurrentStack ) {
+      if ( cmd instanceof DrawingPointPath ) {
+        DrawingPointPath path = (DrawingPointPath)cmd;
+        if ( BrushManager.isPointSection( path.mPointType )  ) {
+          if ( scrap_name.equals( path.getOption( TDString.OPTION_SCRAP ) ) ) return path;
+        }
+      }
+    }
+    return null;
   }
 
 }

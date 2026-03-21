@@ -30,6 +30,7 @@ import com.topodroid.c3walls.cw.CWBorder;
 import com.topodroid.c3walls.cw.CWConvexHull;
 import com.topodroid.c3walls.cw.ConvexHullComputer;
 import com.topodroid.c3walls.pcrust.PowercrustComputer;
+import com.topodroid.dem.DEMsurface;
 
 // import java.io.File;
 import java.io.IOException;
@@ -173,7 +174,7 @@ public class TglParser
   // TODO VECTOR
   protected double x0, y0, z0;       // model center coords (remain fixed)
 
-  public double emin, emax, nmin, nmax, zmin, zmax; // survey bounds
+  public double emin, emax, nmin, nmax, zmin, zmax; // survey bounds [m]
 
   // ------------------------- LINE UTIL
   static Pattern pattern = Pattern.compile( "\\s+" );
@@ -542,7 +543,8 @@ public class TglParser
         if ( reverse ) {
           double b = shot.ber + Math.PI;
           if ( b > 2*Math.PI ) b -= 2*Math.PI;
-          ret.add( new Cave3DShot( station, shot.from_station, shot.len, b, -shot.cln, shot.mFlag, shot.mMillis, mColor) );
+          // N.B. no cavway bits
+          ret.add( new Cave3DShot( station, shot.from_station, shot.len, b, -shot.cln, shot.getFlag(), shot.mMillis, mColor) );
         } else {
           ret.add( shot );
         }
@@ -570,14 +572,16 @@ public class TglParser
           // TDLog.v( "add other shot " + shot.to + "-" + shot.from );
           double b = shot.ber + Math.PI;
           if ( b > 2*Math.PI ) b -= 2*Math.PI;
-          ret.add( new Cave3DShot( null, station, shot.len, b, -shot.cln, shot.mFlag, shot.mMillis, mColor) ); // stations not important
+          // N.B. no cavway bits
+          ret.add( new Cave3DShot( null, station, shot.len, b, -shot.cln, shot.getFlag(), shot.mMillis, mColor) ); // stations not important
         }
       } else if ( shot.to_station == station ) {
         if ( shot.from_station == other ) {
           // TDLog.v( "add reversed shot " + shot.to + "-" + shot.from );
           double b = shot.ber + Math.PI;
           if ( b > 2*Math.PI ) b -= 2*Math.PI;
-          ret.add( new Cave3DShot( null, station, shot.len, b, -shot.cln, shot.mFlag, shot.mMillis, mColor) ); // stations not important
+          // N.B. no cavway bits
+          ret.add( new Cave3DShot( null, station, shot.len, b, -shot.cln, shot.getFlag(), shot.mMillis, mColor) ); // stations not important
         } else {
           // TDLog.v( "add other shot " + shot.from + "-" + shot.to );
           ret.add( shot );
@@ -603,7 +607,8 @@ public class TglParser
           // TDLog.v( "add reversed shot " + shot.to + "-" + shot.from );
           double b = shot.ber + Math.PI;
           if ( b > 2*Math.PI ) b -= 2*Math.PI;
-          ret.add( new Cave3DShot( null, station, shot.len, b, -shot.cln, shot.mFlag, shot.mMillis, mColor) ); // stations not important
+          // N.B. no cavway bits
+          ret.add( new Cave3DShot( null, station, shot.len, b, -shot.cln, shot.getFlag(), shot.mMillis, mColor) ); // stations not important
         } 
       }
     }
@@ -625,7 +630,8 @@ public class TglParser
         } else if ( shot.to_station == station ) {
           double b = shot.ber + Math.PI;
           if ( b > 2*Math.PI ) b -= 2*Math.PI;
-          ret.add( new Cave3DShot( station, null, shot.len, b, -shot.cln, shot.mFlag, shot.mMillis, mColor ) ); // stations not important
+          // N.B. no cavway bits
+          ret.add( new Cave3DShot( station, null, shot.len, b, -shot.cln, shot.getFlag(), shot.mMillis, mColor ) ); // stations not important
         }
       }
     }

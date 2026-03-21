@@ -15,7 +15,8 @@ import com.topodroid.utils.TDLog;
 import com.topodroid.utils.TDStatus;
 import com.topodroid.utils.TDUtil;
 import com.topodroid.ui.MyDialog;
-import com.topodroid.common.PlotType;
+// import com.topodroid.ui.ListItemAdapter;
+import com.topodroid.types.PlotType;
 
 import java.util.List;
 // import java.util.ArrayList;
@@ -144,7 +145,7 @@ class PlotListDialog extends MyDialog
       }
       // mList.setAdapter( mArrayAdapter );
       mArrayAdapter.clear();
-      // mArrayAdapter.add( res.getString(R.string.back_to_survey) );
+      // mArrayAdapter.add( resString(R.string.back_to_survey) );
       mPlots = 0;
       for ( PlotInfo item : list ) {
         // if ( item.type == PlotType.PLOT_PLAN /* || item.type == PlotType.PLOT_EXTENDED */ ) 
@@ -178,6 +179,10 @@ class PlotListDialog extends MyDialog
     // TDLog.Log(  TDLog.LOG_INPUT, "PlotListDialog onClick() " );
     Button b = (Button) v;
     if ( b == mBtnPlotNew ) {
+      if ( ! TDInstance.isSurveyMutable ) { // IMMUTABLE
+        TDToast.makeWarn("Immutable survey");
+        return;
+      }
       hide();
       if ( mParent != null ) {
         int idx = 1 + TopoDroidApp.mData.maxPlotIndex( TDInstance.sid );

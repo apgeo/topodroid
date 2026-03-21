@@ -11,6 +11,9 @@
  */
 package com.topodroid.TDX;
 
+import com.topodroid.utils.TDColor;
+import com.topodroid.dev.cavway.CavwayConst;
+
 public class TglColor
 {
   float[] color;
@@ -120,6 +123,32 @@ public class TglColor
     color[2] = (float)( (col    )&0xff )/255.0f;
   }
 
+  static boolean flagToSplayColor( int flag, float[] color )
+  {
+    if ( flag == 0 ) return false;
+    int col = 0xffffffff;
+    switch ( flag ) {
+      case CavwayConst.FLAG_FEATURE: 
+        col = TDColor.SPLAY_FEATURE;
+        break;
+      case CavwayConst.FLAG_RIDGE:
+        col = TDColor.SPLAY_RIDGE;
+        break;
+      case CavwayConst.FLAG_BACKSIGHT:
+        col = TDColor.SPLAY_BACKSIGHT;
+        break;
+      case CavwayConst.FLAG_GENERIC:
+        col = TDColor.SPLAY_GENERIC;
+        break;
+      default:
+        return false;
+    }
+    color[0] = (float)( (col>>16)&0xff )/255.0f;
+    color[1] = (float)( (col>> 8)&0xff )/255.0f;
+    color[2] = (float)( (col    )&0xff )/255.0f;
+    return true;
+  }
+
   /** fill the RGB color-array with an axis color
    * @param index   axis index
    * @param color   color-array 
@@ -135,9 +164,10 @@ public class TglColor
   // FIXME eventually there will be a color dialog to let user set these ...
   static final float[] ColorStation    = { 0.0f, 0.7f, 0.5f, 1.0f }; // green
   static final float[] ColorLeg        = { 1.0f, 1.0f, 1.0f, 1.0f }; // white
-  static final float[] ColorLegS       = { 0.7f, 1.0f, 0.5f, 1.0f }; // 
-  static final float[] ColorLegD       = { 1.0f, 0.7f, 0.5f, 1.0f }; // 
-  static final float[] ColorLegC       = { 0.3f, 0.7f, 1.0f, 1.0f }; // 
+  static final float[] ColorLegS       = { 0.7f, 1.0f, 0.5f, 1.0f }; // green
+  static final float[] ColorLegD       = { 1.0f, 0.7f, 0.5f, 1.0f }; // red
+  static final float[] ColorLegC       = { 0.3f, 0.7f, 1.0f, 1.0f }; // blue
+  static final float[] ColorLegB       = { 0.8f, 0.9f, 0.3f, 1.0f }; // yellow
   static final float[] ColorSplay      = { 0.7f, 0.7f, 0.7f, 1.0f }; // gray
   static final float[] ColorSurfaceLeg = { 0.0f, 0.3f, 1.0f, 1.0f };
   static final float[] ColorPlan       = { 1.0f, 0.0f, 0.8f, 1.0f }; // violet

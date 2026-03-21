@@ -52,7 +52,7 @@ public class CavwayInfoReadTask extends AsyncTask<Void, Integer, Boolean>
   protected void onPostExecute( Boolean result )
   {
     if ( result ) {
-      mDialog.get().updateHwFw();
+      mDialog.get().updateHwFwSync();
     } else {
       TDToast.makeWarn( R.string.warning_cavway_info );
     }

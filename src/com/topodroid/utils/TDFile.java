@@ -390,7 +390,8 @@ public class TDFile
       // TDLog.v("getCBD " + type + " use private dir ");
       ret = getPrivateDir( type ); // FIXME do i need to create ?
     } else {
-      String documents = ( TDandroid.BELOW_API_19 )? "Documents" : Environment.DIRECTORY_DOCUMENTS;
+      // String documents = ( TDandroid.BELOW_API_19 )? "Documents" : Environment.DIRECTORY_DOCUMENTS;
+      String documents = Environment.DIRECTORY_DOCUMENTS;
       if ( type == null ) {
         ret = new File( Environment.getExternalStoragePublicDirectory( documents ), "TDX" );
       } else {
@@ -697,15 +698,17 @@ public class TDFile
    * @param newname   new pathname
    * @pre oldname exists
    */
-  public static void moveFile( String oldname, String newname )
+  public static boolean moveFile( String oldname, String newname )
   {
     File f1 = getTopoDroidFile( oldname ); // DistoX-SAF
     File f2 = getTopoDroidFile( newname );
     if ( f1.exists() ) {
-      if ( ! f1.renameTo( f2 ) ) TDLog.e("file move: failed " + oldname + " to " + newname );
+      if ( f1.renameTo( f2 ) ) return true;
+      TDLog.e("file move: failed " + oldname + " to " + newname );
     } else {
       TDLog.e("file move: no-exist " + oldname ); // this may be OK
     }
+    return false;
   }
 
   /** creates a "topodroid" folder
@@ -782,7 +785,12 @@ public class TDFile
   { 
     File oldfile = getExternalTempFile( oldname );
     if ( ! oldfile.exists() ) return true;
-    return renameTempFile( oldfile, getTopoDroidFile( newname ) );
+    File newfile = getTopoDroidFile( newname );
+    if ( newfile == null ) {
+      TDLog.e("cnnot create new File for <" + newname + ">" );
+      return false;
+    }
+    return renameTempFile( oldfile, newfile );
   }
   
 

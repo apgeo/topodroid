@@ -17,7 +17,7 @@ import com.topodroid.utils.TDUtil;
 import com.topodroid.math.Point2D;
 import com.topodroid.math.BezierCurve;
 import com.topodroid.prefs.TDSetting;
-// import com.topodroid.common.PlotType;
+// import com.topodroid.types.PlotType;
 import com.topodroid.utils.TDMath;
 import com.topodroid.utils.TDLog;
 import com.topodroid.utils.TDVersion;
@@ -891,8 +891,10 @@ public class DrawingDxf
                   DXF.printString( pw5, 0, "INSERT" );
                   DXF.printString( pw5, 8, layer2 );
                   DXF.printString( pw5, 2, "B_" + th_name );
-                  DXF.printFloat( pw5, 41, point.getScaleValue()*1.4f ); // FIX Asenov
-                  DXF.printFloat( pw5, 42, point.getScaleValue()*1.4f );
+                  //DXF.printFloat( pw5, 41, point.getScaleValue()*1.4f ); // FIX Asenov
+                  //DXF.printFloat( pw5, 42, point.getScaleValue()*1.4f );
+		  DXF.printFloat( pw5, 41, point.getScaleValue()*TDSetting.mUnitIcons); //HBX unit
+                  DXF.printFloat( pw5, 42, point.getScaleValue()*TDSetting.mUnitIcons); //HBX unit
                   DXF.printFloat( pw5, 50, 360.0f-(float)(point.mOrientation) );
                   DXF.printXYZ( pw5, (point.cx+xoff)*scale, -(point.cy+yoff)*scale, z, 0 );
                 }
@@ -1013,8 +1015,10 @@ public class DrawingDxf
             (TDSetting.mAcadLayer?  "SCRAP_" + Integer.toString( scrap ) : "P_"+th_name),
             "AcDbBlockReference" );
     DXF.printString( pw, 2, "B_" + th_name );
-    DXF.printFloat( pw, 41, point.getScaleValue()*1.4f ); // FIX Asenov
-    DXF.printFloat( pw, 42, point.getScaleValue()*1.4f );
+    //DXF.printFloat( pw, 41, point.getScaleValue()*1.4f ); // FIX Asenov
+    //DXF.printFloat( pw, 42, point.getScaleValue()*1.4f );
+    DXF.printFloat( pw, 41, point.getScaleValue()*TDSetting.mUnitIcons); //HBX unit
+    DXF.printFloat( pw, 42, point.getScaleValue()*TDSetting.mUnitIcons); //HBX unit
     DXF.printFloat( pw, 50, 360.0f-(float)(point.mOrientation) );
     DXF.printXYZ( pw, (point.cx+xoff)*scale, -(point.cy+yoff)*scale, z, 0 );
     return handle;
@@ -1204,7 +1208,7 @@ public class DrawingDxf
             break;
           case 'N': // scrap index
             int scrap_index = dis.readInt();
-            TDLog.v( "DXF (tdr to dxf) scrap index " + scrap_index + " scrap flag " + scrap );
+            // TDLog.v( "DXF (tdr to dxf) scrap index " + scrap_index + " scrap flag " + scrap );
             break;
           // case 'G':
           //   path = DrawingFixedName.loadDataStream( version, dis ); // consume DrawingFixedName data

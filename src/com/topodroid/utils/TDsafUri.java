@@ -36,7 +36,7 @@ import android.database.Cursor;
 // import java.io.InputStreamReader;
 // import java.io.BufferedReader;
 // import java.io.OutputStream;
-// import java.io.OutputStreamWriter;
+import java.io.OutputStreamWriter;
 // import java.io.BufferedWriter;
 // import java.io.FileNotFoundException;
 // import java.io.FileFilter;
@@ -46,6 +46,8 @@ import java.io.FileReader;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+
+import java.nio.charset.Charset;
 
 import android.provider.MediaStore;
 // import android.provider.MediaStore.Video;
@@ -113,6 +115,12 @@ public class TDsafUri
     return (pfd == null)? null : new FileWriter( pfd.getFileDescriptor() );
   }
 
+  static public OutputStreamWriter docOutputStreamWriter( ParcelFileDescriptor pfd, Charset cs )
+  {
+    FileOutputStream fos = new FileOutputStream( pfd.getFileDescriptor() );
+    return (pfd == null)? null : new OutputStreamWriter( fos, cs );
+  }
+
   static public FileReader docFileReader( ParcelFileDescriptor pfd )
   {
     return (pfd == null)? null : new FileReader( pfd.getFileDescriptor() );
@@ -139,6 +147,7 @@ public class TDsafUri
     return TDInstance.getContentResolver().getType( uri );
   }
 
+  /* DROPPED 2025-11-26
   // https://stackoverflow.com/questions/36128077/android-opening-a-file-with-action-get-content-results-into-different-uris
   public static String getDocumentPath( Context context, Uri uri )
   {
@@ -151,14 +160,23 @@ public class TDsafUri
           final String[] split = docId.split(":");
           final String type = split[0];
 
-          if ("primary".equalsIgnoreCase(type)) {
+         // if ("primary".equalsIgnoreCase(type)) { // HB map
             return Environment.getExternalStorageDirectory() + "/" + split[1];
-          }
+         // }
           // TODO handle non-primary volumes
         } else if (isDownloadsDocument(uri)) { // DownloadsProvider
           final String id = DocumentsContract.getDocumentId(uri);
-          final Uri contentUri = ContentUris.withAppendedId(Uri.parse("content://downloads/public_downloads"), Long.valueOf(id));
-          return getDataColumn(context, contentUri, null, null);
+          final String[] split = id.split(":");
+          final String type = split[0];
+          if ("msf".equals(type)) { // HB map
+              final Uri contentUri = MediaStore.Files.getContentUri("external");
+              final String selection = "_id=?";
+              final String[] selectionArgs = new String[]{split[1]};
+              return getDataColumn(context, contentUri, selection, selectionArgs);
+          } else {
+              final Uri contentUri = ContentUris.withAppendedId(Uri.parse("content://downloads/public_downloads"), Long.valueOf(id));
+              return getDataColumn(context, contentUri, null, null);
+          }
         } else if (isMediaDocument(uri)) { // MediaProvider
           final String docId = DocumentsContract.getDocumentId(uri);
           final String[] split = docId.split(":");
@@ -170,6 +188,8 @@ public class TDsafUri
             contentUri = MediaStore.Video.Media.EXTERNAL_CONTENT_URI;
           } else if ("audio".equals(type)) {
             contentUri = MediaStore.Audio.Media.EXTERNAL_CONTENT_URI;
+          } else if ("document".equals(type)) { // HB map
+            contentUri = MediaStore.Files.getContentUri("external");
           }
           final String selection = "_id=?";
           final String[] selectionArgs = new String[]{split[1]};
@@ -185,9 +205,6 @@ public class TDsafUri
     }
     return null;
   }
-
-  // ------------------------------------------------------------------------
-  // utils
 
   private static String getDataColumn(Context context, Uri uri, String selection, String[] selectionArgs)
   {
@@ -205,7 +222,15 @@ public class TDsafUri
     }
     return null;
   }
+  */
 
+  // ------------------------------------------------------------------------
+  // utils
+
+  /**
+   * @param uri The Uri to check.
+   * @return Whether the Uri authority is Documents in external storage
+   */
   private static boolean isExternalStorageDocument(Uri uri) {
       return "com.android.externalstorage.documents".equals(uri.getAuthority());
   }

@@ -17,7 +17,7 @@ import com.topodroid.ui.MyKeyboard;
 import com.topodroid.ui.MyColorPicker;
 import com.topodroid.ui.MyDialog;
 import com.topodroid.prefs.TDSetting;
-import com.topodroid.common.LegType;
+import com.topodroid.types.LegType;
 
 // import java.util.regex.Pattern;
 import java.util.List;
@@ -26,7 +26,7 @@ import android.os.Bundle;
 import android.text.InputType;
 
 import android.content.Context;
-import android.inputmethodservice.KeyboardView;
+// import android.inputmethodservice.KeyboardView;
 
 import android.widget.TextView;
 import android.widget.EditText;
@@ -54,9 +54,11 @@ class MultishotDialog extends MyDialog
 
   private EditText mETfrom;
   private EditText mETto;
+  // private EditText mEToffset;
   private TextView mTVstrikeDip;
   
   private Button   mButtonRenumber;
+  private Button   mButtonOffset;
   private Button   mButtonSwap;
   // private Button   mButtonHighlight; FIXME_HIGHLIGHT
   private Button   mButtonColor;
@@ -91,16 +93,19 @@ class MultishotDialog extends MyDialog
 
     mETfrom    = (EditText) findViewById(R.id.shot_from );
     mETto      = (EditText) findViewById(R.id.shot_to );
+    // mEToffset  = (EditText) findViewById(R.id.value_offset );
     mTVstrikeDip = (TextView) findViewById(R.id.strike_dip );
 
     mETfrom.setText( mBlk.mFrom );
     mETto.setText( mBlk.mTo );
+    // mEToffset.setText( "0.0" );
    
     // mETfrom.setOnLongClickListener( this );
     // mETto.setOnLongClickListener( this );
 
-    mKeyboard = new MyKeyboard( mContext, (KeyboardView)findViewById( R.id.keyboardview ),
-                                R.xml.my_keyboard_base_sign, R.xml.my_keyboard_qwerty );
+    // mKeyboard = new MyKeyboard( mContext, (KeyboardView)findViewById( R.id.keyboardview ), R.xml.my_keyboard_base_sign, R.xml.my_keyboard_qwerty );
+    mKeyboard = MyKeyboard.getMyKeyboard( mContext, findViewById( R.id.keyboardview ), R.xml.my_keyboard_base_sign, R.xml.my_keyboard_qwerty );
+
     if ( TDSetting.mKeyboard ) {
       int flag = MyKeyboard.FLAG_POINT_LCASE_2ND;
       if ( TDSetting.mStationNames == 1 ) flag = MyKeyboard.FLAG_POINT;
@@ -123,6 +128,7 @@ class MultishotDialog extends MyDialog
     ((CheckBox)findViewById( R.id.rb_noprofile )).setChecked( true );
 
     mButtonRenumber  = (Button) findViewById(R.id.renumber );
+    mButtonOffset    = (Button) findViewById(R.id.offset );
     mButtonSwap      = (Button) findViewById(R.id.swap );
     // mButtonHighlight = (Button) findViewById(R.id.highlight ); FIXME_HIGHLIGHT
     mButtonColor     = (Button) findViewById(R.id.color );
@@ -134,6 +140,7 @@ class MultishotDialog extends MyDialog
     // mBlk = mBlks.get(0);
     // if ( mBlk != null && mBlk.isLeg() ) {
       mButtonRenumber.setOnClickListener( this );
+      mButtonOffset.setOnClickListener( this );
       mButtonSwap.setOnClickListener( this );
     // } else {
     //   renumber = false;
@@ -199,14 +206,18 @@ class MultishotDialog extends MyDialog
 
     Button b = (Button) v;
     if ( b == mButtonRenumber ) {
+      if ( sameString( mETfrom, mETto ) ) {
+        mETto.setError( resString( R.string.equal_station_names ) );
+        return;
+      }
       String from = TDUtil.toStationFromName( mETfrom.getText().toString() );
       if ( ! TDUtil.isStationName( from ) ) { 
-        mETfrom.setError( mContext.getResources().getString( R.string.bad_station_name ) );;
+        mETfrom.setError( resString( R.string.bad_station_name ) );;
         return;
       }
       String to   = TDUtil.toStationToName( mETto.getText().toString() );
       if ( ! TDUtil.isStationName( to ) ) {
-        mETto.setError( mContext.getResources().getString( R.string.bad_station_name ) );;
+        mETto.setError( resString( R.string.bad_station_name ) );;
         return;
       }
       
@@ -216,32 +227,44 @@ class MultishotDialog extends MyDialog
       }
     // } else if ( b == mButtonHighlight ) { FIXME_HIGHLIGHT
     //   mParent.highlightBlocks( mBlks );
+    } else if ( b == mButtonOffset ) {
+      try {
+        EditText et_offset  = (EditText) findViewById(R.id.value_offset );
+        String offset_str = TDUtil.getTextOrNull( et_offset );
+        if ( offset_str  != null ) {
+          float offset = Float.parseFloat( offset_str );
+          mParent.addOffset( offset ); 
+        } else {
+          // TODO et_offset.setError("bad offset value");
+        }
+      } catch ( NumberFormatException e ) {
+        TDLog.v("ERROR " + e.getMessage() );
+        // TODO et_offset.setError("bad offset value");
+      }
     } else if ( b == mButtonSwap ) {
       mParent.swapBlocksName( mBlks );
-    } else if ( mColoring ) {
-      if ( b == mButtonColor ) {
-        hide();
-        (new MyColorPicker( mContext, this, 0 )).show();
-        return;
-      } else if ( b == mButtonSplays ) {
-        int leg_type = LegType.NORMAL;
-        if ( ((RadioButton)findViewById( R.id.rb_xsplay )).isChecked() ) {
-          leg_type = LegType.XSPLAY;
-        } else if ( ((RadioButton)findViewById( R.id.rb_hsplay )).isChecked() ) {
-          leg_type = LegType.HSPLAY;
-        } else if ( ((RadioButton)findViewById( R.id.rb_vsplay )).isChecked() ) {
-          leg_type = LegType.VSPLAY;
-        }
-        long flag = DBlock.FLAG_SURVEY;
-        if ( ! ((CheckBox)findViewById( R.id.rb_noplan )).isChecked() ) {
-          flag |= DBlock.FLAG_NO_PLAN;
-        } 
-        if ( ! ((CheckBox)findViewById( R.id.rb_noprofile )).isChecked() ) {
-          flag |= DBlock.FLAG_NO_PROFILE;
-        }
-        mParent.updateSplaysLegType( mBlks, leg_type, flag );
-        // TDLog.v("FLAG " + flag );
+    } else if ( mColoring && b == mButtonColor ) {
+      hide();
+      (new MyColorPicker( mContext, this, 0 )).show();
+      return;
+    } else if ( mColoring && b == mButtonSplays ) {
+      int leg_type = LegType.NORMAL;
+      if ( ((RadioButton)findViewById( R.id.rb_xsplay )).isChecked() ) {
+        leg_type = LegType.XSPLAY;
+      } else if ( ((RadioButton)findViewById( R.id.rb_hsplay )).isChecked() ) {
+        leg_type = LegType.HSPLAY;
+      } else if ( ((RadioButton)findViewById( R.id.rb_vsplay )).isChecked() ) {
+        leg_type = LegType.VSPLAY;
       }
+      long flag = DBlock.FLAG_SURVEY;
+      if ( ! ((CheckBox)findViewById( R.id.rb_noplan )).isChecked() ) {
+        flag |= DBlock.FLAG_NO_PLAN;
+      } 
+      if ( ! ((CheckBox)findViewById( R.id.rb_noprofile )).isChecked() ) {
+        flag |= DBlock.FLAG_NO_PROFILE;
+      }
+      mParent.updateSplaysLegType( mBlks, leg_type, flag );
+      // TDLog.v("FLAG " + flag );
     } else if ( mBedding > 0 && b == mButtonBedding ) {
       // if ( mBedding > 1 ) { // warning toast
       //   TDToast.makeWarn( R.string.multistation_plane );

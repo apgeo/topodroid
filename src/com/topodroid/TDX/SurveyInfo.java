@@ -13,6 +13,8 @@ package com.topodroid.TDX;
 
 import com.topodroid.utils.TDMath;
 import com.topodroid.utils.TDLog;
+import com.topodroid.utils.TDString;
+// import com.topodroid.utils.TDUtil;
 
 
 import android.widget.EditText;
@@ -42,6 +44,7 @@ public class SurveyInfo
   int xsections;       // 0: shared, 1: private
   int datamode;        // normal or diving
   int mExtend;         // survey extend
+  boolean mImmutable = false; // whether the survey has been imported
 
   SurveyInfo copy() 
   {
@@ -56,6 +59,7 @@ public class SurveyInfo
     ret.xsections   = xsections;
     ret.datamode    = datamode;
     ret.mExtend     = mExtend;
+    ret.mImmutable  = mImmutable;
     return ret;
   }
 
@@ -64,6 +68,10 @@ public class SurveyInfo
   boolean isDivingMode() { return datamode == DATAMODE_DIVING; }
 
   // boolean isSectionPrivate() { return xsection == 1; }
+
+  /** @return true if the survey is immutable
+   */
+  boolean isImmutable() { return mImmutable; }
 
   /** @return true if the specified extend if LEFT ( ie, less than -999 )
    * @param extend  the specified extend
@@ -112,8 +120,8 @@ public class SurveyInfo
   {
     float decl = DECLINATION_UNSET;
     if ( et != null && et.getText() != null ) {
-      String decl_str = et.getText().toString().trim();
-      if ( /* decl_str != null && */ decl_str.length() > 0 ) { // ALWAYS true
+      String decl_str = TDString.noSpaces( et.getText().toString() );
+      if ( ! TDString.isNullOrEmpty( decl_str ) ) { // ALWAYS true
         decl_str = decl_str.replace(',', '.');
         try {
           decl = Float.parseFloat( decl_str );
@@ -132,8 +140,8 @@ public class SurveyInfo
   static boolean declinationOutOfRange( EditText et )
   {
     if ( et != null && et.getText() != null ) {
-      String decl_str = et.getText().toString().trim();
-      if ( /* decl_str != null && */ decl_str.length() == 0 ) return true;
+      String decl_str = TDString.noSpaces( et.getText().toString() );
+      if ( TDString.isNullOrEmpty( decl_str ) ) return true;
       decl_str = decl_str.replace(',', '.');
       try {
         float decl = Float.parseFloat( decl_str );

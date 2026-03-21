@@ -1,25 +1,38 @@
 <?xml version="1.0" encoding="utf-8"?>
 
 <resources>
-  <!-- TODO string-array name="teamNames">
-     <item name="plain">Text plain</item>
-     <item name="separated">Text separated</item>
-     <item name="dialog">Dialog</item>
+  <!-- TODO string-array name="scanLegType">
+     <item name="s">Generic</item>
+     <item name="sX">XSection</item>
+     <item name="sH">Horizontal</item>
+     <item name="sV">Vertical</item>
   </string-array -->
 
-  <!-- TODO string-array name="bricMode">
-     <item name="prim_only">Prim. only</item>
-     <item name="all">All info</item>
+  <!-- TODO string-array name="toolbarUpdate">
+     <item name="oldest">Replace oldest</item>
+     <item name="front">Put at front</item>
+     <item name="front_oldest">At front, drop oldest</item>
   </string-array -->
 
-  <!-- TODO string-array name="geoImportApp">
-     <item name="none">non-specified</item>
-     <item name="mobile_topographer">Mobile Topographer</item>
-     <item name="gpx_recorder">GPX Recorder</item>
-     <item name="gps_position">GPS Position</item>
-     <item name="gps_test">GPSTest</item>
-     <item name="gps_logger">GPS Logger</item>
-  </string-array -->
+  <string-array name="teamNames">
+     <item name="plain">Texto sin formato</item>
+     <item name="separated">Texto separado</item>
+     <item name="dialog">Diálogo</item>
+  </string-array>
+
+  <string-array name="bricMode">
+     <item name="prim_only">Solo Prim.</item>
+     <item name="all">Toda la información</item>
+  </string-array>
+
+  <string-array name="geoImportApp">
+     <item name="none">no especificado</item>
+     <item name="mobile_topographer">Topógrafo móvil</item>
+     <item name="gpx_recorder">Grabación GPX</item>
+     <item name="gps_position">Posición GPS</item>
+     <item name="gps_test">Test GPS</item>
+     <item name="gps_logger">Registro GPS</item>
+  </string-array>
 
   <string-array name="orientation">
      <item name="unspecified">Sin especificar</item>
@@ -283,11 +296,11 @@
      <item name="ddmmss">Grados minutos segundos</item>
   </string-array>
 
-  <string-array name="calibAlgo">
+  <!-- string-array name="calibAlgo">
      <item name="auto">Auto</item>
      <item name="linear">Lineal</item>
      <item name="nonlinear">No lineal</item>
-  </string-array>
+  </string-array -->
 
   <string-array name="rawCData">
      <item name="none">Nada</item>

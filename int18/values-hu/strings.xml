@@ -1,9 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
+
+    <string name="ai_null_chat">Null MI chat</string>
+    <string name="ai_error">MI hiba %1$s</string>
+    <string name="ai_internet">Figyelem! MI súgóhoz web kapcsolat szükséges.</string>
+    <string name="ai_no_internet">Nincs web kapcsolat.</string>
+	<string name="ai_no_model">Nincs MI modell</string>
+    <string name="ai_prompt">Írd be a kérdést</string>
+    <string name="ai_invalid_key">Valótlan API kulcs</string>
+    <string name="ai_key_instruction">Az API-kulcs az Android belső memóriájában tárolódik, és csak a Google-nak kerül elküldésre.\nKeressen rá az interneten, hogyan szerezhet be Gemini API-kulcsot a Google-tól.</string>
+	
     <!-- UNUSED string name="topodroid_man">https://sites.google.com/site/speleoapps/home/topodroid/docs</string -->
     <string name="no_manual">Nem lehet letölteni a felhasználói kézikönyvet az internetről</string>
     <string name="user_man_ok">Installált felhasználói kézikönyv fordítás</string>
-    <string name="user_man_fail">Hiba a felhasználói kézikönyv fordítás installálásakor</string>
+    <string name="user_man_fail">Hiba a felhasználói kézikönyv fordítás installálásakor [%1$d]</string>
 
     <!-- UNUSED string name="string_false">hamis</string -->
     <!-- UNUSED string name="string_true">igaz</string -->
@@ -26,9 +36,7 @@
     <!-- NO string name="cave3d_label">Cave3D</string -->
 
   <string name="r_title">Android-13+ FIGYELMEZTETÉS</string>
-  <string name="r_dialog">
-Android-13 esetén a TopoDroidnak az alkalmazás privát mappájában kell tárolnia a felméréseket az "Android/data" alatt.\nVigyázat, ez a mappa általában törlődik az alkalmazás eltávolításakor.\nGépeld be\n"%1$s"\naz alábbi mezőbe, hogy folytatni tudd.
-</string>
+  <string name="r_dialog">Android-13 esetén a TopoDroidnak az alkalmazás privát mappájában kell tárolnia a felméréseket az "Android/data" alatt.\nVigyázat, ez a mappa általában törlődik az alkalmazás eltávolításakor.\nGépeld be\n"%1$s"\naz alábbi mezőbe, hogy folytatni tudd.</string>
   <string name="r_continue">FOLYTATÁS</string>
   <string name="r_quit">KILÉPÉS</string>
 
@@ -66,6 +74,16 @@ Android-13 esetén a TopoDroidnak az alkalmazás privát mappájában kell táro
     <string name="hsplay">H</string>
     <string name="vsplay">V</string>
 
+    <string name="pref_gen">Álltalános</string>
+    <string name="pref_ui">Felhasználói felület</string>
+    <string name="pref_data">Adat</string>
+    <string name="pref_plot">Vázlat</string>
+    <string name="pref_3d">3D megtekintő</string>
+    <string name="pref_io">Export</string>
+    <string name="pref_bt">Bluetooth</string>
+    <string name="pref_cal">Kalibráció</string>
+	<string name="pref_xt">Speciális funkciók</string>
+
     <string name="cut">VÁGÁS</string>
     <string name="copy">MÁSOL</string>
     <string name="paste">BEILLESZT</string>
@@ -74,11 +92,13 @@ Android-13 esetén a TopoDroidnak az alkalmazás privát mappájában kell táro
     <string name="memoryA3">DistoX A3 memória </string>
     <string name="memoryX310">DistoX X310 memória</string>
     <string name="memoryXBLE">DistoX-BLE memória</string>
+    <string name="memoryCavway">Cavway memória</string>
     <!-- UNUSED string name="memory_data">DistoX adat</string -->
 
     <string name="thp_user">felhasználó</string>
     <string name="thp_label">felirat</string>
     <string name="thp_section">metszet</string>
+    <string name="thp_picture">kép</string>
     <string name="thp_station">mérési pont</string>
     <!-- UNUSED string name="thp_danger">veszély</string -->
     <string name="thl_user">felhasználó</string>
@@ -91,11 +111,15 @@ Android-13 esetén a TopoDroidnak az alkalmazás privát mappájában kell táro
     <string name="missing_station">Hiányzó mérési pont</string>
     <string name="station_not_found">Mérési pont nem található</string>
     <string name="station_coords">K %1$.2f É %2$.2f Z %3$.2f</string>
+    <string name="station_not_saved">Nincs elmentve a pont</string>
+    <string name="station_name_conflict">Név ütközés. Mindenképpen folytatod?</string>
     <string name="shot_not_found">Mérés nem található</string>
     <string name="shot_not_saved">Mérés nincs elmentve</string>
     <string name="bad_sibling">Rossz mérés ismétlés</string>
     <string name="bad_station">Hibás mérési pont: %1$s</string>
     <string name="bad_station_name">Illegális mérési pont név</string>
+    <string name="equal_station_names">Kapcsolódó mérési pont nevek</string>
+	<string name="invalid_name">Érvénytelen név</string>
     <!-- UNUSED string name="missing_area">TERÜLET</string -->
     <!-- UNUSED string name="missing_hint">Engedélyezd vagy installáld a hiányzó ezközöket</string -->
     <!-- UNUSED string name="missing_line">VONAL</string -->
@@ -108,6 +132,8 @@ Android-13 esetén a TopoDroidnak az alkalmazás privát mappájában kell táro
     <string name="failed_snap_to_point">Nincs közeli pont, amihez a pont illeszthető</string>
     <string name="failed_snap_to_splays">Nincs közeli segédpont, amihez a vonal illeszthető</string>
     <string name="failed_append_to_line">Nem sikerült másik vonalhoz kapcsolni</string>
+    <string name="failed_zoomfit">Sikertelen teljes nagyítás</string>
+    <string name="fail_forget_device">Az Android nem tudta elfelejteni a BT eszközt</string>
 
     <string name="bric_device">Műszer %1$s</string>
     <string name="bric_ble">BLE %1$s</string>
@@ -148,6 +174,8 @@ Android-13 esetén a TopoDroidnak az alkalmazás privát mappájában kell táro
     <!-- UNUSED string name="connect_failed">Hibás kapcsolat</string -->
     <!-- UNUSED string name="data"> adat</string -->
     <string name="using">%1$s használata</string>
+    <string name="cali_err">hiba: átlag %1$.2f&#xb0;, stddev %2$.2f&#xb0;. max. %3$.2f&#xb0;</string>
+    <string name="cali_time">Kalibráció: %1$s</string>
     <string name="calib_error">Átlagos hiba: %1$.2f &#xb0; (BH delta %2$.3f)</string>
     <string name="calib_validate_error">Átlagos hiba: %1$.2f &#xb0;</string>
     <string name="calib_stddev">Hiba szórása:  %1$.4f &#xb0;</string>
@@ -161,9 +189,17 @@ Android-13 esetén a TopoDroidnak az alkalmazás privát mappájában kell táro
     <string name="calib_reset">Visszaállítja a DistoX kalibrációját?</string>
     <string name="calib_min_error">Minimális hiba</string>
     <string name="calib_delta_dir">Ir. diff.: %1$.2f ± %2$.2f (max %3$.2f)</string>
+    <string name="calib_acc_thr">Gyors. [&#x25;]</string>
+    <string name="calib_mag_thr">Magn. [&#x25;]</string>
+    <string name="calib_dip_thr">Dip [&#xb0;]</string>
     <string name="magn_dip">Mágn. lehajlás &#8230;</string>
     <string name="auto_calib">Auto. Kalib.</string>
     <string name="autocalib_not_supported">Kalibrációs számítás szükséges</string>
+    <string name="recalibrate_with">Mérések újraszámítása %1$s -vel</string>
+    <string name="recalibrate_none">Nincs kiválasztott kalibráció</string>
+    <string name="recalibrate_no_cavway">Nem egy Cavway calibráció</string>
+    <string name="recalibrate_no_coeff">Nincs kalibrációs érték</string>
+
     <string name="algorithm">Algoritmus:</string>
     <string name="auto">automatikus</string>
     <string name="linear">lineáris</string>
@@ -199,6 +235,7 @@ Android-13 esetén a TopoDroidnak az alkalmazás privát mappájában kell táro
     <string name="device_status_silent_on">Csendes mód: be</string>
     <string name="device_status_silent_off">Csendes mód: ki</string>
     <string name="bt_reset">Bluetooth kapcsolat újraindítása</string>
+    <!-- UNUSED string name="bt_busy">Bluetooth foglalt</string -->
     <string name="save_as">mentés mint</string>
     <string name="nickname">Becenév</string>
     <string name="unknown_device_type">Ismeretlen műszer típus %1$d</string>
@@ -218,8 +255,8 @@ Android-13 esetén a TopoDroidnak az alkalmazás privát mappájában kell táro
     <!-- UNUSED string name="external_prompt">Mérés beírása</string -->
     <string name="splay_at_to">BJFL a következő pontnál</string>
     <string name="lrud">BJFL</string>
-    <string name="strike_dip">Dip irány %1$.0f inklináció %2$.0f</string>
-      <!-- mi ez? -->
+    <string name="strike_dip">Dőlés irány %1$.0f lehajlás %2$.0f</string>
+    <string name="few_points">Nincs elegendő adat pont</string>
     <string name="few_data">Nincs elegendő adat</string>
     <string name="few_iter">Iteráció nem sikerült</string>
     <string name="few_groups">Nincs elegendő csoportosítható adat</string>
@@ -228,7 +265,8 @@ Android-13 esetén a TopoDroidnak az alkalmazás privát mappájában kell táro
     <!-- UNUSED string name="few_plots">Nincs elég vázlat</string -->
     <string name="few_calibs">Nincs elegendő kalibráció</string>
     <string name="getting_info">DistoX információk letöltése &#8230;</string>
-    <string name="gettingble_info">Letöltött DistoX-BLE információk &#8230;</string>
+    <string name="gettingble_info">DistoX-BLE információk letöltése &#8230;</string>
+    <string name="gettingCavway_info">Cavway információk letöltése &#8230;</string>
 
     <string name="calib_import_title">Kalibráció importálása</string>
     <string name="import_title">Felmérés importálása</string>
@@ -291,8 +329,10 @@ Android-13 esetén a TopoDroidnak az alkalmazás privát mappájában kell táro
     <string name="geocode_title">Geomorfológiaqi kód</string>
     <string name="photo_title">FÉNYKÉP</string>
     <string name="photo_text">Írd be a fénykép megjegyzését</string>
-    <string name="photo_failed">Sikertelen fotó</string>
+    <!-- UNUSED string name="photo_failed">Sikertelen fotó</string -->
+    <string name="photo_not_ready">Nincs kész a fotó. Várj! &#8230;</string>
     <string name="photo_max_captures">Elérte a maximális rögzítési korlátot</string>
+    <string name="photo_many_pictures">Túl sok kép</string>
     <string name="label_title">FELIRAT</string>
     <string name="label_text">Írd be a feliratot.</string>
     <!-- UNUSED string name="altitude">Mag. </string -->
@@ -317,7 +357,9 @@ Android-13 esetén a TopoDroidnak az alkalmazás privát mappájában kell táro
     <string name="fmt_h_geoid">Geoid mag. %1$.0f m</string>
     <!-- UNUSED string name="fmt_h_ellipsoid">Ellipszoid mag. %1$.0f m</string -->
     <string name="location_start_fine">Pontos helymeghatározás kezdés</string>
+    <string name="location_enabled">Ellenőrizd a HELYMEGHATÁROZÁS engedélyezését</string>
     <!-- UNUSED string name="depth_error">Figyelem! Adat mélység hiba</string -->
+    <string name="discovery_error">BT keresési hiba: %1$s</string>
 
     <string name="error_azimuth_required">Azimut szükséges</string>
     <string name="error_length_required">Hossz szükséges</string>
@@ -342,7 +384,7 @@ Android-13 esetén a TopoDroidnak az alkalmazás privát mappájában kell táro
     <string name="error_name_required">Név szükséges</string>
     <!-- UNUSED string name="error_text_required">Szöveg szükséges</string -->
     <string name="error_station_number">Rossz pont számok</string>
-    <string name="error_name_duplicate">Duplikált név</string>
+    <!-- UNUSED string name="error_name_duplicate">Duplikált név</string -->
     <string name="error_no_section_in_section">Metszetben metszet nem megengedett</string>
     <string name="error_profile_slant_section">Döntött ketesztmetszet nem engedélyezett oldalnézetben</string>
     <string name="error_team_required">Csapat szükséges</string>
@@ -358,6 +400,7 @@ Android-13 esetén a TopoDroidnak az alkalmazás privát mappájában kell táro
     <string name="error_value_required">Érték szükséges</string>
     <string name="error_bad_fixes">A fix pont nincs a mérésben</string>
     <string name="error_bad_name">Módosult fájlnév</string>
+    <string name="error_question">Írj be egy kérdést</string>
     
     <string name="group_title">Kalibrációs adat csoportok</string>
     <!-- UNUSED string name="group_policy_four">Négyesével csoportosítva</string -->
@@ -418,7 +461,7 @@ Android-13 esetén a TopoDroidnak az alkalmazás privát mappájában kell táro
     <string name="no_device_window">Műszar ablak nem elérhető a letöltés közben</string>
     <!-- UNUSED string name="no_device_found">Nem talált műszert</string -->
     <string name="no_feature_audio">Hang nem támogatott</string>
-    <string name="no_feature_pdf">PDF nem támogatott</string>
+    <!-- UNUSED string name="no_feature_pdf">PDF nem támogatott</string -->
     <string name="no_gms">Nincsenek kalibrációs adatok.\nTöltsd le az adatokat </string>
     <string name="no_geo_station">Hiba: nincs geolokalizált mérésipont</string>
     <!-- UNUSED string name="no_geopoint_app">Nincs helymeghatározó app</string -->
@@ -432,6 +475,7 @@ Android-13 esetén a TopoDroidnak az alkalmazás privát mappájában kell táro
     <string name="no_profile_overview">Nincs áttekintő a vetített szelvényekhez</string>
     <string name="no_proj4">Proj4 nincs telepítve</string>
     <string name="no_sensors">A felmérésben nincsennek mérések</string>
+	<string name="no_stations">A felmérésben nincsennek mérési pontok</string>
     <!-- UNUSED string name="no_shots">Mérésben nincs poligon.\nhasználd a letöltés gombot</string -->
     <string name="no_search_result">Nincs a keresésnek eredménye.</string>
     <string name="no_survey">Nincs kiválasztva felmérés</string>
@@ -442,6 +486,7 @@ Android-13 esetén a TopoDroidnak az alkalmazás privát mappájában kell táro
     <string name="no_undelete_paste">Nincs visszaállítható/beilleszthető elem</string>
     <string name="format_measure_plan">D %1$.2f %2$.2f X %3$.2f Y %4$.2f Az. %5$.1f</string>
     <string name="format_measure_profile">D %1$.2f %2$.2f X %3$.2f Y %4$.2f Le. %5$.1f</string>
+    <string name="format_setting">Beállítások %1$s -tól %2$s -ig ?</string>
     <!-- NO string name="format_closure" translatable="false">%1$s-%2$s: [%3$d] %4$.1f/%5$.1f (%6$.1f %7$.1f) %8$.1f %% (%9$.1f\u00b0)</string -->
 
     <string name="menu_3d">3D</string>
@@ -465,12 +510,13 @@ Android-13 esetén a TopoDroidnak az alkalmazás privát mappájában kell táro
     <string name="menu_device">MŰSZER</string>
     <string name="menu_device_add">MŰSZER HOZZÁADÁSA</string>
     <string name="menu_export">EXPORTÁLÁS</string>
+    <string name="menu_exit">KILÉP</string>
     <string name="menu_firmware">FIRMWARE</string>
     <string name="menu_geopoint_app">GEOPONT APP</string>
     <string name="menu_recover">HELYREÁLLÍT</string>
     <string name="menu_recover_paste">HELYREÁLLÍT/BEILLESZT</string>
     <string name="menu_reload">ÚJRATÖLT</string>
-    <string name="menu_rename_delete">ÁTNEVEZ/TÖRÖL</string>
+    <string name="menu_rename_delete">MŰVELETEK</string>
     <string name="menu_rename">ÁTNEVEZ</string>
     <string name="menu_plot_scrap">SZINTEK</string>
     <string name="menu_switch">VÁLT/BEZÁR</string>
@@ -485,10 +531,11 @@ Android-13 esetén a TopoDroidnak az alkalmazás privát mappájában kell táro
     <!-- UNUSED string name="menu_pair">PÁROSÍTÁS</string -->
     <string name="menu_palette">PALETTA</string>
     <string name="menu_photo">FOTÓ</string>
+	<string name="menu_stations">PONTOK</string>
     <string name="menu_sections">METSZETEK</string>
     <string name="menu_sensor">SZENZOR</string>
-    <!-- UNUSED string name="menu_scan">KERESÉS</string -->
-    <!-- UNUSED string name="menu_scan_ble">BTLE KERESÉS</string -->
+    <string name="menu_scan">KERESÉS</string>
+    <!-- UNUSED string name="menu_scan_ble">BLE KERESÉS</string -->
     <!-- UNUSED string name="menu_station">ÁLLÁSPONTOK</string -->
     <string name="menu_stats">STATISZTIKA</string>
     <string name="menu_survey">FELMÉRÉSI INFORMÁCIÓK</string>
@@ -497,15 +544,20 @@ Android-13 esetén a TopoDroidnak az alkalmazás privát mappájában kell táro
 	<!-- UPDATES string name="menu_updates">UPDATE ELLENŐRZÉS</string -->
     <string name="menu_validate">ELLENŐRZÉS</string>
     <string name="menu_zoom_fit">ABLAK NAGYÍTÁS</string>
+    <string name="menu_plot_search">ALAPPONT KERESÉS</string>
 
     <!-- FIXED_ZOOM -->
     <string name="zoom_fixed">Rajz felület</string>
 
     <!-- UNUSED string name="start_scan">Keresés indítás</string -->
     <!-- UNUSED string name="stop_scan">Keresés leállítás</string -->
-    <!-- UNUSED string name="title_scan">BTLE keresés</string -->
-    <!-- UNUSED string name="ble_scan_failed">BTLE keresés eredménytelen</string -->
-    <!-- UNUSED string name="ble_gatt_failure">BTLE hiba</string -->
+    <!-- UNUSED string name="scan_started">Felderítés elkezdődött</string -->
+    <!-- UNUSED string name="scan_finished">Felderítés befejeződött</string -->
+    <string name="scanning">Keresés &#8230; Kérlek várj</string>
+
+    <!-- UNUSED string name="title_scan">BLE keresés</string -->
+    <!-- UNUSED string name="ble_scan_failed">BLE keresés eredménytelen</string -->
+    <!-- UNUSED string name="ble_gatt_failure">BLE hiba</string -->
     <string name="ble_no_remote">Nincs távoli műszer</string>
     <!-- UNUSED string name="ble_control">Ellenőrzés</string -->
     <!-- UNUSED string name="ble_connect">Kapcsolódás</string -->
@@ -544,7 +596,7 @@ Android-13 esetén a TopoDroidnak az alkalmazás privát mappájában kell táro
     <string name="popup_select_line">Vonalak kijelölése</string>
     <string name="popup_select_area">Területek kijelölése</string>
     <string name="popup_select_shot">Mérések kijelölése</string>
-    <string name="popup_select_station">Fixpontok kijelölése</string>
+    <string name="popup_select_station">Mérési pontok kijelölése</string>
 
     <!-- UNUSED string name="popup_cont_none">Nincs</string -->
     <!-- UNUSED string name="popup_cont_start">Kezdőpont</string -->
@@ -563,7 +615,7 @@ Android-13 esetén a TopoDroidnak az alkalmazás privát mappájában kell táro
     <!-- UNUSED string name="not_implemented">Nincs még megvalósítva</string -->
     <string name="null_bitmap">Kép létrehozása nem sikerült [OOM error]</string>
     <string name="photo">fotó</string>
-    <string name="photo_camera">Régi kamera</string>
+    <!-- UNUSED string name="photo_camera">Régi kamera</string -->
     <string name="photo_comment_prompt">Írj megjegyzést a fotóhoz</string>
     <string name="photo_azimuth_clino">Irányszög: %1$.1f Lejtszög %2$.1f</string>
     <!-- UNUSED string name="photo_name">álláspont/név</string -->
@@ -643,6 +695,8 @@ Android-13 esetén a TopoDroidnak az alkalmazás privát mappájában kell táro
     <string name="shot_note">megjegyzés</string>
     <!-- UNUSED string name="shot_reverse">visszamérés</string -->
     <string name="shot_to">hová</string>
+    <string name="shot_refreshed">Mérés lista frissítve</string>
+    <string name="scan_type">Szkennelés típus</string>
 
     <string name="station">mérési pont</string>
     <string name="station_ask">Beilleszt mérési pontot a vázlatba?</string>
@@ -656,6 +710,8 @@ Android-13 esetén a TopoDroidnak az alkalmazás privát mappájában kell táro
     <!-- UNUSED string name="survey_date">yyyy.mm.dd</string -->
     <string name="survey_delete">Törli a felmérést?</string>
     <string name="survey_move">Mérések mozhatása a %1$s felmérésbe?</string>
+    <string name="survey_copy_all_flags">A mérések akkor másolhatók, ha mind megjelennek</string>
+    <string name="survey_copy_only_tail">Csak a mérések utolsó része másolható</string>
     <string name="survey_split">Felosztja a felmérést?</string>
     <string name="survey_not_attached">FIGYELEM: nem kapcsolódó mérések</string>
     <string name="survey_not_extend">FIGYELEM: nincs beállítva a mérés kiterítése</string>
@@ -706,7 +762,7 @@ Android-13 esetén a TopoDroidnak az alkalmazás privát mappájában kell táro
     <string name="undelete_check">Ellenőrző mérések</string>
     <string name="undelete_blunder">Baklövések</string>
     <string name="undelete_plot">Vázlatok</string>
-    <string name="delete_whole_leg">Mérés törlése</string>
+    <string name="delete_whole_leg">Egész mérés törlése</string>
     <string name="visible_border">látható határ</string>
     <!-- UNUSED string name="vthreshold">függőleges küszöb</string -->
     <!-- UNUSED string name="wait_scan">Keresés: várj &#8230;</string -->
@@ -715,6 +771,8 @@ Android-13 esetén a TopoDroidnak az alkalmazás privát mappájában kell táro
     <string name="zip_saved">Zip archívum mentve</string>
     <string name="zip_failed">Nem sikerült a felmérés tömörítése</string>
     <string name="zip_share_failed">Nem lehet megosztani a zip-archívumot</string>
+    <string name="file_share_failed">Nem lehet megosztani a fájlt</string>
+    <string name="file_share_no_app">Nincs fájl megosztó alkalmazás</string>
     <string name="unzip_fail">Nem sikerült a felmérés kitömörítése</string>
     <string name="unzip_fail_sqlite">Sikertelen SQL: törölje a felmérést és próbálkozzon újra</string>
     <string name="unzip_fail_survey">Kitömörítés nem sikerült: felmérés neve nem megfelelő</string>
@@ -728,7 +786,6 @@ Android-13 esetén a TopoDroidnak az alkalmazás privát mappájában kell táro
     <string name="trilateration_failure">Ívmetszés sikertelen %1$d / %2$d </string>
     <!-- UNUSED string name="trilateration_error">Ívmetszési hiba %1$.2f</string -->
     <!-- UNUSED string name="trilateration_succeeded">Ívmetszés sikerült: fennmaradó hiba %1$.2f</string -->
-    <string name="trilateration_success">Ívmetszés sikerült: %1$d csoport</string>
 
 	
     <string name="survey_info">Felmérés információ</string>
@@ -756,6 +813,7 @@ Android-13 esetén a TopoDroidnak az alkalmazás privát mappájában kell táro
     <string name="stat_surface">Felszíni mérések %1$d # %2$d %3$.1f %4$s</string>
     <!-- UNUSED string name="stat_surface_z">Felszín Z %1$.1f %2$.1f %3$s</string -->
     <string name="stat_survey_z">Felmérés Z %1$.1f %2$.1f %3$s</string>
+    <string name="stat_survey_length">Felmérési hossz %1$.1f %2$s</string>
     <string name="stat_wens">Ny %1$.0f  K %2$.0f  É %3$.0f  D %4$.0f [%5$s]</string>
     <string name="stat_angle_error">Szöghibák %1$.2f ± %2$.2f</string>
     <string name="shot_title">MÉRÉS %1$s - %2$s</string>
@@ -788,6 +846,7 @@ Android-13 esetén a TopoDroidnak az alkalmazás privát mappájában kell táro
     <!-- UNUSED string name="landscape">térkép</string -->
 
     <string name="display_view">Képernyő</string>
+    <string name="display_refresh">Képernyő frissítés</string>
     <string name="plan_view">alaprajz</string>
     <string name="profile_view">oldalnézet</string>
 
@@ -803,11 +862,14 @@ Android-13 esetén a TopoDroidnak az alkalmazás privát mappájában kell táro
     <string name="ask_gps_service">Bekapcsolja a GNSS-t?</string>
     <!-- UNUSED string name="ask_backups_clear">Törli a vázlat mentéseket?</string -->
     <string name="ask_manual_update">Felülírja a felhasználói kézikönyv fordítását?\nJelenlegi v. %1$d Installált v. %2$d</string>
+    <string name="ask_clear_equates">Visszavonod az összes kapcsolatot?</string>
+    <string name="ask_forget_device">Eszköz elfelejtése %1$s?</string>
 
     <string name="button_add"       >Hozzáad</string>
     <string name="button_apply"     >Alkalmaz</string>
     <string name="button_back"      >Vissza</string>
     <string name="button_cancel"    >Mégse</string>
+    <string name="button_forget"    >Elfelejt</string>
     <string name="button_geocode"   >GeoKód</string>
     <!-- UNUSED string name="button_change"    >Változtat</string -->
     <string name="button_clipboard" >Vágólap</string>
@@ -821,7 +883,9 @@ Android-13 esetén a TopoDroidnak az alkalmazás privát mappájában kell táro
     <string name="button_current"   >Aktív</string>
     <string name="button_delete"    >Töröl</string>
     <string name="button_duplicate" >Megdupláz </string>
+    <string name="button_settime"   >Óra beállítás</string>
     <string name="button_surface"   >Felület</string>
+	<string name="button_splay"     >Sün</string>
     <string name="button_no_extend" >Nincs kiterítés</string>
     <string name="button_eval"      >Nyers</string>
     <string name="button_evalg"     >G</string>
@@ -833,26 +897,29 @@ Android-13 esetén a TopoDroidnak az alkalmazás privát mappájában kell táro
     <!-- DONT TRANSLATE string name="button_help">Súgó</string -->
     <string name="button_manual"    >Felhasználói Kézikönyv</string>
     <!-- UNUSED string name="button_measure"   >Mérés   </string -->
-    <!-- UNUSED string name="button_photo"   >Fotó</string -->
+    <string name="button_photo"   >Fotó</string>
     <!-- UNUSED string name="button_sensor"  >Szenzorok</string -->
     <!-- UNUSED string name="button_direction">Irány/Lejtés</string -->
     <!-- UNUSED string name="button_azimuth">Irány</string -->
     <string name="button_plot"    >Rajzol</string>
-    <string name="button_less">Kevesebb</string>
+    <string name="button_less"    >Kevesebb</string>
     <string name="button_more"    >Több</string>
     <string name="button_move"    >Mozgat</string>
     <string name="button_next"    >Következő</string>
     <string name="button_prev"    >Előző</string>
     <string name="button_new"     >Új szint</string>
     <string name="button_rename"  >Átnevez</string>
+    <string name="button_retake"  >Újrafelvétel</string>
     <string name="button_prefix"  >Előtag</string>
     <string name="button_skip"    >Átugor</string>
     <string name="button_done"    >Kész</string>
-    <string name="button_lrud"    >+BJFL</string>
-    <string name="button_ok"        >OK     </string>
+    <string name="button_lrud"    >+ BJFL</string>
+    <string name="button_no"        >NEM</string>
+    <string name="button_ok"        >OK</string>
     <string name="button_off"       >ki</string>
     <string name="button_on"        >be</string>
     <string name="button_open"      >Megnyit</string>
+    <string name="button_offset"    >Eltolás</string>
     <string name="button_read"      >Olvas  </string>
     <string name="button_recover"   >Visszaállít</string>
     <string name="button_reverse"   >Fordított</string>
@@ -866,19 +933,24 @@ Android-13 esetén a TopoDroidnak az alkalmazás privát mappájában kell táro
     <string name="button_left"      >BAL</string>
     <string name="button_right"     >JOBB</string>
     <string name="button_clear"     >Tisztít</string>
+    <string name="button_clear_all" >Mindent töröl</string>
     <string name="button_clear_day" >Tisztít 1nap</string>
     <string name="button_clear_week">Tisztít 7nap</string>
     <string name="button_clear_memory">Memória tisztítás</string>
     <string name="button_save"      >Ment</string>
-    <!-- UNUSED string name="button_select"    >Kiválaszt    </string -->
+    <string name="button_select"    >Kiválaszt    </string>
+    <string name="button_submit"    >Elküld</string>
     <string name="button_leg_station">Poligon pontok</string>
     <string name="button_all_station">Minden pont</string>
     <string name="button_leg_search">Poligon keresés</string>
-    <string name="button_search"    >Keres    </string>
-    <string name="button_merge"     >Egyesít     </string>
+    <string name="button_search"    >Keres</string>
+    <string name="button_merge"     >Egyesít körvonal</string>
     <string name="button_saved"     >Mentett pont</string>
     <string name="button_scrap"     >Körvonal</string>
-    <string name="button_split"     >Feloszt     </string>
+    <string name="button_split"     >Feloszt</string>
+    <string name="button_to_sketch">Vázlathoz</string>
+    <string name="button_to_scrap" >Szinthez</string>
+    <string name="button_to_buffer">puffer</string>
     <string name="button_station"   >Központ:</string>
     <string name="button_store"     >Tárol</string>
     <string name="button_swap"      >Csere      </string>
@@ -897,6 +969,7 @@ Android-13 esetén a TopoDroidnak az alkalmazás privát mappájában kell táro
     <string name="button_write"     >Feltölt</string>
     <string name="button_xsection"  >Keresztmetszet</string>
     <string name="xsection">Kereszmetszetek</string>
+    <string name="buffer">Puffer</string>
     <string name="buffer_size">Puffer: %1$d adat</string>
     <string name="buffer_sorted">rendezett</string>
     <!-- UNUSED string name="buffer_unsorted">rendezetlen</string -->
@@ -907,6 +980,7 @@ Android-13 esetén a TopoDroidnak az alkalmazás privát mappájában kell táro
     <string name="mode_station">Mérési pontok</string>
     <string name="mode_grid">Rács</string>
     <string name="mode_fixed">Fix ref.</string>
+    <string name="mode_scrap">Cak a jelenlegi szint</string>
     <string name="mode_outline">Csak körvonal</string>
     <string name="mode_scale_ref">Vonalas lépték</string>
     <string name="mode_sections">Metszetek</string>
@@ -931,7 +1005,7 @@ Android-13 esetén a TopoDroidnak az alkalmazás privát mappájában kell táro
     <string name="popup_do_splay">Segéd mérés</string>
     <string name="popup_do_leg">Poligon mérések</string>
     <string name="popup_do_gm_data">Kalibr. mérés</string>
-    <string name="popup_do_gm_group">Kalib. csoport</string>
+    <!-- UNUSED string name="popup_do_gm_group">Kalib. csoport</string -->
     <string name="popup_do_laser">Lézer</string>
     <string name="popup_do_scan">Scan mérés</string>
     <string name="popup_do_shot">Mérés</string>
@@ -962,6 +1036,7 @@ Android-13 esetén a TopoDroidnak az alkalmazás privát mappájában kell táro
     <!-- UNUSED string name="clino">Lejtszög [fok]</string -->
 
     <string name="bt_alias_title">Bluetooth aliasok</string>
+    <string name="hint_api_key">API kulcs</string>
     <string name="hint_bt_alias">BT alias</string>
     <string name="hint_bt_code">Műszer kód</string>
     <string name="bt_alias_missing">BT alias hiányzik</string>
@@ -990,7 +1065,7 @@ Android-13 esetén a TopoDroidnak az alkalmazás privát mappájában kell táro
     <string name="hint_text">szöveg</string>
     <string name="hint_options">opciók</string>
     <string name="hint_name">név</string>
-    <string name="hint_prefix">előtagx</string>
+    <string name="hint_prefix">előtag</string>
     <string name="hint_from">kezdőpont</string>
     <string name="hint_to">végpont</string>
     <string name="hint_azimuth">irány</string>
@@ -1018,7 +1093,9 @@ Android-13 esetén a TopoDroidnak az alkalmazás privát mappájában kell táro
 
     <string name="split_nothing">Nem megosztható</string>
     <string name="flip_shots">Mérések_megfordítása </string>
-    <string name="copy_items">Tételek másolása</string>
+    <string name="move_items">Elemek mozgatása</string>
+    <string name="copy_items">Elemek másolása</string>
+    <string name="paste_items">Beilleszt</string>
     <string name="current_station_format">K %1$.1f É %2$.1f H %3$.1f</string>
 
     <string name="man_preface">Előszó</string>
@@ -1061,7 +1138,7 @@ Android-13 esetén a TopoDroidnak az alkalmazás privát mappájában kell táro
     <string name="help_current_station">Elmentett mérési pontok</string>
     <string name="help_azimuth">Kiterítési irány</string>
     <string name="help_refresh">Képernyő frissítés</string>
-    <string name="help_device">Műszer funkciók</string>
+    <string name="help_device">Műszer ablak</string>
     <string name="help_device_add">Műszer hozzáadása</string>
     <string name="help_add_topodroid">Új felmérés</string>
     <string name="help_import">ZIP archívum, vagy felmérés importálása</string>
@@ -1079,9 +1156,9 @@ Android-13 esetén a TopoDroidnak az alkalmazás privát mappájában kell táro
     <string name="help_display">Képernyő mód választása</string>
     <string name="help_display_calib">Törölt mérések láthatóak/nem </string>
     <string name="help_validate">Kalibráció érvényesítése</string>
-    <string name="help_overview">Funkciók áttekintése</string>
+    <string name="help_overview">Áttekintő ablak</string>
     <string name="help_packets">DistoX csomag párbeszédpanel</string>
-    <string name="help_plot">Vázlat funkciók megtekintése</string>
+    <string name="help_plot">Vázlat ablak</string>
     <string name="help_note">Felmérési jegyzetek szerkesztése</string>
     <string name="help_bluetooth">Bluetooth kapcsolat újraindítása</string>
     <string name="help_remote">DistoX távirányítása</string>
@@ -1093,6 +1170,7 @@ Android-13 esetén a TopoDroidnak az alkalmazás privát mappájában kell táro
     <!-- UPDATES string name="help_updates">Check for app version updates</string -->
     <string name="help_photo">Fényképek</string>
     <string name="help_sensor">Mérések</string>
+	<string name="help_stations">Pontok</string>
     <string name="help_3d">3D nézőke (Cave3D)</string>
     <!-- UNUSED string name="help_move">Mozgatás/zoom mód</string -->
     <string name="help_draw">Rajz mód</string>
@@ -1104,6 +1182,7 @@ Android-13 esetén a TopoDroidnak az alkalmazás privát mappájában kell táro
     <string name="help_plot_delete">Vázlat törlése</string>
     <string name="help_plot_rename">Vázlat átnevezése/törlése</string>
     <string name="help_plot_scrap">Vázlat szintek</string>
+    <string name="help_plot_search">Alappont keresés</string>
     <string name="help_plot_switch">Vázlat nézet átváltása</string>
     <string name="help_search">Mérési pont keresése</string>
     <string name="help_stats">Felmérési statisztikák</string>
@@ -1145,6 +1224,7 @@ Android-13 esetén a TopoDroidnak az alkalmazás privát mappájában kell táro
     <!-- UNUSED string name="help_save">Változtatások mentése a mérési informácókba</string -->
     <string name="help_save_calib">Változtatások mentése a kalibrációs információkhoz</string>
     <string name="help_export_survey">Felmérés exportálása</string>
+    <string name="help_export_surveys">Minden felmérés exportálása</string>
     <string name="help_loc">GNSS koordináta</string>
     <string name="help_delete_survey">Felmérés törlése</string>
     <string name="help_delete_calib">Kalibráció törlése</string>
@@ -1154,8 +1234,8 @@ Android-13 esetén a TopoDroidnak az alkalmazás privát mappájában kell táro
     <string name="help_sdcard">DistoX memória funkciók</string>
     <string name="help_read">DistoX kalibrációs együtthatójának kiolvasása és megjelenítése</string>
     <string name="help_info_device">Műszer információ</string>
-    <!-- UNUSED string name="help_scan">Újabb DistoX-ek keresése</string -->
-    <!-- UNUSED string name="help_scan_ble">BTLE műszer keresése</string -->
+    <string name="help_scan">Újabb DistoX-ek keresése</string>
+    <!-- UNUSED string name="help_scan_ble">BLE műszer keresése</string -->
     <!-- UNUSED string name="help_pair">Párosítás a kiválasztott DistoX-el</string -->
     <string name="help_open_calib">Kalibráció megnyitása</string>
     <string name="help_export_calib">Kalibráció exportálása</string>
@@ -1168,11 +1248,13 @@ Android-13 esetén a TopoDroidnak az alkalmazás privát mappájában kell táro
     <string name="help_add_project">Barlang projekt hozzáadása</string>
     <string name="help_add_surveys">Mérés hozzáadása</string>
     <string name="help_drop_surveys">Mérés eldobása</string>
+    <string name="help_color_surveys">Mérések színének megváltoztatása</string>
     <string name="help_view_surveys">Mérések megjelenítése</string>
     <string name="help_view_equates">Kapcsolódások listázása</string>
     <string name="help_export_config">Projekt Exportálás</string>
     <string name="help_delete_config">Projekt törlése</string>
     <string name="help_add_equate">Mérések kapcsolódó pontjainak hozzáadása</string>
+    <string name="help_all_equates">Ősszes lehetséges kapcsolat</string>
     <string name="help_equates">Kapcsolódó pontok listázása</string>
     <string name="help_stations_minus">Mutass kevesebb pontot</string>
     <string name="help_stations_plus">Mutass több pontot</string>
@@ -1190,9 +1272,12 @@ Android-13 esetén a TopoDroidnak az alkalmazás privát mappájában kell táro
     <string name="export_lrud">JBFL</string>
     <string name="export_lrud_from">JBFL a kezdő ponton</string>
     <string name="export_maps">Térkép az adatok előtt</string>
+    <string name="export_uncommented_maps">Nem kommentelt térképek</string>
     <string name="export_prefix">Barlangnév-előtag a pont neveknél</string>
     <string name="export_prefix_hint">előtag</string>
-    <!-- TODO string name="export_media">media items</string -->
+    <string name="export_prefix_set">Beállít</string>
+    <string name="export_prefix_reset">Visszaállít</string>
+    <string name="export_media">média elemek</string>
     <!-- UNUSED string name="export_suffix_hint">utótag</string -->
     <string name="export_series_hint">sorozatok</string>
     <string name="export_roundtrip">Roundtrip</string><!--Roundtrip-->
@@ -1211,6 +1296,7 @@ Android-13 esetén a TopoDroidnak az alkalmazás privát mappájában kell táro
     <string name="export_xvi">Xvi képek</string>
     <string name="export_with_xsections">Metszetekkel együtt</string>
     <string name="export_grouped">Elemek csoportosítása rétegekre típus szerint</string>
+    <string name="export_origin">Kezdópont</string>
     <string name="export_with_reference">XY skála</string>
 
     <!-- UNUSED string name="export_linedir_stroke">Vonal irány stroke</string -->
@@ -1230,16 +1316,19 @@ Android-13 esetén a TopoDroidnak az alkalmazás privát mappájában kell táro
     <string name="audio_overwrite">Felülírja?</string>
     <!-- UNUSED string name="playing">Lejátszás %1$s</string -->
   
-    <string name="import_functional">Csak a funkcionális beállítások betöltése</string>
     <string name="import_trox">Trox fájl formátum</string>
     <string name="import_lrud">Import BJFL</string>
     <string name="import_leg_first">Poligon mérés a BJFL előtt</string>
     <string name="import_diving_datamode">Merülési adatmód</string>
     <string name="import_therion_path">Felmérési útvonallal</string>
 
+    <string name="title_gemini">Ird be a te MI API kulcsodat</string>
+    <string name="title_ai_dialog">MI súgó</string>
+    <string name="title_ai_dialog_pref">MI beállítás súgó</string>
     <string name="title_azimut">Kiterítés referencia iránya</string>
     <string name="title_audio">Hangjegyzet</string>
     <string name="title_audio_list">Hang felvétel</string>
+    <string name="title_recalibrate">Klibrációk</string>
     <string name="title_calib">Kalibrációk</string>
     <string name="title_calib_check">Kalir. ell. mérések</string>
     <!-- UNUSED string name="title_check">Kalibrációs ellenőrzés</string -->
@@ -1250,7 +1339,10 @@ Android-13 esetén a TopoDroidnak az alkalmazás privát mappájában kell táro
     <!-- UNUSED string name="title_contour">Körvonal</string -->
     <!-- UNUSED string name="title_coord">Ird be a pont koordinátáit:</string -->
     <string name="title_current_station">Elmentett mérési pontok</string>
+    <string name="title_scan_shot">Szkennelés</string>
     <string name="title_search">Pont/Mérés keresés</string>
+	 <string name="title_stations">Pontok</string>
+    <string name="title_plot_search">Alappont keresés</string>
     <string name="title_pref_search">Beállítások keresése</string>
     <string name="title_gm_search">Kalibrációs adat keresés</string>
     <string name="title_dangling">Csatolatlan mérés</string>
@@ -1318,6 +1410,7 @@ Android-13 esetén a TopoDroidnak az alkalmazás privát mappájában kell táro
     <string name="title_settings_gpx">GPX export beállítások</string>
     <string name="title_settings_kml">KML export beállítások</string>
     <string name="title_settings_srv">Walls export beállítások</string>
+    <string name="title_settings_ply">Polygon export beállítások</string>
 
     <string name="title_settings_sketch">TopoDroid 3d vázlat beállítások</string>
     <string name="title_settings_survey">TopoDroid mérés beállítások</string>
@@ -1339,13 +1432,13 @@ Android-13 esetén a TopoDroidnak az alkalmazás privát mappájában kell táro
     <string name="title_settings_3d">TopoDroid 3D néző beállítások</string>
     <string name="title_settings_dem">TopoDroid DEM beállítások</string>
     <string name="title_settings_walls3d">TopoDroid 3D modell beállítások</string>
-    <string name="title_settings_geek">Szakértői beállítások</string>
-    <string name="title_settings_geek_survey">Szakértői mérés beállítások</string>
-    <string name="title_settings_geek_splay">Szakértői sün beállítások</string>
-    <string name="title_settings_geek_plot">Szakértői vázlat beállítások</string>
-    <string name="title_settings_geek_line">Szakértői vonal beállítások</string>
-    <string name="title_settings_geek_device">Szakértői műszer beállítások</string>
-    <string name="title_settings_geek_import">Szakértői import beállítások</string>
+    <string name="title_settings_geek">Másodlagos beállítások</string>
+    <string name="title_settings_geek_survey">Másodlagos mérés beállítások</string>
+    <string name="title_settings_geek_splay">Másodlagos sün beállítások</string>
+    <string name="title_settings_geek_plot">Másodlagos vázlat beállítások</string>
+    <string name="title_settings_geek_line">Másodlagos vonal beállítások</string>
+    <string name="title_settings_geek_device">Másodlagos műszer beállítások</string>
+    <string name="title_settings_geek_import">Másodlagos import beállítások</string>
     <string name="title_settings_log">TopoDroid naplózás beállítások</string>
 
     <string name="title_shift">Váltás</string>
@@ -1360,11 +1453,14 @@ Android-13 esetén a TopoDroidnak az alkalmazás privát mappájában kell táro
     <string name="title_survey_new">Új felmérés</string>
     <string name="title_survey_export">felmérés exportálása</string>
     <string name="title_survey_rename">Felmérés átnevezése</string>
-    <string name="title_plot_rename">Vázlat átnevezése</string>
+    <string name="title_station_photo">Mérési pont fotó</string>
+    <string name="title_team_dialog">Csapat nevek</string>
+    <string name="title_plot_rename">Vázlat műveletek</string>
     <string name="title_plot_zoomfit">Zoom teljes / Irány</string>
     <string name="title_calib_export">Kalibráció exportálása</string>
     <!-- UNUSED string name="title_zoom">Zoom</string -->
 
+    <string name="title_read_names">Mérési pont név leképezés</string>
     <string name="title_import_shot">Felmérés import</string>
     <string name="title_import_gps">GNSS pont import</string>
     <string name="title_import_th2">Therion th2 fájl</string>
@@ -1379,6 +1475,8 @@ Android-13 esetén a TopoDroidnak az alkalmazás privát mappájában kell táro
   <string name="pref_export_settings">Beállítások exportálása/importálása</string>
  <!-- UNUSED string name="pref_tcsx">Export cSurvey-1.20 transfer-csx</string -->
 
+  <string name="pref_bulk_export_title">Tömeges adatexportálás</string>
+  <string name="pref_bulk_export_summary">Az összes felmérés tömeges exportálása</string>
   <string name="pref_export_plot_title">Vázlat export formátum</string>
   <string name="pref_export_plot_summary">Alapértelmezett vázlat export formátum</string>
   <string name="pref_export_shots_title">Adat export formátum</string>
@@ -1411,12 +1509,14 @@ Android-13 esetén a TopoDroidnak az alkalmazás privát mappájában kell táro
   <!-- UNUSED string name="pref_cat_min_algo">MIN ALGO</string -->
   <string name="pref_cat_device">MŰSZEREK</string>
   <string name="pref_cat_cave3d">3D MEGJELENÍTŐ</string>
-  <string name="pref_cat_geek">SZAKÉRTŐI BEÁLLÍTÁSOK</string>
+  <string name="pref_cat_geek">MÁSODLAGOS BEÁLLÍTÁSOK</string>
   <string name="pref_cat_sketch">3D VÁZLAT</string>
   <!-- UNUSED string name="pref_cat_log">NAPLÓZÁSOK</string -->
 
   <string name="pref_locale_title">Nyelv</string>
   <string name="pref_locale_summary">Nyelv</string>
+  <string name="pref_gemini_title">MI kulcs</string>
+  <string name="pref_gemini_summary">Gemini API kulcs</string>
   <string name="pref_orientation_title">Képernyő irány</string>
   <string name="pref_orientation_summary">App képernyő irány</string>
   <string name="pref_single_back_title">Egy vissza</string>
@@ -1445,7 +1545,7 @@ Android-13 esetén a TopoDroidnak az alkalmazás privát mappájában kell táro
   <string name="pref_therion_config_summary">Therion konfig parancs készítés</string>
   <string name="pref_therion_maps_title">Therion térképek elöl</string>
   <string name="pref_therion_maps_summary">Therion térképek a felmérési adatok előtt</string>
-  <string name="pref_extra_buttons_title">Engedélyezett funkciók</string>
+  <string name="pref_extra_buttons_title">Használati profil</string>
   <string name="pref_extra_buttons_summary">Engedélyezett funkciók beállítása</string>
   <string name="pref_size_buttons_title">Gombok mérete</string>
   <string name="pref_size_buttons_summary">Fejléc gombok mérete</string>
@@ -1488,12 +1588,16 @@ Android-13 esetén a TopoDroidnak az alkalmazás privát mappájában kell táro
   <string name="pref_unnamed_device_summary">Menü engedélyezése a műszer nevének megadásához</string>
   <string name="pref_station_prefix_title">Pontnév előtag</string>
   <string name="pref_station_prefix_summary">Pontnév előtagok exportálása</string>
-  <!-- TODO string name="pref_with_media_title">Media export</string -->
-  <!-- TODO string name="pref_with_media_summary">Include media in export [cSurvey]</string -->
+  <string name="pref_with_media_title">Média export</string>
+  <string name="pref_with_media_summary">Média felvétele az exportálásba [cSurvey]</string>
   <string name="pref_compass_splays_title">Compass segédmérések</string>
   <string name="pref_compass_splays_summary">Segédmérések exportja a Compass fájlokba</string>
   <string name="pref_walls_splays_title">Walls sünök</string>
   <string name="pref_walls_splays_summary">Segédmérések exportja a Walls fájlokba</string>
+  <string name="pref_ply_lrud_title">Polygon LRUD</string>
+  <string name="pref_ply_lrud_summary">BJFL vagy pontnév hozzáadása a sünöknél</string>
+  <string name="pref_ply_minus_title">Polygon minus</string>
+  <string name="pref_ply_minus_summary">"-" vagy számozott sünök a Polygonban</string>
   <string name="pref_vtopo_splays_title">VisualTopo segédmérések</string>
   <string name="pref_vtopo_splays_summary">Segédmérések exportja a VisualTopo fájlokba</string>
   <string name="pref_vtopo_lrud_title">BJFL a kezdőpontnál</string>
@@ -1581,8 +1685,8 @@ Android-13 esetén a TopoDroidnak az alkalmazás privát mappájában kell táro
   <string name="pref_conn_mode_summary">A DistoX-el való kapcsolat típusa adatletöltéshez</string>
   <!-- UNUSED string name="pref_auto_reconnect_title">Automatikus újrakapcsolódás</string -->
   <!-- UNUSED string name="pref_auto_reconnect_summary">Újrakapcsolódás, ha a kapcsolat megszakad</string -->
-  <string name="pref_second_distox_title">Két DistoX mérés</string>
-  <string name="pref_second_distox_summary">Mérés két DistoX-el</string>
+  <string name="pref_second_distox_title">Két műszeres mérés</string>
+  <string name="pref_second_distox_summary">Mérés két műszerrel</string>
   <string name="pref_auto_pair_title">Atomatikus párosítás</string>
   <string name="pref_auto_pair_summary">Párosítás a talált műszerrel</string>
   <string name="pref_head_tail_title">Új adatok száma</string>
@@ -1627,6 +1731,10 @@ Android-13 esetén a TopoDroidnak az alkalmazás privát mappájában kell táro
   <string name="pref_pt_color_map_summary">PocketTopo szín jelkulcs (PocketTopo import)</string>
   <string name="pref_text_size_title">Betűméret</string>
   <string name="pref_text_size_summary">Lista elemek betűmérete</string>
+  <string name="pref_symbol_size_title">Szimbólum méret</string>
+  <string name="pref_symbol_size_summary">Alsó választó sáv szimbólum méret</string>
+  <string name="pref_toolbar_update_title">Eszköztár frissítése</string>
+  <string name="pref_toolbar_update_summary">Hogyan illeszthetők be az új szimbólumok az alsó sorba</string>
   <string name="pref_closeness_title">Kijelölési sugár</string>
   <string name="pref_closeness_message">Vázlat elemek kijelölési sugara</string>
   <string name="pref_eraseness_title">Radír méret</string>
@@ -1652,8 +1760,8 @@ Android-13 esetén a TopoDroidnak az alkalmazás privát mappájában kell táro
 
   <!-- UNUSED string name="pref_data_backup_title">Adat autómatikus export</string -->
   <!-- UNUSED string name="pref_data_backup_summary">Automatkus adat export(alapértelmezett formátumra van szükség)</string -->
-  <string name="pref_editable_stations_title">Átírható pontszám</string>
-  <string name="pref_editable_stations_summary">Módosíthatók a pont nevek a jegyzőkönyvben</string>
+  <!-- UNUSED string name="pref_editable_stations_title">Átírható pontszám</string -->
+  <!-- UNUSED string name="pref_editable_stations_summary">Módosíthatók a pont nevek a jegyzőkönyvben</string -->
   <string name="pref_zipped_symbols_title">Tömörített szimbólum</string>
   <string name="pref_zipped_symbols_summary">Szimbólum fájlok tárolása/beolvasása zip archívumokba/ból</string>
   <string name="pref_fixed_origin_title">Vázlat kezdőpont</string>
@@ -1737,12 +1845,14 @@ Android-13 esetén a TopoDroidnak az alkalmazás privát mappájában kell táro
   <string name="pref_shot_timer_summary">Hány másodpercig várjon, mielőtt megméri az irányszöget</string>
   <string name="pref_beep_volume_title">Időzítő hangereje</string>
   <string name="pref_beep_volume_summary">Időzítő csipogásának hány százalékos a hangereje</string>
+  <string name="pref_beep_length_title">Időzítő sípolás hossza</string>
+  <string name="pref_beep_length_summary">Sípolás időtartama [msec]</string>
   <string name="pref_extend_frac_title">Arányos kiterítés</string>
   <string name="pref_extend_frac_summary">A "kiterítés"-nek lehet-e tizedes része</string>
   <string name="pref_recent_shot_title">Legutóbbi mérés</string>
   <string name="pref_recent_shot_summary">Az utolsó mérés kiemelése</string>
-  <string name="pref_drawing_unit_title">Pont eszközök méretaránya</string>
-  <string name="pref_drawing_unit_summary">Pont eszközök méretaránya</string>
+  <string name="pref_drawing_unit_title">Pont szimbólumok méretaránya</string>
+  <string name="pref_drawing_unit_summary">Pont ikonok/szimbólumok méretaránya</string>
   <string name="pref_unscaled_points_title">Pont nagyítás</string>
   <string name="pref_unscaled_points_summary">A pont tipusú jelkulcs elemek nem nagyíthatóak</string>
   <string name="pref_segment_title">Vonal-pont távolság</string>
@@ -1781,6 +1891,10 @@ Android-13 esetén a TopoDroidnak az alkalmazás privát mappájában kell táro
   <string name="pref_label_size_summary">Címkék mérete</string>
   <string name="pref_scalable_label_title">Felirat méretezés</string>
   <string name="pref_scalable_label_summary">Felirat mérete a nagyítás szerint</string>
+  <string name="pref_xsection_offset_title">Keresztmetszet eltolás</string>
+  <string name="pref_xsection_offset_summary">Keresztmetszet pontok eltolása</string>
+  <string name="pref_plot_cache_title">Vázlat gyorsítótár</string>
+  <string name="pref_plot_cache_summary">Vázlatok gyorsítótárazása a memóriában</string>
   <string name="pref_slope_lside_title">Lejtő vonal l-side</string>
   <string name="pref_slope_lside_summary">Lejtő vonal alapértelmezett l-side</string>
   <string name="pref_arrow_length_title">Metszet-jelölő</string>
@@ -1793,8 +1907,8 @@ Android-13 esetén a TopoDroidnak az alkalmazás privát mappájában kell táro
   <string name="pref_line_units_summary">Rajz vonal mértékegység</string>
   <string name="pref_line_close_title">Zárt vonal zárás</string>
   <string name="pref_line_close_summary">Vonal zárása a zárt vonal típusnál</string>
-  <string name="pref_linesnap_title">Vonal/felület illesztés</string>
-  <string name="pref_linesnap_summary">Vonal/terület megfordításának engedélyezése</string>
+  <string name="pref_linesnap_title">Vonal/terület illesztés</string>
+  <string name="pref_linesnap_summary">Vonal/terület akciók engedélyezése</string>
   <string name="pref_linecurve_title">Sima/Kiegyenesített</string>
   <string name="pref_linecurve_summary">Sima/Kiegyenesített vonal szakasz lehetőség</string>
   <string name="pref_linestraight_title">Kiegyenesített vonal</string>
@@ -1813,6 +1927,8 @@ Android-13 esetén a TopoDroidnak az alkalmazás privát mappájában kell táro
   <string name="pref_stylus_size_summary">Toll méret [pxl, 0: nincs]</string>
   <string name="pref_line_ends_title">Vonal-vég vágás</string>
   <string name="pref_line_ends_summary">A végekről ledobandó vonalpontok száma [0]</string>
+  <!-- UNUSED string name="pref_zoom_lower_bound_title">Zoom határ</string -->
+  <!-- UNUSED string name="pref_zoom_lower_bound_summary">Zoom teljes minimum skála [0.1]</string -->
   <string name="pref_fixed_thickness_title">Poligonvonal vastagsága</string>
   <string name="pref_fixed_thickness_summary">Poligonvonal vastagsága</string>
   <!-- UNUSED string name="pref_device_title">Műszer</string -->
@@ -1861,6 +1977,8 @@ Android-13 esetén a TopoDroidnak az alkalmazás privát mappájában kell táro
   <string name="pref_LRExtend_summary">Bal/Jobb irányú kiterjedés becslése (Compass/VisualTopo import</string>
   <string name="pref_diving_mode_title">Búvár mód</string>
   <string name="pref_diving_mode_summary">Búvár mód engedélyezése</string>
+  <string name="pref_shot_tampering_title">Mérés manipulálása</string>
+  <string name="pref_shot_tampering_summary">Letöltött mérés módosítása</string>
   <string name="pref_splay_classes_title">Segédmérés osztályozása</string>
   <string name="pref_splay_classes_summary">Segédmérés osztályozás engedélyezése</string>
   <string name="pref_splay_color_title">Segédmérés szinezés</string>
@@ -1929,7 +2047,7 @@ Android-13 esetén a TopoDroidnak az alkalmazás privát mappájában kell táro
   <!-- NO string name="pref_algo_min_delta_summary">Min-algo group G^M.x súlyozása</string -->
 
   <string name="pref_3d_sketch_title">3D modellezés</string>
-  <string name="pref_3d_sketch_summary">3D modelezés engedélyezése (csak hibakeresésre)</string>
+  <string name="pref_3d_sketch_summary">3D modellezés engedélyezése (csak hibakeresésre)</string>
   <string name="pref_sketch_splay_buffer_title">Sün puffer</string>
   <string name="pref_sketch_splay_buffer_summary">Metszet sün puffer [m]</string>
 
@@ -1994,6 +2112,7 @@ Android-13 esetén a TopoDroidnak az alkalmazás privát mappájában kell táro
 \n\nSegítség: menü "súgó, ?"
 \nFelhasználói kézikönyv: Könyv ikon a súgó ablakban
 \nDokumentumok: http://sites.google.com/site/speleoapps
+\nLetöltés: http://marcocorvi.altervista.org/caving/speleoapps/speleoapks/TopoDroidApks.html
 \nHozzászólások, hiba bejelentés, új funkció igények: marco.corvi@gmail.com
 \nA magyar fordítást Sűrű Péter munkája nyomán
 \nHoll Balázs (holl.balazs.TopoDroid@gmail.com) készítette.
@@ -2066,13 +2185,16 @@ Android-13 esetén a TopoDroidnak az alkalmazás privát mappájában kell táro
     <string name="title_export">Projekt exportálása a &#8230;</string>
     <string name="title_equates">Projekt kapcsolódó pontok</string>
     <string name="title_equate_new">Kapcsolódó pont hozzáadás &#8230;</string>
+	<string name="button_equate_all">Mind</string><!-- HB EQ all-->
+	<string name="button_equate_one">Egy</string><!-- HB EQ one-->
+    <string name="button_equate_search">Keres</string><!-- HB EQ all-->
     <string name="title_equate_with">Kapcsolódik %1$s és %2$s</string>
     <!-- UNUSED string name="title_cwd">Jelenlegi munka könyvtár</string -->
     <string name="title_drop">Eldobja a mérést?</string>
     <string name="title_tdconfig">Adja meg a projekt nevét</string>
     <string name="title_surveys">Mérések</string>
 
-    <string name="exported">Mentett fájl %1$s</string>
+    <string name="exported">Exportált fájl %1$s</string>
     <string name="export_failed">Hibás export</string>
 
     <string name="image_diagram">Irány diagram</string>
@@ -2116,7 +2238,7 @@ Android-13 esetén a TopoDroidnak az alkalmazás privát mappájában kell táro
     <string name="info_survey">Felmérések</string>
     <string name="info_shot">Mérések</string>
     <string name="info_station">Pontok</string>
-    <string name="info_length">Hossz</string>
+    <string name="info_length">Poligon hossz</string>
     <string name="info_surface">Felszín hossz</string>
     <string name="info_depth">Mélység</string>
     <string name="info_volume">Térfogat</string>
@@ -2148,6 +2270,7 @@ Android-13 esetén a TopoDroidnak az alkalmazás privát mappájában kell táro
     <string name="legs_surface">Felszín</string>
     <string name="legs_duplicate">Duplikált</string>
     <string name="legs_commented">Kizárt</string> <!-- kizárt=kommentelt -->
+    <string name="legs_backshot">Fordított mérés</string> <!-- Backshot DistoX?-->
 
     <string name="proj_perspective">Perspektív parameterek</string>
     <string name="proj_orthographic">Merőleges parameterek</string>
@@ -2292,6 +2415,10 @@ Android-13 esetén a TopoDroidnak az alkalmazás privát mappájában kell táro
     <string name="warning_no_csv_type">CSV típus nincs meghatározva</string>
     <string name="warning_cavway_info">Cavway info lekérés sikertelen</string>
     <string name="no_permissions">Az alkalmazás nem tud futni szükséges hozzáférések nélkül</string>
+    <string name="cavway_sync_failed">Nem sikerült szinkronizálni a Cavway óráját</string>
+    <string name="cavway_synchronized">Cavway órájának szinkronizálása</string>
+    <string name="cavway_sync_ok">Cavway órája szinkronizálva</string>
+    <string name="cavway_sync_offset">Cavway idő eltolódás: %1$d [perc]</string>
 
     <!-- UNUSED string name="done_fractals">Kész fraktál dimenziók</string -->
     <string name="done_convexhull">Kész konvex-hajótest falak</string>
@@ -2389,7 +2516,7 @@ Android-13 esetén a TopoDroidnak az alkalmazás privát mappájában kell táro
     <string name="help_alpha_3d">D.E.M.</string>
     <string name="help_wall_3d">3D modell</string>
     <!-- UNUSED string name="help_temperature">Hőmérséklet</string -->
-    <string name="help_sketch_3d">3D vázlat felemelés</string>
+    <!-- UNUSED string name="help_sketch_3d">3D vázlat felemelés</string -->
     <!-- UNUSED string name="help_fractal">Fraktál analízis</string -->
 
     <string name="help_light_3d">Eltolás és fény</string>

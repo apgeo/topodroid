@@ -1,6 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--suppress CheckTagEmptyBody -->
 <resources>
+  <!-- TODO string-array name="scanLegType">
+     <item name="s">Generic</item>
+     <item name="sX">XSection</item>
+     <item name="sH">Horizontal</item>
+     <item name="sV">Vertical</item>
+  </string-array -->
+
+  <!-- TODO string-array name="toolbarUpdate">
+     <item name="oldest">Replace oldest</item>
+     <item name="front">Put at front</item>
+     <item name="front_oldest">At front, drop oldest</item>
+  </string-array -->
+
   <string-array name="teamNames">
      <item name="plain">Texto simples</item>
      <item name="separated">Texto com separadores</item>
@@ -348,12 +361,12 @@
     <item name="degrees">graus decimais</item>
     <item name="ddmmss">graus, minutos, segundos</item>
   </string-array>
-  <string-array name="calibAlgo">
+  <!-- string-array name="calibAlgo">
     <item name="auto">automático</item>
     <item name="linear">linear</item>
     <item name="nonlinear">não linear</item>
-    <!-- item name="minimum">Mínimo</item -->
-  </string-array>
+    <! - - item name="minimum">Mínimo</item - - >
+  </string-array -->
   <string-array name="rawCData">
     <item name="none">nenhum</item>
     <item name="dec">decimal</item>

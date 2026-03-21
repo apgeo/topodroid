@@ -4,7 +4,7 @@
 <h4>CUSTOM SETTINGS</h4>
 
 <div style="font-size=90%">
-<i>Custom settings</i> are for TopoDroid esoteric features.<br>
+<i>Secondary settings</i> are for TopoDroid esoteric features.<br>
 They are accessible only at tester level.<br>
 However, their effects can be visible at a lower level (denoted in square brackets).<br>
 By default, the flags are disabled.
@@ -12,23 +12,25 @@ By default, the flags are disabled.
 
 <b>General settings</b><br>
 <ul>
-<li><i>Single BACK</i>: close windows with single tap of BACK button</li>
+<li><i>Single BACK</i>: close windows with single tap of the BACK button</li>
 <li><i>Navigation bar</i>: whether to hide the navigation bar and show it with a slide-up</li>
-<li>Additional <i>palettes</i>: to install tools from other sets than the basic cave-tool set</li>
+<li>Additional <a href="page_tools.htm">palettes</a>: to install tools from other sets than the basic cave-tool set</li>
 <li><i>Packet logging</i>: raw data packets are copied into the packed database</li>
 <li><i>Sketch editing</i>: enables the sketch editing tool in the <u>Main window</u></li>
+<li><i>API key</i>: <a href="page_help.htm">Gemini API key</a> [default non-set]</li>
 </ul>
 <br><p>
 
 <b>Survey data settings</b><br>
 <ul>
 <li><i>Diving mode</i> enables data "diving-mode" - distance, azimuth and depth</li>
+<li><i>Shot tampering</i> enables editable values for downloaded shot [B]</li>
 <li><i>Recent shots</i> can be highlighted in blue, and selectively displayed</li>
 <li><i>Recent data timeout</i> the time after which a shot is no longer "recent"</li>
 <li><i>Fractional extend</i> for legs in the extended profile</li>
 <li>Swap stations for <i>DistoX backsight</i> data</li>
 <li><i>Plane interpolation</i>: direction and dip of the plane of a set of splays</li>
-<li><i>Sensors</i> measures [A]</li>
+<li><a href="page_sensors.htm">Sensors</a> measures [A]</li>
 <li><i>Loop closure</i>: error compensation method [E]</li>
 <li><i>Loop threshold</i>: threshold used in selective loop compensation [E]</li>
 <li>Using <i></i>Android compass</i>/clino [A]</li>
@@ -70,9 +72,9 @@ dashing by the view [60&deg;]</li>
 <li><i>Leg-only refresh</i> recompute (and redraw) the midline only when a leg is downloaded (in continuous data-download mode) [not] [T]</li>
 <li><i>Affine transform</i> enable the sketch affine transformation</li>
 <li><i>Canvas levels</i>: none, by item, by type [none]</li>
-<li><i>Graph-paper scale</i> adjustment [0]</li>
-<li><i>Slant xsections</i>: whether to allow slanted x-section for profile views [no]</li>
-<li><i>Oblique projected profiles</i>: maximum value of the projection angle to the normal of the projection plane.
+<li><a href="page_graph_paper_scale.htm">Graph-paper scale</a> adjustment [0]</li>
+<li><a href="manual11.htm">Slant xsections</a>: whether to allow slanted x-section for profile views [no]</li>
+<li><a href="page_projection.htm">Oblique projected profiles</a>: maximum value of the projection angle to the normal of the projection plane.
 It cannot be over 80&deg;. If below 10&deg; the projection is normal. [0]</li>
 <li><i>Line ends cut</i>: number of line-points to drop from ends when <i>Stylus only drawing</i> is set to something greater than zero.</li>
 </ul>
@@ -83,7 +85,7 @@ It is also not used at tester level, because, at this level there is an experime
 
 If <i>slant xsections</i> is enabled, the plane of xsections in profile views can have an inclination.
 Only inclinations multiple of 10&deg; are used.
-If <i>slant xsections</i> is not enabled, section lines traced at more than the value of <i>HThreshold</i> are vertical xsections, 
+If <i>slant xsections</i> is not enabled, section lines traced at more than the value of <i>HThreshold</i> are vertical xsections,
 otherwise they are horizontal xsections.<br><p>
 
 <b>Line settings</b><br>
@@ -97,7 +99,7 @@ otherwise they are horizontal xsections.<br><p>
 <li><i>Line/Area snap</i> actions</li>
 <li><i>Smooth/straighten segment</i> actions</li>
 <li>Making whole line <i>"rocky"</i> action [no]</li>
-<li><i>Multi-path</i> actions: path multiselection is initiated with a point-action menu. 
+<li><i>Multi-path</i> actions: path multiselection is initiated with a point-action menu.
 The multi-path actions are: delete, decimate, join, scrap-move. "Finish" terminates the multiselection without doing anything.</li>
 <!-- li><i>Composite actions</i></li -->
 </ul>
@@ -123,21 +125,21 @@ The multi-path actions are: delete, decimate, join, scrap-move. "Finish" termina
 <li>Pause after the remote <i>Laser-on command</i> [1500 ms] [A]</li>
 <li>Pause after the remote <i>shot command</i> [2000 ms] [A]</li>
 <li><i>Firmware</i> sanity check [yes] [A]</li>
-<li><i>Bric4 mode</i>: either primary data only, all data, or all data except the index.
-With all data TopoDroid uses as shot index the value from the Bric4. [all] [T]</li>
-<li><i>Bric4 zero data</i>: whether to record zero-shots [no] [N]</li>
-<li><i>Bric index</i>: whether to use the shot-index of the BRIC as shot ID [no]. It requires that all the info of a shot are downloaded.</li>
-<li><i>Sap5 bit-16 bug</i>: workaround [T]</li>
+<li><i>BRIC mode</i>: either primary data only, all data, or all data except the index.
+With all data TopoDroid uses as shot index the value from the <i>BRIC</i>. [all] [T]</li>
+<li><i>BRIC zero data</i>: whether to record zero-shots [no] [N]</li>
+<li><i>BRIC index</i>: whether to use the shot-index of the <i>BRIC</i> as shot ID [no]. It requires that all the info of a shot are downloaded.</li>
+<li><i>SAP5 bit-16 bug</i>: workaround [T]</li>
 </ul>
 <br>
 Note. If the delays after the remote "Laser-on" and "Shot" commands are too short, the commands may fail.
 <br><p>
-  
+ 
 <b>Import-Export settings</b><br>
 <ul>
 <li>Include <i>tool files</i> in zip archive</li>
 <li>Survey <i>datamode</i> on import (normal, diving) [normal]</li>
-<li>Export csx in <i>cSurvey-transfer</i> format (required cSurvey 1.20)</li> 
+<li>Export csx in <i>cSurvey-transfer</i> format (required cSurvey 1.20)</li>
 <li><i>Stations</i>: add stations automatically to th2 files</li>
 <li><i>LRUD splay count</i>: number of splays used for LURD</li>
 </ul>

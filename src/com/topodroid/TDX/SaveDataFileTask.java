@@ -15,10 +15,11 @@ import com.topodroid.utils.TDLog;
 import com.topodroid.utils.TDFile;
 import com.topodroid.utils.TDsafUri;
 import com.topodroid.utils.TDStatus;
+import com.topodroid.utils.TDString;
 import com.topodroid.num.TDNum;
 import com.topodroid.prefs.TDSetting;
 import com.topodroid.dev.Device;
-import com.topodroid.common.ExportInfo;
+import com.topodroid.types.ExportInfo;
 
 // import java.lang.ref.WeakReference;
 
@@ -29,11 +30,13 @@ import android.os.ParcelFileDescriptor;
 import android.os.AsyncTask;
 
 import java.io.FileOutputStream;
-// import java.io.OutputStream;
+// import java.io.OutputStreamWriter;
 // import java.io.FileWriter;
 import java.io.BufferedWriter;
 // import java.io.FileNotFoundException;
 import java.io.IOException;
+
+import java.nio.charset.Charset;
 
 class SaveDataFileTask extends AsyncTask<Void, Void, String >
 {
@@ -47,8 +50,10 @@ class SaveDataFileTask extends AsyncTask<Void, Void, String >
   private String mSurveyName; // export survey name - TopoRobot
   private boolean mToast;
   private Uri mUri = null;
+  private TopoDroidApp mApp = null;
 
   /**
+   * @param app         TopoDroidApp reference (for sharing)
    * @param uri         output URI
    * @param format      format for the toast
    * @param sid         survey ID
@@ -59,8 +64,9 @@ class SaveDataFileTask extends AsyncTask<Void, Void, String >
    * @param export_info export info (type, prefix, name ...)
    * @param toast       whether to toast
    */
-  SaveDataFileTask( Uri uri, String format, long sid, SurveyInfo info, DataHelper data, String survey, Device device, ExportInfo export_info, boolean toast )
+  SaveDataFileTask( TopoDroidApp app, Uri uri, String format, long sid, SurveyInfo info, DataHelper data, String survey, Device device, ExportInfo export_info, boolean toast )
   {
+    mApp     = app;
     /* if ( TDSetting.mExportUri ) */ mUri = uri; // FIXME_URI
     mFormat  = format;
     mSid     = sid;
@@ -153,7 +159,7 @@ class SaveDataFileTask extends AsyncTask<Void, Void, String >
               // float decl = mData.getSurveyDeclination( mSid );
               // if ( decl >= SurveyInfo.DECLINATION_MAX ) decl = 0;
               float decl = mInfo.getDeclination();
-              TDNum num = new TDNum( list, blk.mFrom, null, null, decl, null ); // null formatClosure
+              TDNum num = new TDNum( list, blk.mFrom, decl, null ); // null formatClosure
               pathname = mSurvey + TDPath.DXF;
               ret = TDExporter.exportSurveyAsDxf( bw, mSid, mData, mInfo, num, mSurvey );
             }
@@ -204,7 +210,8 @@ class SaveDataFileTask extends AsyncTask<Void, Void, String >
             break;
           case TDConst.SURVEY_FORMAT_PLG: // Polygon CAVE
             // bw = new BufferedWriter( (pfd != null)? TDsafUri.docFileWriter( pfd ) : new FileWriter( TDPath.getCaveFileWithExt( mSurvey ) ) );
-            bw = new BufferedWriter( TDsafUri.docFileWriter( pfd ) );
+            // bw = new BufferedWriter( TDsafUri.docFileWriter( pfd ) );
+            bw = new BufferedWriter( TDsafUri.docOutputStreamWriter( pfd, Charset.forName( "ISO-8859-2" ) ) );
             pathname = mSurvey + TDPath.CAVE;
             ret = TDExporter.exportSurveyAsPlg( bw, mSid, mData, mInfo, mSurvey );
             break;
@@ -279,16 +286,24 @@ class SaveDataFileTask extends AsyncTask<Void, Void, String >
   protected void onPostExecute( String filename )
   {
     // TDLog.v( "save data file task post exec - filename " + filename );
-    if ( mToast ) { 
+    if ( mToast ) {
       if ( filename == null ) {
         TDToast.makeBad( R.string.saving_file_failed );
       } else if ( filename.length() == 0 ) {
         TDToast.makeBad( R.string.no_geo_station );
       } else {
-        TDToast.make( String.format(mFormat, filename) ); 
+        TDToast.make( String.format(mFormat, filename) );
+      }
+    }
+    if ( TDSetting.mExportDataShare && mApp != null ) { // Share file if enabled
+      if ( ! TDString.isNullOrEmpty( filename ) ) { 
+        String mimetype = TDConst.getMimeFromFilename( filename );
+        // TDLog.v("mime " + mimetype );
+        if ( mimetype != null ) {
+          mApp.shareFile( filename, mimetype, 1 ); // 1 SurveyActivity
+        }
       }
     }
   }
 
 }
-

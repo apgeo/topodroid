@@ -177,6 +177,10 @@ public class BrushManager
   public static String getLineFullThName( int idx )  { return (mLineLib  == null)? null : mLineLib.getSymbolFullThName( idx ); }
   public static String getAreaFullThName( int idx )  { return (mAreaLib  == null)? null : mAreaLib.getSymbolFullThName( idx ); }
 
+  public static String getPointFullThNameEscapedColon( int idx ) { return (mPointLib == null)? null : mPointLib.getSymbolFullThNameEscapedColon( idx ); }
+  public static String getLineFullThNameEscapedColon( int idx )  { return (mLineLib  == null)? null : mLineLib.getSymbolFullThNameEscapedColon( idx ); }
+  public static String getAreaFullThNameEscapedColon( int idx )  { return (mAreaLib  == null)? null : mAreaLib.getSymbolFullThNameEscapedColon( idx ); }
+
   static String getPointGroup( int idx ) { return (mPointLib == null)? null : mPointLib.getSymbolGroup( idx ); }
   static String getLineGroup( int idx )  { return (mLineLib  == null)? null : mLineLib.getSymbolGroup( idx ); }
   static String getAreaGroup( int idx )  { return (mAreaLib  == null)? null : mAreaLib.getSymbolGroup( idx ); }
@@ -316,7 +320,7 @@ public class BrushManager
   public static final Paint fixedShotPaint   = makePaint( 0xffbbbbbb,           WIDTH_CURRENT, Paint.Style.STROKE);
   public static final Paint fixedBluePaint   = makePaint( 0xff9999ff,           WIDTH_CURRENT, Paint.Style.STROKE);
   public static final Paint deepBluePaint    = makePaint( 0xff3366ff,           WIDTH_CURRENT, Paint.Style.STROKE);
-  public static final Paint darkBluePaint    = makePaint( 0x663366ff,           WIDTH_CURRENT, Paint.Style.STROKE); // same as deepBluePaint but with alpha
+  public static final Paint darkBluePaint    = makePaint( 0xbb3366ff,           WIDTH_CURRENT, Paint.Style.STROKE); // same as deepBluePaint but with alpha
   public static final Paint lightBluePaint   = makePaint( 0xff66ccff,           WIDTH_CURRENT, Paint.Style.STROKE);
   public static final Paint fixedRedPaint    = makePaint( TDColor.FIXED_RED,    WIDTH_CURRENT, Paint.Style.STROKE);
   public static final Paint fixedYellowPaint = makePaint( TDColor.FIXED_YELLOW, WIDTH_CURRENT, Paint.Style.STROKE);
@@ -331,6 +335,13 @@ public class BrushManager
   public static final Paint paintSplayXVdash  = makePaint( TDColor.SPLAY_NORMAL,  WIDTH_CURRENT, Paint.Style.STROKE);  // MID_BLUE
   public static final Paint paintSplayXVdot   = makePaint( TDColor.SPLAY_NORMAL,  WIDTH_CURRENT, Paint.Style.STROKE);  // MID_BLUE
   public static final Paint paintSplayLatest  = makePaint( TDColor.SPLAY_LATEST,  WIDTH_CURRENT, Paint.Style.STROKE);
+
+  public static final Paint paintSplayFeature   = makePaint( TDColor.SPLAY_FEATURE,   WIDTH_CURRENT, Paint.Style.STROKE);
+  public static final Paint paintSplayRidge     = makePaint( TDColor.SPLAY_RIDGE,     WIDTH_CURRENT, Paint.Style.STROKE);
+  public static final Paint paintSplayBacksight = makePaint( TDColor.SPLAY_BACKSIGHT, WIDTH_CURRENT, Paint.Style.STROKE);
+  public static final Paint paintSplayGeneric   = makePaint( TDColor.SPLAY_GENERIC,   WIDTH_CURRENT, Paint.Style.STROKE);
+
+  public static final Paint paintScanShot     = makePaint( TDColor.SCAN_SHOT,   WIDTH_CURRENT, Paint.Style.STROKE);
 
   public static final Paint fixedGridPaint    = makePaint( TDColor.DARK_GRID,   WIDTH_FIXED, Paint.Style.STROKE);
   public static final Paint fixedGrid10Paint  = makePaint( TDColor.GRID,        WIDTH_FIXED, Paint.Style.STROKE);
@@ -389,20 +400,20 @@ public class BrushManager
    * @param ctx   context
    * @param res   resources
    */
-  static void loadAllLibraries( Context ctx, Resources res ) 
+  static void loadAllSymbolLibraries( Context ctx, Resources res ) 
   {
     // TDLog.v("BRUSH load libraries" );
-    mHasSymbolLibraries = false;
+    // mHasSymbolLibraries = false; // TODO FIXME needed ?
     makeStationSymbol( res );
     reloadPointLibrary( ctx, res );
     reloadLineLibrary( res );
     reloadAreaLibrary( res );
-    mHasSymbolLibraries = true;
+    // mHasSymbolLibraries = true;
   }
 
   /** reset symbol config-enabled values and all that
    */
-  static void initAllIndices()
+  static void initAllSymbolIndices()
   {
     if ( mPointLib != null ) mPointLib.initIndices();
     if ( mLineLib  != null ) mLineLib.initIndices();
@@ -574,7 +585,7 @@ public class BrushManager
   //  */
   // static boolean hasMadePaths() { return doneMakePaths; }
 
-  /** make the paths - protected by doneMakePaths to make paths only once
+  /** make the splay path effects - protected by doneMakePaths to make paths only once
    */
   static void doMakePaths()
   {

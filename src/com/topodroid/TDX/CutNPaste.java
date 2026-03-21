@@ -11,14 +11,15 @@
  */
 package com.topodroid.TDX;
 
-// import com.topodroid.utils.TDLog;
 // import static android.view.Gravity.LEFT;
 
+import com.topodroid.dev.Device;
 import com.topodroid.dev.cavway.CavwayTakeShot;
 import com.topodroid.dev.distox_ble.DistoXBLETakeShot; // SIWEI
 
 import com.topodroid.utils.TDString;
 import com.topodroid.utils.TDColor;
+import com.topodroid.utils.TDLog;
 import com.topodroid.prefs.TDSetting;
 import com.topodroid.dev.ConnectionState;
 import com.topodroid.dev.Device;
@@ -28,6 +29,7 @@ import com.topodroid.dev.bric.BricMode; // MODE
 import com.topodroid.dev.bric.BricConst;
 import com.topodroid.dev.bric.MemoryBricTask;
 import com.topodroid.dev.sap.SapConst;
+import com.topodroid.dev.cavway.CavwayConst;
 
 import java.lang.ref.WeakReference;
 
@@ -99,7 +101,7 @@ public class CutNPaste
         public void onClick(View v) {
           EditText edit_text = mEditText.get();
           if ( edit_text != null ) {
-            mClipboardText = edit_text.getText().toString();
+            mClipboardText = edit_text.getText().toString(); // FIXME NOSPACES ?
             edit_text.setText(TDString.EMPTY);
             String str = String.format( context.getResources().getString( R.string.copied ), mClipboardText );
             TDToast.makeGravity( str, Gravity.START | Gravity.TOP );
@@ -114,7 +116,7 @@ public class CutNPaste
         public void onClick(View v) {
           EditText edit_text = mEditText.get();
           if ( edit_text != null ) {
-            mClipboardText = edit_text.getText().toString();
+            mClipboardText = edit_text.getText().toString(); // FIXME NOSPACES ?
             String str = String.format( context.getResources().getString( R.string.copied ), mClipboardText );
             TDToast.makeGravity( str, Gravity.START | Gravity.TOP );
           }
@@ -286,21 +288,20 @@ public class CutNPaste
         ww = textview3.getPaint().measureText( text );
         if ( ww > w ) w = ww;
 
-        if ( TDSetting.isConnectionModeContinuous() ) {
-          // ----- MEASURE ONE CALIB GROUP AND DOWNLOAD : NEED MODE CONTINUOUS
-          //
-          text = res.getString( R.string.popup_do_gm_group );
-          textview4 = makePopupButton( context, text, popup_layout, lWidth, lHeight,
-            new View.OnClickListener( ) {
-              public void onClick(View v) {
-                // i_lister.enableBluetoothButton(false);
-                new DeviceX310TakeShot( i_lister, lister, app, 4, DataType.DATA_CALIB ).execute();
-                dismissPopupBT();
-              }
-            } );
-          ww = textview3.getPaint().measureText( text );
-          if ( ww > w ) w = ww;
-        }
+        // if ( TDSetting.isConnectionModeContinuous() ) {
+        //   // ----- MEASURE ONE CALIB GROUP AND DOWNLOAD : NEED MODE CONTINUOUS
+        //   text = res.getString( R.string.popup_do_gm_group );
+        //   textview4 = makePopupButton( context, text, popup_layout, lWidth, lHeight,
+        //     new View.OnClickListener( ) {
+        //       public void onClick(View v) {
+        //         // i_lister.enableBluetoothButton(false);
+        //         new DeviceX310TakeShot( i_lister, lister, app, 4, DataType.DATA_CALIB ).execute();
+        //         dismissPopupBT();
+        //       }
+        //     } );
+        //   ww = textview3.getPaint().measureText( text );
+        //   if ( ww > w ) w = ww;
+        // }
 
       } else {
         // ----- MEASURE ONE SPLAY AND DOWNLOAD IT IF MODE IS CONTINUOUS
@@ -319,7 +320,6 @@ public class CutNPaste
         if ( ww > w ) w = ww;
 
         // ----- MEASURE ONE LEG AND DOWNLOAD IT IF MODE IS CONTINUOUS
-        //
         text = res.getString(R.string.popup_do_leg);
         textview4 = makePopupButton( context, text, popup_layout, lWidth, lHeight,
           new View.OnClickListener( ) {
@@ -374,20 +374,20 @@ public class CutNPaste
         ww = textview3.getPaint().measureText( text );
         if ( ww > w ) w = ww;
 
-        if ( TDSetting.isConnectionModeContinuous() ) {
-          // ----- MEASURE ONE CALIB GROUP AND DOWNLOAD : NEED MODE CONTINUOUS
-          text = res.getString( R.string.popup_do_gm_group );
-          textview4 = makePopupButton( context, text, popup_layout, lWidth, lHeight,
-                  new View.OnClickListener( ) {
-                    public void onClick(View v) {
-                      // i_lister.enableBluetoothButton(false);
-                      new DistoXBLETakeShot( i_lister, lister, app, 4, DataType.DATA_CALIB ).execute();
-                      dismissPopupBT();
-                    }
-                  } );
-          ww = textview3.getPaint().measureText( text );
-          if ( ww > w ) w = ww;
-        }
+        // if ( TDSetting.isConnectionModeContinuous() ) {
+        //   // ----- MEASURE ONE CALIB GROUP AND DOWNLOAD : NEED MODE CONTINUOUS
+        //   text = res.getString( R.string.popup_do_gm_group );
+        //   textview4 = makePopupButton( context, text, popup_layout, lWidth, lHeight,
+        //           new View.OnClickListener( ) {
+        //             public void onClick(View v) {
+        //               // i_lister.enableBluetoothButton(false);
+        //               new DistoXBLETakeShot( i_lister, lister, app, 4, DataType.DATA_CALIB ).execute();
+        //               dismissPopupBT();
+        //             }
+        //           } );
+        //   ww = textview3.getPaint().measureText( text );
+        //   if ( ww > w ) w = ww;
+        // }
 
       } else {
         // ----- MEASURE ONE SPLAY AND DOWNLOAD IT IF MODE IS CONTINUOUS
@@ -418,7 +418,7 @@ public class CutNPaste
         ww = textview4.getPaint().measureText( text );
         if ( ww > w ) w = ww;
       }
-    }else if ( TDInstance.deviceType() == Device.DISTO_CAVWAYX1 ) { // SIWEI
+    } else if ( TDInstance.deviceType() == Device.DISTO_CAVWAYX1 ) { // SIWEI
       // ----- TURN LASER ON
       text = res.getString(R.string.remote_on);
       textview1 = makePopupButton( context, text, popup_layout, lWidth, lHeight,
@@ -459,20 +459,20 @@ public class CutNPaste
         ww = textview3.getPaint().measureText( text );
         if ( ww > w ) w = ww;
 
-        if ( TDSetting.isConnectionModeContinuous() ) {
-          // ----- MEASURE ONE CALIB GROUP AND DOWNLOAD : NEED MODE CONTINUOUS
-          text = res.getString( R.string.popup_do_gm_group );
-          textview4 = makePopupButton( context, text, popup_layout, lWidth, lHeight,
-                  new View.OnClickListener( ) {
-                    public void onClick(View v) {
-                      // i_lister.enableBluetoothButton(false);
-                      new CavwayTakeShot( i_lister, lister, app, 4, DataType.DATA_CALIB ).execute();
-                      dismissPopupBT();
-                    }
-                  } );
-          ww = textview3.getPaint().measureText( text );
-          if ( ww > w ) w = ww;
-        }
+        // if ( TDSetting.isConnectionModeContinuous() ) {
+        //   // ----- MEASURE ONE CALIB GROUP AND DOWNLOAD : NEED MODE CONTINUOUS
+        //   text = res.getString( R.string.popup_do_gm_group );
+        //   textview4 = makePopupButton( context, text, popup_layout, lWidth, lHeight,
+        //           new View.OnClickListener( ) {
+        //             public void onClick(View v) {
+        //               // i_lister.enableBluetoothButton(false);
+        //               new CavwayTakeShot( i_lister, lister, app, 4, DataType.DATA_CALIB ).execute();
+        //               dismissPopupBT();
+        //             }
+        //           } );
+        //   ww = textview4.getPaint().measureText( text );
+        //   if ( ww > w ) w = ww;
+        // }
 
       } else {
         // ----- MEASURE ONE SPLAY AND DOWNLOAD IT IF MODE IS CONTINUOUS
@@ -503,6 +503,20 @@ public class CutNPaste
         ww = textview4.getPaint().measureText( text );
         if ( ww > w ) w = ww;
       }
+
+      // ----- TURN OFF
+      //
+      text = res.getString(R.string.popup_do_off);
+      textview4 = makePopupButton( context, text, popup_layout, lWidth, lHeight,
+        new View.OnClickListener( ) {
+          public void onClick(View v) {
+            TDLog.v("Switch off");
+            app.sendCavwayCommand( Device.DEVICE_OFF );
+            dismissPopupBT();
+          }
+        } );
+      ww = textview4.getPaint().measureText( text );
+      if ( ww > w ) w = ww;
     }
     else if ( TDInstance.isDeviceBric() ) // -----------------------------------------------------
     {
@@ -611,7 +625,7 @@ public class CutNPaste
       textview1 = makePopupButton( context, text, popup_layout, lWidth, lHeight,
         new View.OnClickListener( ) {
           public void onClick(View v) {
-            app.sendSap6Command( SapConst.SAP_LASER_ON );
+            app.sendSap6Command( Device.LASER_ON );
             dismissPopupBT();
           }
         } );
@@ -624,7 +638,7 @@ public class CutNPaste
       textview1 = makePopupButton( context, text, popup_layout, lWidth, lHeight,
         new View.OnClickListener( ) {
           public void onClick(View v) {
-            app.sendSap6Command( SapConst.SAP_LASER_OFF );
+            app.sendSap6Command( Device.LASER_OFF );
             dismissPopupBT();
           }
         } );
@@ -637,7 +651,7 @@ public class CutNPaste
       textview2 = makePopupButton( context, text, popup_layout, lWidth, lHeight,
         new View.OnClickListener( ) {
           public void onClick(View v) {
-            app.sendSap6Command( SapConst.SAP_TAKE_SHOT );
+            app.sendSap6Command( Device.MEASURE );
             dismissPopupBT();
           }
         } );
@@ -650,7 +664,7 @@ public class CutNPaste
       textview4 = makePopupButton( context, text, popup_layout, lWidth, lHeight,
         new View.OnClickListener( ) {
           public void onClick(View v) {
-            app.sendSap6Command( SapConst.SAP_DEVICE_OFF );
+            app.sendSap6Command( Device.DEVICE_OFF );
             dismissPopupBT();
           }
         } );

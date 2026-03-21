@@ -1,9 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
+
+    <string name="ai_null_chat">Null ИИ чат</string>
+    <string name="ai_error">Ошибка ИИ %1$s</string>
+    <string name="ai_internet">Внимание. Для работы ИИ-помощи требуется подключение к интернету.</string>
+    <string name="ai_no_internet">Нет подключения к интернету.</string>
+    <string name="ai_prompt">Введите свой вопрос</string>
+    <string name="ai_invalid_key">Недействительный ключ API</string>
+    <string name="ai_key_instruction">Ключ API хранится во внутренней памяти Android и отправляется только в Google. \nНайдите в интернете информацию о том, как получить ключ API Gemini от Google.</string>
+	
     <!-- UNUSED string name="topodroid_man">https://sites.google.com/site/speleoapps/home/topodroid/docs</string -->
     <string name="no_manual">Невозможно скачать руководство из интернета.</string>
     <string name="user_man_ok">Перевод руководства установлен</string>
-    <string name="user_man_fail">Не удалось установить перевод руководства</string>
+    <string name="user_man_fail">Не удалось установить перевод руководства [%1$d]</string>
 
     <!-- UNUSED string name="string_false">неверно</string -->
     <!-- UNUSED string name="string_true">верно</string -->
@@ -66,6 +75,16 @@
     <string name="hsplay">Гор.</string>
     <string name="vsplay">Верт.</string>
 
+    <string name="pref_gen">Общие</string>
+    <string name="pref_ui">Пользовательский интерфейс</string>
+    <string name="pref_data">Данные</string>
+    <string name="pref_plot">Абрисы</string>
+    <string name="pref_3d">3D вьюер</string>
+    <string name="pref_io">Экспорт</string>
+    <string name="pref_bt">Bluetooth</string>
+    <string name="pref_cal">Калибровка</string>
+    <string name="pref_xt">Специальные функции</string>
+
     <string name="cut">ВЫРЕЗАТЬ</string>
     <string name="copy">КОПИРОВАТЬ</string>
     <string name="paste">ВСТАВИТЬ</string>
@@ -74,10 +93,12 @@
     <string name="memoryA3">Память DistoX A3</string>
     <string name="memoryX310">Память DistoX X310</string>
     <string name="memoryXBLE">Память DistoX-BLE</string>
+    <string name="memoryCavway">Память Cavway</string>
     <!-- UNUSED string name="memory_data">DistoX данные</string -->
     <string name="thp_user">пользовательский</string>
     <string name="thp_label">подпись</string>
     <string name="thp_section">сечение</string>
+    <string name="thp_picture">картинка</string>
     <string name="thp_station">пикет</string>
     <!-- UNUSED string name="thp_danger">опасность</string -->
     <string name="thl_user">пользовательский</string>
@@ -90,11 +111,15 @@
     <string name="missing_station">Отсутствует пикет</string>
     <string name="station_not_found">Пикет не обнаружен</string>
     <string name="station_coords">E %1$.2f N %2$.2f Высота %3$.2f</string>
+    <string name="station_not_saved">Пикет не сохранён</string>
+    <string name="station_name_conflict">Конфликтующие названия. Всё равно продолжить?</string>
     <string name="shot_not_found">Замеры не найдены</string>
     <string name="shot_not_saved">Замер не сохранен</string>
     <string name="bad_sibling">Плохой замер в группе</string>
     <string name="bad_station">Плохой пикет: %1$s</string>
     <string name="bad_station_name">Недопустимый номер пикета</string>
+    <string name="equal_station_names">Одинаковые номера пикетов</string>
+    <string name="invalid_name">Неверное имя</string>
     <!-- UNUSED string name="missing_area">ОБЛАСТЬ</string -->
     <!-- UNUSED string name="missing_hint">Пожалуйста, подключите недостающие инструменты, либо установите их.</string -->
     <!-- UNUSED string name="missing_line">ЛИНИЯ</string -->
@@ -107,6 +132,8 @@
     <string name="failed_snap_to_point">Отсутствует ближайшая точка для закрепления объекта</string>
     <string name="failed_snap_to_splays">Рядом нет бокового замера чтобы привязать к нему эту линию</string>
     <string name="failed_append_to_line">Не удалось добавить новую линию к существующей</string>
+    <string name="failed_zoomfit">Не удалось вместить в экран</string>
+    <string name="fail_forget_device">Android не удалось удалить устройство Bluetooth</string>
 
     <string name="bric_device">Прибор %1$s</string>
     <string name="bric_ble">BLE %1$s</string>
@@ -147,6 +174,8 @@
     <!-- UNUSED string name="connect_failed">Ошибка соединения</string -->
     <!-- UNUSED string name="data">данные</string -->
     <string name="using">Использую %1$s</string>
+    <string name="cali_err">ошибки: среднее %1$.2f&#xb0;, СтОткл %2$.2f&#xb0;. макс. %3$.2f&#xb0;</string>
+    <string name="cali_time">Калибровка: %1$s</string>
     <string name="calib_error">Средн. Ошибка: %1$.2f градуса (BH дельта %2$.3f)</string>
     <string name="calib_validate_error">Средняя ошибка: %1$.2f &#xb0;</string>
     <string name="calib_stddev">Ст-откл ошибок: %1$.4f градуса</string>
@@ -159,9 +188,16 @@
     <string name="calib_reset">Сбросить калибровку DistoX ?</string>
     <string name="calib_min_error">Минимальная ошибка</string>
     <string name="calib_delta_dir">Разн. напр.: %1$.2f ± %2$.2f (max %3$.2f)</string>
+    <string name="calib_acc_thr">Ускор. [&#x25;]</string>
+    <string name="calib_mag_thr">Магн. [&#x25;]</string>
+    <string name="calib_dip_thr">Накл. [&#xb0;]</string>
     <string name="magn_dip">Магн. наклон &#8230;</string>
     <string name="auto_calib">Авто калибровка</string>
     <string name="autocalib_not_supported">Необходимый расчет калибровки</string>
+    <string name="recalibrate_with">Пересчитать замеры с %1$s</string>
+    <string name="recalibrate_none">Калибровка не выбрана</string>
+    <string name="recalibrate_no_cavway">Не является калибровкой Cavway</string>
+    <string name="recalibrate_no_coeff">Нет калибровочных коэффициентов</string>
 
     <string name="algorithm">Алгоритм расчета:</string>
     <string name="auto">авто</string>
@@ -198,6 +234,7 @@
     <string name="device_status_silent_on">Без сохранения: вкл</string>
     <string name="device_status_silent_off">Без сохранения: выкл</string>
     <string name="bt_reset">Сброс соединения bluetooth</string>
+    <!-- UNUSED string name="bt_busy">Bluetooth занят</string -->
     <string name="save_as">сохранить как</string>
     <string name="nickname">Псевдоним</string>
     <string name="unknown_device_type">Неизвестный тип устройства %1$d</string>
@@ -220,6 +257,7 @@
     <!-- CHANGED string name="strike_dip">Простирание %1$.0f Падение %2$.0f</string -->
     <string name="strike_dip">Азимут простирания %1$.0f Угол падения %2$.0f</string>
 
+    <string name="few_points">Слишком мало данных</string>
     <string name="few_data">Недостаточно данных</string>
     <string name="few_iter">Ошибка: Слишком много итераций\nПроверьте данные калибровки</string>
     <string name="few_groups">Недостаточно данных с номером группы</string>
@@ -229,6 +267,7 @@
     <string name="few_calibs">Недостаточно калиб. замеров</string>
     <string name="getting_info">Получение информации о DistoX&#8230;</string>
     <string name="gettingble_info">Получение данных о DistoX-BLE &#8230;</string>
+    <string name="gettingCavway_info">Получение информации о Cavway &#8230;</string>
 
     <string name="calib_import_title">Импорт калибровки</string>
     <string name="import_title">Импорт файла</string>
@@ -291,8 +330,10 @@
     <string name="geocode_title">Код геоморфологии</string>
     <string name="photo_title">ФОТО</string>
     <string name="photo_text">Введите коментарий к фото</string>
-    <string name="photo_failed">Ошибка фото</string>
+    <!-- UNUSED string name="photo_failed">Ошибка фото</string -->
+    <string name="photo_not_ready">Фото не готово. Ожидайте &#8230;</string>
     <string name="photo_max_captures">Достигнут предел кол-ва попыток съёмки</string>
+    <string name="photo_many_pictures">Слишком много фотографий</string>
     <string name="label_title">ПОДПИСЬ</string>
     <string name="label_text">Введите текст подписи</string>
     <!-- UNUSED string name="altitude">Alt. </string -->
@@ -316,7 +357,9 @@
     <string name="fmt_h_geoid">Ошибка %1$.0f м</string>
     <!-- UNUSED string name="fmt_h_ellipsoid">Ошибка %1$.0f м</string -->
     <string name="location_start_fine">Начинаю уточнение позиции</string>
+    <string name="location_enabled">Убедитесь, что функция МЕСТОПОЛОЖЕНИЕ включена</string>
     <!-- UNUSED string name="depth_error">Внимание. >Ошибка данных глубины.</string -->
+    <string name="discovery_error">Ошибка обнаружения BT: %1$s</string>
 
     <string name="error_azimuth_required">Требуется азимут</string>
     <string name="error_length_required">Требуется длина</string>
@@ -341,7 +384,7 @@
     <string name="error_name_required">Требуется название</string>
     <!-- UNUSED string name="error_text_required">Требуется ввести текст</string -->
     <string name="error_station_number">Неверное кол-во пикетов</string>
-    <string name="error_name_duplicate">Повторяющееся имя</string>
+    <!-- UNUSED string name="error_name_duplicate">Повторяющееся имя</string -->
     <string name="error_no_section_in_section">Сечение внутри поперечного сечения недопустимо</string>
     <string name="error_profile_slant_section">Наклонные сечения не включены для разрезов</string>
     <string name="error_team_required">Нужно указать группу съёмки</string>
@@ -357,6 +400,7 @@
     <string name="error_value_required">Требуется значение</string>
     <string name="error_bad_fixes">Привязанные точки не принадлежат съёмке</string>
     <string name="error_bad_name">Имя файла изменено</string>
+    <string name="error_question">Пожалуйста, задайте вопрос</string>
     
     <string name="group_title">Присвоить номера групп калибровочным измерениям</string>
     <!-- UNUSED string name="group_policy_four">Правило: группировать по четыре</string -->
@@ -416,7 +460,7 @@
     <string name="no_device_window">Окно устройств недоступно во время загрузки данных</string>
     <!-- UNUSED string name="no_device_found">Прибор не обнаружен</string -->
     <string name="no_feature_audio">Аудио не поддерживается</string>
-    <string name="no_feature_pdf">PDF не поддерживается</string>
+    <!-- UNUSED string name="no_feature_pdf">PDF не поддерживается</string -->
     <string name="no_gms">Отсутствуют данные для калибровки.\nИспользуйте кнопку Скачать</string>
     <string name="no_geo_station">Ошибка: отсутствует пикет с координатами</string>
     <!-- UNUSED string name="no_geopoint_app">Нет приложения геопозиционирования</string -->
@@ -430,6 +474,7 @@
     <string name="no_profile_overview">Нет обзора для спроецированного профиля</string>
     <string name="no_proj4">Proj4 не установлен</string>
     <string name="no_sensors">В съёмке отсутствуют измерения</string>
+    <string name="no_stations">Съёмка не содержит пикетов</string>
     <!-- UNUSED string name="no_shots">В съёмке отсутствуют пикеты.\nИспользуйте кнопку Скачать для их создания</string -->
     <string name="no_search_result">Поиск не дал результатов.</string>
     <string name="no_survey">Съёмка не выбрана.</string>
@@ -440,6 +485,7 @@
     <string name="no_undelete_paste">Нет записей для восстановления/вставки</string>
     <string name="format_measure_plan">D %1$.2f %2$.2f Dx %3$.2f Dy %4$.2f Азимут %5$.1f"</string>
     <string name="format_measure_profile">D %1$.2f %2$.2f Dx %3$.2f Dy %4$.2f Уклон %5$.1f"</string>
+    <string name="format_setting">Переформатировать %1$s в %2$s ?</string>
     <!-- NO string name="format_closure" translatable="false">%1$s-%2$s: %3$d %4$.1f / %5$.1f m [%6$.1f %7$.1f] %8$.1f (%9$.1f \u00b0)</string -->
 
     <string name="menu_3d">3D</string>
@@ -463,12 +509,13 @@
     <string name="menu_device">ПРИБОР</string>
     <string name="menu_device_add">ДОБАВИТЬ УСТРОЙСТВО</string>
     <string name="menu_export">Экспорт</string>
+    <string name="menu_exit">ВЫХОД</string>
     <string name="menu_firmware">Прошивка</string>
     <string name="menu_geopoint_app">ПРИЛОЖЕНИЕ ГЕОПРИВЯЗКИ</string>
     <string name="menu_recover">Восстановить</string>
     <string name="menu_recover_paste">ВОССТАНОВИТЬ/ВСТАВИТЬ</string>
     <string name="menu_reload">Перезагрузить</string>
-    <string name="menu_rename_delete">Переименовать/Удалить</string>
+    <string name="menu_rename_delete">ОПЕРАЦИИ</string>
     <string name="menu_rename">ПЕРЕИМЕНОВАТЬ</string>
     <string name="menu_plot_scrap">СКРАПЫ</string>
     <string name="menu_switch">ЗАКРЫТЬ/ПЕРЕКЛЮЧИТЬ</string>
@@ -483,9 +530,10 @@
     <!-- UNUSED string name="menu_pair">СОПРЯЖЕНИЕ</string -->
     <string name="menu_palette">ПАЛИТРА</string>
     <string name="menu_photo">ФОТО</string>
+    <string name="menu_stations">ПИКЕТЫ</string>
     <string name="menu_sections">СЕЧЕНИЯ</string>
     <string name="menu_sensor">ДАТЧИКИ</string>
-    <!-- UNUSED string name="menu_scan">Сканировать</string -->
+    <string name="menu_scan">Сканировать</string>
     <!-- UNUSED string name="menu_scan_ble">СКАН BT окружение</string -->
     <!-- UNUSED string name="menu_station">ПИКЕТЫ</string -->
     <string name="menu_stats">СТАТИСТИКА</string>
@@ -494,12 +542,17 @@
     <!-- UNUSED string name="menu_tdr2th2">TH2 Абрисы</string -->
     <string name="menu_validate">ВАЛИДАЦИЯ</string>
     <string name="menu_zoom_fit">ВМЕСТИТЬ</string>
+    <string name="menu_plot_search">ПОИСК ПИКЕТА</string>
 
     <!-- FIXED_ZOOM -->
     <string name="zoom_fixed">Милиметровая-бумага</string>
 
     <!-- UNUSED string name="start_scan">Начать сканирование</string -->
     <!-- UNUSED string name="stop_scan">Остановить сканирование</string -->
+    <!-- UNUSED string name="scan_started">Начато обнаружение устройств</string -->
+    <!-- UNUSED string name="scan_finished">Обнаружение устройств закончено</string -->
+    <string name="scanning">Сканирование&#8230; Пожалуйста, подождите</string>
+
     <!-- UNUSED string name="title_scan">Сканировать BLE</string -->
     <!-- UNUSED string name="ble_scan_failed">Сбой сканирования BLE</string -->
     <!-- UNUSED string name="ble_gatt_failure">Сбой BLE</string -->
@@ -560,7 +613,7 @@
     <!-- UNUSED string name="not_implemented">Пока не реализовано</string -->
     <string name="null_bitmap">null bitmap [OOM error]</string>
     <string name="photo">фото</string>
-    <string name="photo_camera">Камера TopoDroid</string>
+    <!-- UNUSED string name="photo_camera">Камера TopoDroid</string -->
     <string name="photo_comment_prompt">Введите комментарий к фото</string>
     <string name="photo_azimuth_clino">Азимут: %1$.1f Наклон: %2$.1f</string>
     <!-- UNUSED string name="photo_name">Пикет/название</string -->
@@ -640,6 +693,8 @@
     <string name="shot_note">заметки</string>
     <!-- UNUSED string name="shot_reverse">развернуть</string -->
     <string name="shot_to">№ НА</string>
+    <string name="shot_refreshed">Таблица замеров обновлена</string>
+    <!-- TODO string name="scan_type">Scan type</string -->
 
     <string name="station">пикет</string>
     <string name="station_ask">Добавить пикет в абрис?</string>
@@ -653,6 +708,8 @@
     <!-- UNUSED string name="survey_date">ггг.мм.дд</string -->
     <string name="survey_delete">Удалить съёмку?</string>
     <string name="survey_move">Переместить замеры в съёмку %1$s ?</string>
+    <string name="survey_copy_all_flags">Замеры можно копировать только если все отображаются</string>
+    <string name="survey_copy_only_tail">Копировать можно только последний сегмент замеров</string>
     <string name="survey_split">Разорвать съёмку ?</string>
     <string name="survey_not_attached">ВНИМАНИЕ: не соединенный пикет</string>
     <string name="survey_not_extend">ВНИМАНИЕ: замеры без направления развертки</string>
@@ -710,6 +767,8 @@
     <string name="zip_saved">Сохранено </string>
     <string name="zip_failed">Ошибка survey-zip</string>
     <string name="zip_share_failed">Невозможно поделиться zip-архивом</string>
+    <string name="file_share_failed">Не удалось поделиться файлом</string>
+    <string name="file_share_no_app">Нет приложения для обмена файлами</string>
     <string name="unzip_fail">Ошибка survey-unzip</string>
     <string name="unzip_fail_sqlite">Ошибка SQL: удалите съёмку и попробуйте снова</string>
     <string name="unzip_fail_survey">Ошибка: несовпадение названия съёмки</string>
@@ -723,7 +782,6 @@
     <string name="trilateration_failure">Трилатерация не удалась %1$d / %2$d </string>
     <!-- UNUSED string name="trilateration_error">Ошибка трилатерации %1$.2f</string -->
     <!-- UNUSED string name="trilateration_succeeded">Трилатерация выполнена: оставшаяся ошибка %1$.2f</string -->
-    <string name="trilateration_success">Трилатерация удалась: %1$d кластеров</string>
 
     <string name="survey_info">Статистика съёмки</string>
     <string name="stat_dates">С %1$s по %2$s</string>
@@ -750,6 +808,7 @@
     <string name="stat_surface">Поверхн. пикеты %1$d # %2$d длина: %3$.1f %4$s</string>
     <!-- UNUSED string name="stat_surface_z">Поверхность Z %1$.1f %2$.1f %3$s</string -->
     <string name="stat_survey_z">Съёмка Z %1$.1f %2$.1f %3$s</string>
+    <string name="stat_survey_length">Длина съёмки %1$.1f %2$s</string>
     <string name="stat_wens">З %1$.0f  В %2$.0f  С %3$.0f  Ю %4$.0f [%5$s]"</string>
     <string name="stat_angle_error">Угловые ошибки %1$.2f ± %2$.2f"</string>
     <string name="shot_title">ПИКЕТЫ %1$s - %2$s"</string>
@@ -782,6 +841,7 @@
     <!-- UNUSED string name="landscape">альбомная</string -->
 
     <string name="display_view">Вид отображения</string>
+    <string name="display_refresh">Обновить дисплей</string>
     <string name="plan_view">план</string>
     <string name="profile_view">разрез</string>
 
@@ -797,11 +857,14 @@
     <string name="ask_gps_service">Включить сервис GPS?</string>
     <!-- UNUSED string name="ask_backups_clear">Удалить резервные копии абрисов?</string -->
     <string name="ask_manual_update">Обновить перевод руководства пользователя?\nТекущая v. %1$d Установленная v. %2$d</string>
+    <string name="ask_clear_equates">Удалить все соединения?</string>
+    <string name="ask_forget_device">Удалить устройство %1$s?</string>
 
     <string name="button_add"       >Добавить</string>
     <string name="button_apply"     >Применить</string>
     <string name="button_back"      >Назад</string>
     <string name="button_cancel"    >Отмена</string>
+    <string name="button_forget"    >Удалить</string>
     <string name="button_geocode"   >ГеоКод</string>
     <!-- UNUSED string name="button_change">Изменить</string -->
     <string name="button_clipboard" >Вставить</string>
@@ -815,6 +878,7 @@
     <string name="button_current"   >Текущий</string>
     <string name="button_delete"    >Удалить</string>
     <string name="button_duplicate" >Дубликаты</string>
+    <string name="button_settime"   >Установить время</string>
     <string name="button_surface"   >Поверхностные</string>
     <string name="button_no_extend" >Нет напр. развертки </string>
     <string name="button_eval"      >Вычислить    </string>
@@ -827,7 +891,7 @@
     <!-- NO string name="button_help">Помощь</string -->
     <string name="button_manual"    >Руководство</string>
     <!-- UNUSED string name="button_measure"   >Изменить   </string -->
-    <!-- UNUSED string name="button_photo"   >Фото</string -->
+    <string name="button_photo"   >Фото</string>
     <!-- UNUSED string name="button_sensor"  >Датчики</string -->
     <!-- UNUESD string name="button_direction">Азимут/угол</string -->
     <!-- UNUSED string name="button_azimuth">Азимут</string -->
@@ -839,14 +903,17 @@
     <string name="button_prev"    >Предыдущий</string>
     <string name="button_new"     >Новый скрап</string>
     <string name="button_rename"  >Переименовать</string>
+    <string name="button_retake"  >Переснять</string>
     <string name="button_prefix"  >Префикс</string>
     <string name="button_skip"    >Пропустить</string>
     <string name="button_done"    >Готово</string>
     <string name="button_lrud"    >Добавить ЛПВН</string>
+    <string name="button_no"		>НЕТ</string>
     <string name="button_ok"        >OK        </string>
     <string name="button_off"       >выкл</string>
     <string name="button_on"        >вкл</string>
     <string name="button_open"      >Откр      </string>
+    <string name="button_offset"    >Отступ</string>
     <string name="button_read"      >Считать   </string>
     <string name="button_recover"   >Восстановить</string>
     <string name="button_reverse"   >Развернуть</string>
@@ -860,11 +927,13 @@
     <string name="button_left"      >ЛЕВО</string>
     <string name="button_right"     >ПРАВО</string>
     <string name="button_clear"     >Очистить  </string>
+    <string name="button_clear_all" >Очистить все</string>
     <string name="button_clear_day" >Очистить 1d  </string>
     <string name="button_clear_week">Очистить 7d  </string>
     <string name="button_clear_memory">Очистить память</string>
     <string name="button_save"      >Сохр.     </string>
-    <!-- UNUSED string name="button_select"    >Выбрать   </string -->
+    <string name="button_select"    >Выбрать   </string>
+    <string name="button_submit"    >Отправить</string>
     <string name="button_leg_station">Пикеты замера</string>
     <string name="button_all_station">Все пикеты</string>
     <string name="button_leg_search">Поиск замера</string>
@@ -873,6 +942,9 @@
     <string name="button_saved"     >Сохраненный пикет</string>
     <string name="button_scrap"     >Контуры</string>
     <string name="button_split"     >Разделить     </string>
+    <string name="button_to_sketch">В абрис</string>
+    <string name="button_to_scrap" >В скрап</string>
+    <string name="button_to_buffer">Буфер</string>
     <string name="button_station"   >По центру</string>
     <string name="button_store"     >Записать   </string>
     <string name="button_swap"      >Поменять местами      </string>
@@ -891,6 +963,7 @@
     <string name="button_write"     >Передать в Disto</string>
     <string name="button_xsection"  >Сечение</string>
     <string name="xsection">Сечение</string>
+    <string name="buffer">Буфер</string>
     <string name="buffer_size">Буфер: %1$d записей</string>
     <string name="buffer_sorted">отсортировано</string>
     <!-- UNUSED string name="buffer_unsorted">не отсортировано</string -->
@@ -901,6 +974,7 @@
     <string name="mode_station">Пикеты</string>
     <string name="mode_grid">Сетка</string>
     <string name="mode_fixed">Сдвиг относительно нитки</string>
+    <string name="mode_scrap">Только текущий абрис</string>
     <string name="mode_outline">Только контур</string>
     <string name="mode_scale_ref">Шкала масштаба</string>
     <string name="mode_sections">Сечения</string>
@@ -926,7 +1000,7 @@
     <string name="popup_do_splay">Сделать замер</string>
     <string name="popup_do_leg">Сделать три замера</string>
     <string name="popup_do_gm_data">Калибр. замер</string>
-    <string name="popup_do_gm_group">Группа Калибр.</string>
+    <!-- UNUSED string name="popup_do_gm_group">Группа Калибр.</string -->
     <string name="popup_do_laser">Лазер</string>
     <string name="popup_do_scan">Сканировать</string>
     <string name="popup_do_shot">Замер</string>
@@ -956,6 +1030,7 @@
     <!-- UNUSED string name="clino">Угол [грд]</string -->
 
     <string name="bt_alias_title">Псевдонимы Bluetooth</string>
+    <string name="hint_api_key">Ключ API</string>
     <string name="hint_bt_alias">BT псевдоним</string>
     <string name="hint_bt_code">Код устройства</string>
     <string name="bt_alias_missing">BT псевдоним отсутствует</string>
@@ -1012,7 +1087,9 @@
 
     <string name="split_nothing">Нечего разделять</string>
     <string name="flip_shots">Развернуть пикеты</string>
+    <string name="move_items">Переместить объекты</string>
     <string name="copy_items">Копировать объекты</string>
+    <string name="paste_items">Вставить объекты</string>
     <string name="current_station_format">E %1$.1f N %2$.1f H %3$.1f</string>
 
     <string name="man_preface">Предисловие</string>
@@ -1086,6 +1163,7 @@
     <string name="help_undelete">Восстановить удаленные элементы</string>
     <string name="help_photo">Фотографии в съёмке</string>
     <string name="help_sensor">Показания датчиков</string>
+    <string name="help_stations">Пикеты</string>
     <string name="help_3d">3D просмотр (Cave3D)</string>
     <!-- UNUSED string name="help_move">Включть режим перемещения/зума</string -->
     <string name="help_draw">Перейти в режим рисования</string>
@@ -1097,6 +1175,7 @@
     <string name="help_plot_delete">Удалить абрис</string>
     <string name="help_plot_rename">Переименовать/Удалить абрис</string>
     <string name="help_plot_scrap">Скрапы в абрисе</string>
+    <string name="help_plot_search">Поиск пикета</string>
     <string name="help_plot_switch">Переключить абрис</string>
     <string name="help_search">Поиск пикета</string>
     <string name="help_stats">Инструмент статистики по съёмке</string>
@@ -1138,6 +1217,7 @@
     <!-- UNUSED string name="help_save">Сохранить нзменения информации о съёмке</string -->
     <string name="help_save_calib">Сохранить измерения информации о калибровке</string>
     <string name="help_export_survey">Экспорт съёмки</string>
+    <string name="help_export_surveys">Экспорт всех съемок</string>
     <string name="help_loc">GPS привязка</string>
     <string name="help_delete_survey">Удалить съёмку</string>
     <string name="help_delete_calib">Удалить калибровку</string>
@@ -1147,7 +1227,7 @@
     <string name="help_sdcard">DistoX управление памятью</string>
     <string name="help_read">Загрузить и показать текущие коэффициенты калибровки DistoX</string>
     <string name="help_info_device">Информация об устройстве</string>
-    <!-- UNUSED string name="help_scan">Найти новые устройства DistoX</string -->
+    <string name="help_scan">Найти новые устройства DistoX</string>
     <!-- UNUSED string name="help_scan_ble">Сканирование BT окружения </string -->
     <!-- UNUSED string name="help_pair">Сопряжение текущего устройства DistoX</string -->
     <string name="help_open_calib">Открыть окно данных калибровки</string>
@@ -1161,11 +1241,13 @@
     <string name="help_add_project">Добавить проект пещеры</string>
     <string name="help_add_surveys">Добавить съёмки</string>
     <string name="help_drop_surveys">Удалить съёмки</string>
+    <string name="help_color_surveys">Изменить цвета съёмок</string>
     <string name="help_view_surveys">Показать съёмки</string>
     <string name="help_view_equates">Список соединений</string>
     <string name="help_export_config">Экспортировать проект</string>
     <string name="help_delete_config">Удалить проект</string>
     <string name="help_add_equate">Добавить соединение съёмок</string>
+    <string name="help_all_equates">Все возможные соединения</string>
     <string name="help_equates">Список соединений съёмки</string>
     <string name="help_stations_minus">Показать меньше пикетов</string>
     <string name="help_stations_plus">Показать меньше пикетов</string>
@@ -1183,9 +1265,12 @@
     <string name="export_lrud">ЛПВН</string>
     <string name="export_lrud_from">ЛПВН на пикете ОТ</string>
     <string name="export_maps">Блок map до данных съёмки</string>
+    <string name="export_uncommented_maps">Раскомментированные карты</string>
     <string name="export_prefix">Добавлять префикс к номерам пикетов</string>
     <string name="export_prefix_hint">префикс</string>
-    <!-- TODO string name="export_media">media items</string -->
+    <string name="export_prefix_set">Установить</string>
+    <string name="export_prefix_reset">Сбросить</string>
+    <string name="export_media">Фото-Аудио</string>
     <!-- UNUSED string name="export_suffix_hint">суффикс</string -->
     <string name="export_series_hint">группа</string>
     <string name="export_roundtrip">Roundtrip</string>
@@ -1204,6 +1289,7 @@
     <string name="export_xvi">Xvi изображение</string>
     <string name="export_with_xsections">Экспортировать поперечные сечения</string>
     <string name="export_grouped">Сгруппировать элементы в слоях по типу</string>
+    <string name="export_origin">Пикет начала координат</string>
     <string name="export_with_reference">Включить XY точки отсчета</string>
 
     <!-- UNUSED string name="export_linedir_stroke">Line dir stroke</string -->
@@ -1223,16 +1309,19 @@
     <string name="audio_overwrite">Перезаписать ?</string>
     <!-- UNUSED string name="playing">Playing %1$s</string -->
   
-    <string name="import_functional">Импортировать только функциональные настройки</string>
     <string name="import_trox">Формат файла Trox</string>
     <string name="import_lrud">Импорт ЛПВН</string>
     <string name="import_leg_first">Замер перед ЛПВН сплеями</string>
     <string name="import_diving_datamode">Режим подводной съёмки</string>
     <string name="import_therion_path">Вместе с ниткой хода</string>
 
+    <string name="title_gemini">Введите ключ API вашего ИИ.</string>
+    <string name="title_ai_dialog">ИИ-помощник</string>
+    <string name="title_ai_dialog_pref">Помощь настрек ИИ</string>
     <string name="title_azimut">Опорный азимут развёртки</string>
     <string name="title_audio">Аудио заметка</string>
     <string name="title_audio_list">Аудио заметки</string>
+    <string name="title_recalibrate">Калибровки</string>
     <string name="title_calib">Калибровки</string>
     <string name="title_calib_check">Замеры контроля калибровки</string>
     <!-- UNUSED string name="title_check">Calibration-check</string -->
@@ -1243,7 +1332,10 @@
     <!-- UNUSED string name="title_contour">Контур</string -->
     <!-- UNUSED string name="title_coord">Введите координаты точки:</string -->
     <string name="title_current_station">Сохраненные пикеты</string>
+    <string name="title_scan_shot">Сканирующий замер</string>
     <string name="title_search">Поиск пикетов/замеров</string>
+    <string name="title_stations">Пикеты</string>
+    <string name="title_plot_search">Поиск пикета</string>
     <string name="title_pref_search">Поиск настроек</string>
     <string name="title_gm_search">Поиск данных калибровки</string>
     <string name="title_dangling">Неприсоединенные замеры</string>
@@ -1310,7 +1402,8 @@
     <!-- UNUSED string name="title_settings_png">PNG настройки экспорта</string -->
     <string name="title_settings_gpx">GPX настройки экспорта</string>
     <string name="title_settings_kml">KML настройки экспорта</string>
-    <string name="title_settings_srv">Wallsнастройки экспорта</string>
+    <string name="title_settings_srv">Walls настройки экспорта</string>
+    <string name="title_settings_ply">настройки экспорта нитки хода</string>
 
     <string name="title_settings_sketch">TopoDroid настройки 3d абриса</string>
     <string name="title_settings_survey">TopoDroid настройки топосъёмки</string>
@@ -1353,11 +1446,14 @@
     <string name="title_survey_new">Новая съёмка</string>
     <string name="title_survey_export">Экспорт съёмки как</string>
     <string name="title_survey_rename">Переименовать съёмку</string>
-    <string name="title_plot_rename">Переименовать абрис</string>
+    <string name="title_station_photo">Фото пикета</string>
+    <string name="title_team_dialog">Имена съёмщиков</string>
+    <string name="title_plot_rename">Операции с абрисом</string>
     <string name="title_plot_zoomfit">Вместить / Ориентация</string>
     <string name="title_calib_export">Экспорт калибровки как</string>
     <!-- UNUSED string name="title_zoom">Зум</string -->
 
+    <string name="title_read_names">Карта номеров пикетов</string>
     <string name="title_import_shot">Импорт съёмки</string>
     <string name="title_import_gps">Импорт точки GPS</string>
     <string name="title_import_th2">Therion th2 файл</string>
@@ -1373,6 +1469,8 @@
 
   <!-- UNUSED string name="pref_tcsx">Экспорт cSurvey-1.20 transfer-csx</string -->
 
+  <string name="pref_bulk_export_title">Пакетный экспорт</string>
+  <string name="pref_bulk_export_summary">Экспорт данных всех съемок в пакетном режиме</string>
   <string name="pref_export_plot_title">Формат экспорта абрисов</string>
   <string name="pref_export_plot_summary">Формат по умолчанию для экспорта абрисов</string>
   <string name="pref_export_shots_title">Формат экспорта съёмки</string>
@@ -1412,6 +1510,8 @@
   <!-- OK string name="pref_hide_help_summary">Скрыть кнопку помощи</string -->
   <string name="pref_locale_title">Язык</string>
   <string name="pref_locale_summary">Переключить язык интерфейса программы</string>
+  <string name="pref_gemini_title">Ключ ИИ</string>
+  <string name="pref_gemini_summary">Ключ API Gemini</string>
   <string name="pref_orientation_title">Ориентация экрана</string>
   <string name="pref_orientation_summary">Настройки ориентации экрана приложения</string>
   <string name="pref_single_back_title">Однократное назад</string>
@@ -1480,12 +1580,16 @@
   <string name="pref_unnamed_device_summary">Включить меню для ввода имени устройства</string>
   <string name="pref_station_prefix_title">Экспортировать пикеты с префиксом </string>
   <string name="pref_station_prefix_summary">Добавлять префикс к номерам пикетов при экспорте в формат [Compass]</string>
-  <!-- TODO string name="pref_with_media_title">Media export</string -->
-  <!-- TODO string name="pref_with_media_summary">Include media in export [cSurvey]</string -->
+  <string name="pref_with_media_title">Экспорт фото-аудио</string>
+  <string name="pref_with_media_summary">Включть фото-аудио в экспорт [cSurvey]</string>
   <string name="pref_compass_splays_title">Сплеи в Compass</string>
   <string name="pref_compass_splays_summary">Экспорт сплеев в формат Compass</string>
   <string name="pref_walls_splays_title">Сплеи в Walls</string>
   <string name="pref_walls_splays_summary">Экспорт сплеев в формат Walls</string>
+  <string name="pref_ply_lrud_title">Нитка хода ЛПВН</string>
+  <string name="pref_ply_lrud_summary">Нитка хода ЛПВН</string>
+  <string name="pref_ply_minus_title">Нитка хода минус</string>
+  <string name="pref_ply_minus_summary">Нитка хода минус</string>
   <string name="pref_vtopo_splays_title">Сплеи VisualTopo</string>
   <string name="pref_vtopo_splays_summary">Экспорт сплеев в формат VisualTopo</string>
   <string name="pref_vtopo_lrud_title">ЛПВН на пикете ОТ</string>
@@ -1618,6 +1722,10 @@
   <string name="pref_pt_color_map_summary">Соответствие цветов PocketTopo типам объектов в TopoDtoid при импорте</string>
   <string name="pref_text_size_title">Размер текста</string>
   <string name="pref_text_size_summary">Размер шрифта в списках</string>
+  <string name="pref_symbol_size_title">Размер символов</string>
+  <string name="pref_symbol_size_summary">Размер символов в нижней панели</string>
+  <!-- TODO string name="pref_toolbar_update_title">Toolbar update</string -->
+  <!-- TODO string name="pref_toolbar_update_summary">How to insert symbols in bottom bar</string -->
   <string name="pref_closeness_title">Радиус выбора</string>
   <string name="pref_closeness_message">Радиус зоны выбора элемента абриса</string>
   <string name="pref_eraseness_title">Размер ластика</string>
@@ -1643,8 +1751,8 @@
 
   <!-- UNUSED string name="pref_data_backup_title">Авто-экспорт данных</string -->
   <!-- UNUSED string name="pref_data_backup_summary">Автоматический экспорт данных (требуется установить формат по умолчанию)</string -->
-  <string name="pref_editable_stations_title">Редактируемые пикеты</string>
-  <string name="pref_editable_stations_summary">Редактируемые номера пикетов в списке изиерений</string>
+  <!-- UNUSED string name="pref_editable_stations_title">Редактируемые пикеты</string -->
+  <!-- UNUSED string name="pref_editable_stations_summary">Редактируемые номера пикетов в списке изиерений</string -->
   <string name="pref_zipped_symbols_title">Архив условных обозначений</string>
   <string name="pref_zipped_symbols_summary">Добавить/извлечь файлы условных обозначений в/из zip архив</string>
   <string name="pref_fixed_origin_title">Точка отсчета абрисов</string>
@@ -1729,6 +1837,8 @@
   <string name="pref_shot_timer_summary">Время задержки при измерении направления на пикет [c]</string>
   <string name="pref_beep_volume_title">Громкость сигнала таймера</string>
   <string name="pref_beep_volume_summary">Проценты громкости сигнала таймера</string>
+  <!-- TODO string name="pref_beep_length_title">Timer-beep length</string -->
+  <!-- TODO string name="pref_beep_length_summary">Duration of beep [msec]</string -->
   <string name="pref_extend_frac_title">Неполная развертка</string>
   <string name="pref_extend_frac_summary">В случае когда значение "развертки" имеет десятичную часть.</string>
   <string name="pref_recent_shot_title">Недавние замеры</string>
@@ -1773,6 +1883,10 @@
   <string name="pref_label_size_summary">Размер шрифта в подписях</string>
   <string name="pref_scalable_label_title">Масштабирование подписей</string>
   <string name="pref_scalable_label_summary">Масштабирование подписей при зуме</string>
+  <string name="pref_xsection_offset_title">Смещение поперечного сечения</string>
+  <string name="pref_xsection_offset_summary">Смещение точки поперечного сечения</string>
+  <string name="pref_plot_cache_title">Кэш абрисов</string>
+  <string name="pref_plot_cache_summary">Кэширование абрисов в памяти</string>
   <string name="pref_slope_lside_title">Линия уклона l-направление</string>
   <string name="pref_slope_lside_summary">l-направление линии уклона по умолчанию</string>
   <string name="pref_arrow_length_title">Бергштрих сечения</string>
@@ -1805,6 +1919,8 @@
   <string name="pref_stylus_size_summary">Размер точки касания стилуса [пиксели, 0: игнорировать касания]</string>
   <string name="pref_line_ends_title">Обрезать окончания линий</string>
   <string name="pref_line_ends_summary">Количество точек линии, которые нужно убрать с концов [0]</string>
+  <!-- UNUSED string name="pref_zoom_lower_bound_title">Zoom bound</string -->
+  <!-- UNUSED string name="pref_zoom_lower_bound_summary">Zoom-fit minimum scale [0.1]</string -->
   <string name="pref_fixed_thickness_title">Толщина нитки хода</string>
   <string name="pref_fixed_thickness_summary">Толщина нитки хода</string>
   <!-- UNUSED string name="pref_device_title">Устройство</string -->
@@ -1853,6 +1969,8 @@
   <string name="pref_LRExtend_summary">Оценить расстояния лево/право при импорте форматов Compass/VisualTopo</string>
   <string name="pref_diving_mode_title">Подводная съёмка</string>
   <string name="pref_diving_mode_summary">Включить режим подводной съёмки</string>
+  <string name="pref_shot_tampering_title">Редактирование замеров</string>
+  <string name="pref_shot_tampering_summary">Редактирование скачаных с дисто замеров</string>
   <string name="pref_splay_classes_title">Классы сплеев</string>
   <string name="pref_splay_classes_summary">Включить разделение сплеев на классы (показаны разным цветом)</string>
   <string name="pref_splay_color_title">Цвета сплеев</string>
@@ -2050,6 +2168,9 @@
     <string name="title_export">Экспортировать проект как &#8230;</string>
     <string name="title_equates">Соединения в проекте</string>
     <string name="title_equate_new">Добавить соединение &#8230;</string>
+    <string name="button_equate_all">Все</string>
+    <string name="button_equate_one">Один</string>
+    <string name="button_equate_search">Поиск</string>
     <string name="title_equate_with">Соединить %1$s с %2$s</string>
     <!-- UNUSED string name="title_cwd">Текущий рабочий каталог</string -->
     <string name="title_drop">Удалить съёмки ?</string>
@@ -2131,6 +2252,7 @@
     <string name="legs_surface">Поверхность</string>
     <string name="legs_duplicate">Дубликат</string>
     <string name="legs_commented">Закоментированный</string>
+    <string name="legs_backshot">Обратный замер</string>
 
     <string name="proj_perspective">Настройки перспективы</string>
     <string name="proj_orthographic">Настройки ортографической проекции</string>
@@ -2271,6 +2393,10 @@
     <string name="warning_no_csv_type">CSV тип не указан</string>
     <string name="warning_cavway_info">Не удалось считать информацию о Cavway</string>
     <string name="no_permissions">Приложение не может работать без необходимых разрешений</string>
+    <string name="cavway_sync_failed">Не удалось синхронизировать время Cavway</string>
+    <string name="cavway_synchronized">Синхронизиация время Cavway</string>
+    <string name="cavway_sync_ok">Время Cavway синхронизировано</string>
+    <string name="cavway_sync_offset">Смещение времени Cavway: %1$d [min]</string>
 
     <!-- UNUSED string name="done_fractals">Завершено fractals dims</string -->
     <string name="done_convexhull">Завершено convex-hull стены</string>
@@ -2328,8 +2454,8 @@
     <string name="cpref_dem_maxsize_summary">Максимальное число ячеек сетки [400]</string>
     <string name="cpref_dem_reduce_title">Уменьшение DEM</string>
     <string name="cpref_dem_reduce_summary">режим уменьшения DEM [сократить]</string>
-    <!-- TODO string name="cpref_texture_root_title">Texture root</string -->
-    <!-- TODO string name="cpref_texture_root_summary">Texture root pathname [/sdcard/]</string -->
+    <string name="cpref_texture_root_title">Хранилище текстур</string>
+    <string name="cpref_texture_root_summary">Путь к хранилищу текстур [/sdcard/]</string>
   
     <string name="cpref_all_splay_title">Все сплеи</string>
     <string name="cpref_all_splay_summary">Все сплеи для стен</string>
@@ -2371,7 +2497,7 @@
     <string name="help_alpha_3d">D.E.M.</string>
     <string name="help_wall_3d">3D модель</string>
     <!-- UNUSED string name="help_temperature">Температура</string -->
-    <string name="help_sketch_3d">3D sketch lifting</string>
+    <!-- UNUSED string name="help_sketch_3d">3D sketch lifting</string -->
     <!-- UNUSED string name="help_fractal">Фрактальный анализ</string -->
 
     <string name="help_light_3d">Перемещение и освещение</string>
