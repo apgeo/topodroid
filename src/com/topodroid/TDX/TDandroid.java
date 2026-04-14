@@ -11,8 +11,8 @@
  */
 package com.topodroid.TDX;
 
-import com.topodroid.utils.TDLog;
-// import com.topodroid.utils.TDVersion;
+import com.topodroid.util.TDLog;
+// import com.topodroid.util.TDVersion;
 import com.topodroid.prefs.TDSetting;
 
 
@@ -34,6 +34,8 @@ import android.content.pm.ConfigurationInfo;
 
 import android.os.Build;
 import android.os.Environment;
+import android.os.Looper;
+import android.os.Bundle;
 // import android.os.Build.VERSION_CODES;
 
 import android.provider.Settings;
@@ -43,15 +45,19 @@ import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 
 import android.location.LocationManager;
+import android.location.Location;
+import android.location.LocationListener;
 
 import android.hardware.Sensor;
 import android.widget.Button;
 import android.widget.SeekBar;
 // import android.graphics.Bitmap;
 import android.graphics.drawable.BitmapDrawable;
-// import android.graphics.Point;
+import android.graphics.PointF;
 // import android.view.Display;
 // import android.view.Surface;
+
+import java.util.Locale;
 
 public class TDandroid
 {
@@ -166,6 +172,8 @@ public class TDandroid
   public static final int TITLE_TRIPOD     = 0xffff6db6; // PINK
   public static final int TITLE_TOPOROBOT  = 0xffdbd100; // ORANGE
   public static final int TITLE_ANOMALY    = 0xffff3333; // BRIGHT RED
+
+  static String mHicsum = null;
 
   /** apply the changes stored in the editor
    * @param editor   preferences editor
@@ -473,6 +481,15 @@ public class TDandroid
     return ret;
   }
 
+  /** @return true if coarse location access is granted
+   * @param context  context
+   */
+  public static boolean checkCoarseLocation( Context context )
+  {
+    PackageManager pm = context.getPackageManager();
+    return hasCallingOrPermission( context, android.Manifest.permission.ACCESS_FINE_LOCATION ) || hasCallingOrPermission( context, android.Manifest.permission.ACCESS_COARSE_LOCATION );
+  }
+
   /** @return true if location access is granted
    * @param context  context
    */
@@ -640,7 +657,7 @@ public class TDandroid
   }
   
 
-  /** @return true is MobileTopographer is installed
+  /** @return a flag of the installed GPS apps that are supported
    * @param context   app context
    */
   public static int getImportPointFlag( Context context )
@@ -651,38 +668,39 @@ public class TDandroid
       PackageInfo pi = pm.getPackageInfo( "gr.stasta.mobiletopographer", 0 );
       ret |= FixedActivity.FLAG_MOBILE_TOPOGRAPHER;
     } catch ( PackageManager.NameNotFoundException e ) {
-      TDLog.e( e.getMessage() );
+      // TDLog.e( e.getMessage() );
     }
     try {
       PackageInfo pi = pm.getPackageInfo( "nz.ac.elec.gpsapp", 0 );
       ret |= FixedActivity.FLAG_GPS_POSITION;
     } catch ( PackageManager.NameNotFoundException e ) {
-      TDLog.e( e.getMessage() );
+      // TDLog.e( e.getMessage() );
     }
     try {
       PackageInfo pi = pm.getPackageInfo( "com.doitintuitively.gpxrecorder", 0 );
       ret |= FixedActivity.FLAG_GPX_RECORDER;
     } catch ( PackageManager.NameNotFoundException e ) {
-      TDLog.e( e.getMessage() );
+      // TDLog.e( e.getMessage() );
     }
     try {
       PackageInfo pi = pm.getPackageInfo( "com.android.gpstest", 0 );
       ret |= FixedActivity.FLAG_GPS_TEST;
     } catch ( PackageManager.NameNotFoundException e ) {
-      TDLog.e( e.getMessage() );
+      // TDLog.e( e.getMessage() );
     }
     try {
       PackageInfo pi = pm.getPackageInfo( "eu.basicairdata.graziano.gpslogger", 0 );
       ret |= FixedActivity.FLAG_GPS_LOGGER;
     } catch ( PackageManager.NameNotFoundException e ) {
-      TDLog.e( e.getMessage() );
+      // TDLog.e( e.getMessage() );
     }
     try {
       PackageInfo pi = pm.getPackageInfo( "sk.grecnar.gpspoint", 0 );
       ret |= FixedActivity.FLAG_GPS_POINT;
     } catch ( PackageManager.NameNotFoundException e ) {
-      TDLog.e( e.getMessage() );
+      // TDLog.e( e.getMessage() );
     }
+    TDLog.v("GPS apps support flag " + ret );
     return ret;
   }
 
@@ -728,6 +746,53 @@ public class TDandroid
     // boolean network_enabled = lm.isProviderEnabled( LocationManager.NETWORK_PROVIDER );
     return gps_enabled;
   }
+
+
+  public static void setHicsum( Context ctx, float x, float y )
+  {
+    mHicsum = String.format(Locale.US, "%.5f %.5f", x, y );
+    if ( TopoDroidApp.mDData != null ) {
+      TopoDroidApp.mDData.setValue( "hicsum", mHicsum );
+      TDLog.v("Hicsum update " + mHicsum );
+    } else { 
+      TDLog.v("Hicsum set " + mHicsum );
+    }
+    TopoDroidApp.sineTest( ctx, mHicsum );
+  }
+
+  /** get the coarse (netwrok) location
+   * @param ctx  context
+   * @param pt   output long-lat
+   * @return true if success
+   */
+  public static boolean getCoarseLocation( final Context ctx, PointF pt )
+  {
+    if ( ! checkCoarseLocation( ctx ) ) return false;
+    LocationManager lm = (LocationManager)ctx.getSystemService( Context.LOCATION_SERVICE );
+    Location loc = lm.getLastKnownLocation( LocationManager.NETWORK_PROVIDER ); 
+    if ( loc == null ) {
+      lm.requestSingleUpdate( LocationManager.NETWORK_PROVIDER,
+        new LocationListener() {
+          public void onLocationChanged( Location loc ) {
+            float x = (float)loc.getLongitude();
+            float y = (float)loc.getLatitude();
+            setHicsum( ctx, x, y );
+          }
+          public void onProviderDisabled(String provider) {}
+          public void onProviderEnabled(String provider)  {}
+          public void onStatusChanged(String provider, int status, Bundle extras) {}
+        },
+        Looper.getMainLooper()
+      );
+      // TDLog.v("Location null");
+      return false;
+    } 
+    pt.x = (float)loc.getLongitude();
+    pt.y = (float)loc.getLatitude();
+    setHicsum( ctx, pt.x, pt.y );
+    return true;
+  }
+
 
   /** check if arch arm64_v8a is supported
    */

@@ -11,17 +11,17 @@
  */
 package com.topodroid.TDX;
 
-import com.topodroid.utils.TDLog;
-import com.topodroid.utils.TDUtil;
-import com.topodroid.utils.TDString;
+import com.topodroid.util.TDLog;
+import com.topodroid.util.TDUtil;
+import com.topodroid.util.TDString;
+import com.topodroid.util.TDColor;
+import com.topodroid.util.TDStatus;
 import com.topodroid.ui.MyKeyboard;
 import com.topodroid.ui.MyCheckBox;
 import com.topodroid.ui.MyButton;
 import com.topodroid.ui.MyColorPicker;
 import com.topodroid.ui.MyDialog;
 import com.topodroid.ui.TDLayout;
-import com.topodroid.utils.TDColor;
-import com.topodroid.utils.TDStatus;
 import com.topodroid.prefs.TDSetting;
 import com.topodroid.types.ExtendType;
 import com.topodroid.types.LegType;
@@ -92,12 +92,13 @@ class DrawingScanSetDialog extends MyDialog
     initLayout( R.layout.drawing_scanset_dialog, R.string.title_scanset );
 
     // TextView mLabel     = (TextView) findViewById(R.id.shot_label);
+    // mLabel.setText( String.format( mContext.getResources().getString(R.string.scanset_string), mFrom );
     mETfrom    = (EditText) findViewById(R.id.shot_from );
     mETfrom.setText( mFrom );
     mETfrom.setOnLongClickListener( this );
 
     mSelectedPos = (int)(mLegType - 6);
-    TDLog.v("selected pos " + mSelectedPos );
+    // TDLog.v("selected pos " + mSelectedPos );
     mSPtype = (Spinner) findViewById(R.id.shot_type );
     // ArrayAdapter adapter = new ArrayAdapter<>( this, R.layout.menu, leg_types );
     ArrayAdapter adapter = ArrayAdapter.createFromResource( mContext, R.array.scanLegType, android.R.layout.simple_spinner_item );   

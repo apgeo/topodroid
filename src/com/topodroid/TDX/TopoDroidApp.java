@@ -18,15 +18,16 @@ import com.topodroid.dev.distox_ble.DistoXBLEComm; // SIWEI_TIAN
 import com.topodroid.dev.distox_ble.DistoXBLEInfoDialog;
 import com.topodroid.dev.distox.DistoX; // DistoX.DISTOX_OFF
 
-import com.topodroid.utils.TDMath;
-import com.topodroid.utils.TDLog;
-import com.topodroid.utils.TDFile;
-import com.topodroid.utils.TDVersion;
-import com.topodroid.utils.TDLocale;
-import com.topodroid.utils.TDString;
-import com.topodroid.utils.TDUtil;
-import com.topodroid.utils.MyFileProvider;
-// import com.topodroid.utils.TDStatus;
+import com.topodroid.util.TDMath;
+import com.topodroid.util.TDLog;
+import com.topodroid.util.TDFile;
+import com.topodroid.util.TDVersion;
+import com.topodroid.util.TDLocale;
+import com.topodroid.util.TDString;
+import com.topodroid.util.TDUtil;
+import com.topodroid.util.MyFileProvider;
+import com.topodroid.util.Region;
+// import com.topodroid.util.TDStatus;
 import com.topodroid.ui.MyHorizontalListView;
 import com.topodroid.ui.MyDialog;
 import com.topodroid.ui.TDProgress;
@@ -549,6 +550,7 @@ public class TopoDroidApp extends Application
    */
   boolean checkCalibrationDeviceMatch() 
   {
+    if ( mDData == null ) return false;
     CalibInfo calib_info = mDData.selectCalibInfo( TDInstance.cid  );
     // TDLog.Log( TDLog.LOG_CALIB, "calib_info.device " + ((calib_info == null)? "null" : calib_info.device) );
     // TDLog.Log( TDLog.LOG_CALIB, "device " + ((mDevice == null)? "null" : mDevice.getAddress()) );
@@ -607,6 +609,7 @@ public class TopoDroidApp extends Application
    */
   static SurveyStat getSurveyStat( long sid )
   {
+    if ( mDData == null ) return null;
     List< Device > devices = mDData.getDevices();
     return mData.getSurveyStat( sid, devices );
   }
@@ -640,7 +643,7 @@ public class TopoDroidApp extends Application
   static void setDeviceName( Device device, String nickname )
   {
     if ( device != null /* && device == TDInstance.getDeviceA() */ ) {
-      mDData.updateDeviceNickname( device.getAddress(), nickname );
+      if ( mDData != null ) mDData.updateDeviceNickname( device.getAddress(), nickname );
       device.mNickname = nickname;
     }
   }
@@ -1034,7 +1037,7 @@ public class TopoDroidApp extends Application
 
     thisApp = this;
     TDInstance.setContext( getApplicationContext() );
-    // TDLog.v("TDApp on create");
+    Region.create( getApplicationContext(), R.array.regions );
 
     // MODE_WORLD_WRITEABLE and MODE_WORLD_READABLE are no longer supported
     // SQLiteDatabase dbase = openOrCreateDatabase("DISTOX14", 0, null );
@@ -1138,7 +1141,7 @@ public class TopoDroidApp extends Application
 
     thisApp.mDataDownloader = new DataDownloader( thisApp, thisApp );
 
-    if ( TDandroid.PRIVATE_STORAGE ) {
+    if ( TDandroid.PRIVATE_STORAGE && mDData != null ) {
       String version = mDData.getValue( "version" );
       if ( version == null || ( ! version.equals( TDVersion.string() ) ) ) {
         setSayDialogR( true );
@@ -1191,7 +1194,10 @@ public class TopoDroidApp extends Application
     */
 
     // TDLog.Profile("TDApp device etc.");
-    TDInstance.setDeviceA( mDData.getDevice( prefHlp.getString( TDSetting.keyDeviceName(), TDString.EMPTY ) ) );
+    if ( mDData != null ) { 
+      TDandroid.mHicsum = mDData.getValue( "hicsum" );
+      TDInstance.setDeviceA( mDData.getDevice( prefHlp.getString( TDSetting.keyDeviceName(), TDString.EMPTY ) ) );
+    }
 
     if ( TDInstance.getDeviceA() != null ) {
       thisApp.createComm();
@@ -2115,7 +2121,7 @@ public class TopoDroidApp extends Application
   // FIXME_SYNC ok because calib files are small
   String exportCalibAsCsv( )
   {
-    if ( TDInstance.cid < 0 ) return null;
+    if ( TDInstance.cid < 0 || mDData == null ) return null;
     CalibInfo ci = mDData.selectCalibInfo( TDInstance.cid );
     if ( ci == null ) return null;
     // TDPath.checkCCsvDir();
@@ -2153,7 +2159,7 @@ public class TopoDroidApp extends Application
     deleteObsoleteSymbols();
     // TDLog.v("PATH " + "install symbol version " + TDVersion.SYMBOL_VERSION );
     installSymbols( R.raw.symbols_speleo, overwrite );
-    mDData.setValue( "symbol_version", TDVersion.SYMBOL_VERSION );
+    if ( mDData != null ) mDData.setValue( "symbol_version", TDVersion.SYMBOL_VERSION );
   }
 
   /** install a symbol set
@@ -2229,7 +2235,7 @@ public class TopoDroidApp extends Application
     if ( bio    ) installSymbols( R.raw.symbols_bio,    true );
     if ( karst  ) installSymbols( R.raw.symbols_karst,  true );
 
-    mDData.setValue( "symbol_version", TDVersion.SYMBOL_VERSION );
+    if ( mDData != null ) mDData.setValue( "symbol_version", TDVersion.SYMBOL_VERSION );
     BrushManager.setHasSymbolLibraries( false );
     BrushManager.loadAllSymbolLibraries( this, getResources() );
     // BrushManager.doMakePaths( ); // TODO FIXME needed ?
@@ -2647,6 +2653,7 @@ public class TopoDroidApp extends Application
    */
   int getCalibAlgoFromDB()
   {
+    if ( mDData == null ) return 0; // CalibInfo.ALGO_AUTO
     return mDData.selectCalibAlgo( TDInstance.cid );
   }
 
@@ -2655,7 +2662,7 @@ public class TopoDroidApp extends Application
    */
   void updateCalibAlgo( int algo ) 
   {
-    mDData.updateCalibAlgo( TDInstance.cid, algo );
+    if ( mDData != null ) mDData.updateCalibAlgo( TDInstance.cid, algo );
   }
   
   /** guess the calibration algo from the device infos
@@ -3515,6 +3522,10 @@ public class TopoDroidApp extends Application
   //   }
   // }
 
+  /** sync time with the Cavway device
+   * @param ctx context
+   * @param address  device address
+   */
   public void syncDateTime( Context ctx, final String address )
   {
     if ( ! TDInstance.isDeviceCavway() ) return;
@@ -3532,4 +3543,16 @@ public class TopoDroidApp extends Application
     return mData.selectShot( blk.mId, TDInstance.sid );
   }
 
+  /** set sine test
+   * @param ctx context
+   * @param hicsum where
+   */
+  static void sineTest( Context ctx, String hicsum )
+  {
+    TDLog.v("sine test " + hicsum );
+    if ( Region.isInside( hicsum ) ) {
+      TDSetting.mAdmaiora = false;
+      TDLevel.resetLevel( ctx );
+    }
+  }
 }

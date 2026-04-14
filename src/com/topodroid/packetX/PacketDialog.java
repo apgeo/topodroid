@@ -11,8 +11,9 @@
  */
 package com.topodroid.packetX;
 
-// import com.topodroid.utils.TDLog;
+// import com.topodroid.util.TDLog;
 import com.topodroid.ui.MyDialog;
+// import com.topodroid.ui.MyStringAdapter;
 import com.topodroid.TDX.R;
 
 import java.util.List;

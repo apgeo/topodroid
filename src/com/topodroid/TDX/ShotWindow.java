@@ -11,17 +11,17 @@
  */
 package com.topodroid.TDX;
 
-import com.topodroid.utils.TDMath;
-// import com.topodroid.utils.TDFile;
-import com.topodroid.utils.TDLog;
-import com.topodroid.utils.TDFeedback;
-import com.topodroid.utils.TDTag;
-import com.topodroid.utils.TDString;
-import com.topodroid.utils.TDStatus;
-import com.topodroid.utils.TDRequest;
-import com.topodroid.utils.TDLocale;
-import com.topodroid.utils.TDUtil;
-// import com.topodroid.utils.TDVersion;
+import com.topodroid.util.TDMath;
+// import com.topodroid.util.TDFile;
+import com.topodroid.util.TDLog;
+import com.topodroid.util.TDFeedback;
+import com.topodroid.util.TDTag;
+import com.topodroid.util.TDString;
+import com.topodroid.util.TDStatus;
+import com.topodroid.util.TDRequest;
+import com.topodroid.util.TDLocale;
+import com.topodroid.util.TDUtil;
+// import com.topodroid.util.TDVersion;
 import com.topodroid.math.TDMatrix;
 import com.topodroid.math.TDVector;
 import com.topodroid.ui.MyButton;
@@ -221,11 +221,13 @@ public class ShotWindow extends Activity
   // TODO replace flags with DisplayMode-flag 
   //      N.B. id is in the data adapter
   private boolean mFlagSplay  = true;  //!< whether to hide splay shots
+  private boolean mFlagScan   = true;  //!< whether to hide scan sets
   private boolean mFlagLatest = false; //!< whether to show the latest splay shots
   private boolean mFlagLeg    = true;  //!< whether to hide leg extra shots
   private boolean mFlagBlank  = false; //!< whether to hide blank shots
 
   boolean isFlagSplay()  { return mFlagSplay; }
+  boolean isFlagScan()   { return mFlagScan; }
   boolean isFlagLatest() { return mFlagLatest; }
   boolean isFlagLeg()    { return mFlagLeg; }
   boolean isFlagBlank()  { return mFlagBlank; }
@@ -236,15 +238,16 @@ public class ShotWindow extends Activity
   private boolean testFlagSplayLegBlank() 
   { 
     // TDLog.v("Flags splay " + mFlagSplay + " leg " + mFlagLeg + " blank " + mFlagBlank );
-    return mFlagSplay || mFlagLeg || mFlagBlank; 
+    return mFlagSplay || mFlagLeg || mFlagBlank || mFlagScan; 
   }
 
   // void setShowIds( boolean show ) { mDataAdapter.show_ids = show; }
 
-  void setFlags( boolean ids, boolean splay, boolean latest, boolean leg, boolean blank )
+  void setFlags( boolean ids, boolean splay, boolean scan, boolean latest, boolean leg, boolean blank )
   {
     mDataAdapter.show_ids = ids;
     mFlagSplay = splay;
+    mFlagScan  = scan;
     if ( TDSetting.mShotRecent ) mFlagLatest = latest;
     mFlagLatest = latest;
     mFlagLeg    = leg;
@@ -270,6 +273,7 @@ public class ShotWindow extends Activity
   private DBlockAdapter mDataAdapter;
   // private ArrayAdapter< String > mDataAdapter;
   private ArrayList< String > mShowSplay;
+  private ArrayList< String > mShowScans;
 
 
   // private long mLastExtend; // id of the last-extend-ed splay 
@@ -639,6 +643,9 @@ public class ShotWindow extends Activity
         } 
         scan_idx = cur.mIndex;
         // prev_is_scan = true;
+        if ( mFlagScan ) {
+          if ( ! showScansContains( cur.mFrom ) ) continue;
+        }
       } else {
         scan_idx = -1L;
         // prev_is_scan = false;
@@ -649,7 +656,7 @@ public class ShotWindow extends Activity
             mApp_mData.updateShotLeg( cur.mId, TDInstance.sid, LegType.EXTRA ); // cur.mType ); // FIXME 20140616
           }
           else if ( ! cur.isSecLeg() ) { // FIXME 20201118
-            // if ( prev != null && prev.isBlank() ) prev.setBlockLegType( DBlock.BLOCK_BLANK_LEG );
+            // if ( prev != null && prev.isBlank() ) prev.setBlockTypeFromLegType( DBlock.BLOCK_BLANK_LEG );
             if ( prev != null ) prev.setTypeBlankLeg();
           }
 
@@ -869,7 +876,7 @@ public class ShotWindow extends Activity
     if ( blk == null || ! blk.isSplay() ) return;
     do {
       // TDLog.v( TAG + "toggle splay type " + pos + " is splay " + blk.isSplay() + " leg " + blk.getLegType() );
-      blk.setBlockLegType( (int)leg1 );
+      blk.setBlockTypeFromLegType( (int)leg1 );
       mApp_mData.updateShotLeg( blk.mId, TDInstance.sid, leg1 );
       mDataAdapter.updateBlockView( blk.mId );
       if ( (--pos) < 0 ) break;
@@ -916,7 +923,7 @@ public class ShotWindow extends Activity
           break;
       }
       // TDLog.v( TAG + "toggle splay type " + pos + " is splay " + blk.isSplay() + " leg " + blk.getLegType() );
-      blk.setBlockLegType( (int)leg1 );
+      blk.setBlockTypeFromLegType( (int)leg1 );
       mApp_mData.updateShotLeg( blk.mId, TDInstance.sid, leg1 );
       mDataAdapter.updateBlockView( blk.mId );
       if ( (--pos) < 0 ) break;
@@ -936,10 +943,9 @@ public class ShotWindow extends Activity
   {
     // TDLog.v( TAG + "update splay " + blk.mId + " leg type " + leg1 );
     mApp_mData.updateShotLeg( blk.mId, TDInstance.sid, leg1 );
-    // int block_type = DBlock.blockOfSplayLegType[ (int)leg1 ];
     // // long leg_type = DBlock.legOfBlockType[ block_type ];
     // blk.setBlockType( block_type ); // FIXME 20240716
-    blk.setBlockLegType( (int)leg1 );
+    blk.setBlockTypeFromLegType( (int)leg1 );
     // TDLog.v("update display : update splay leg type");
     updateDisplay();
   }
@@ -947,11 +953,10 @@ public class ShotWindow extends Activity
   // from MultiselectDialog
   void updateSplaysLegType( List< DBlock > blks, int leg_type, long flag )
   {
-    // int block_type = DBlock.blockOfSplayLegType[ leg_type ];
     for ( DBlock blk : blks ) {
       // long leg_type = DBlock.legOfBlockType[ block_type ];
       long f = blk.resetFlag( flag ); // n.b. keep cavway bits
-      blk.setBlockLegType( leg_type );
+      blk.setBlockTypeFromLegType( leg_type );
       // blk.setBlockType( block_type ); // FIXME 20240716
       mApp_mData.updateShotLegFlag( blk.mId, TDInstance.sid, leg_type, f );
     }
@@ -1395,6 +1400,8 @@ public class ShotWindow extends Activity
     // rv.setLayoutManager( lm );
 
     mShowSplay   = new ArrayList<>();
+    mShowScans   = new ArrayList<>();
+
     if ( TDSetting.mEditableStations ) {
        mDataAdapter = new DBlockAdapter( this, this, R.layout.dblock_row, new ArrayList< DBlock >() );
     } else {
@@ -1689,6 +1696,7 @@ public class ShotWindow extends Activity
       mFlagBlank  = ( vals.length > 2 ) && vals[2].equals( TDString.ONE );
       mDataAdapter.show_ids = ( vals.length > 3 ) && vals[3].equals( TDString.ONE );
       mFlagLatest = ( vals.length > 4 ) && vals[4].equals( TDString.ONE );
+      mFlagScan   = ( vals.length > 5 )? vals[5].equals( TDString.ONE ) : mFlagSplay;
     } else {
       TDLog.e( TAG + "no saved data");
     }
@@ -1701,7 +1709,7 @@ public class ShotWindow extends Activity
     (new Thread() {
       public void run() {
         mApp_mData.setValue( "DISTOX_SHOTS",
-          String.format(Locale.US, "%d %d %d %d %d", mFlagSplay?1:0, mFlagLeg?1:0, mFlagBlank?1:0, isShowIds()?1:0, mFlagLatest?1:0 ) );
+          String.format(Locale.US, "%d %d %d %d %d %d", mFlagSplay?1:0, mFlagLeg?1:0, mFlagBlank?1:0, isShowIds()?1:0, mFlagLatest?1:0, mFlagScan?1:0 ) );
       }
     } ).start();
     // TDLog.v( TAG + "save to data mFlagSplay " + mFlagSplay );
@@ -2353,7 +2361,7 @@ public class ShotWindow extends Activity
   {
     // TDLog.v( "SHOT WINDOW do update name and flags " + blk.mId + " flag " + flag + " leg " + leg + " / " + blk.getLegType() );
     blk.setBlockName( from, to, (leg == LegType.BACK) );
-    blk.setBlockLegType( (int)leg );
+    blk.setBlockTypeFromLegType( (int)leg );
 
     long fl = flag | blk.cavwayBits();
     if ( blk.isTampered() ) fl |= DBlock.FLAG_TAMPERED; 
@@ -2387,7 +2395,7 @@ public class ShotWindow extends Activity
       blk3.setExtend( extend, stretch );
       blk3.resetFlag( flag );
       blk3.mComment = comment;
-      // FIXME if ( leg == LegType.EXTRA ) blk3.setBlockLegType( DBlock.BLOCK_SEC_LEG );
+      // FIXME if ( leg == LegType.EXTRA ) blk3.setBlockTypeFromLegType( DBlock.BLOCK_SEC_LEG );
       mDataAdapter.updateBlockView( blk3.mId );
     }
   }
@@ -2941,6 +2949,18 @@ public class ShotWindow extends Activity
     }
   }
 
+  void recomputeScans( String st, int pos )
+  {
+    if ( mFlagScan ) {
+      if ( ! mShowScans.remove( st ) ) {
+        mShowScans.add( st );
+      }
+      updateDisplay( );
+      mList.setSelection( (pos>5)? pos-5 : 0 );
+    }
+  }
+
+
   /** @return true if the list of station for splay-display contains the specified name
    * @param name   station name
    */
@@ -2951,6 +2971,15 @@ public class ShotWindow extends Activity
     }
     return false;
   }
+
+  private boolean showScansContains( String name ) 
+  {
+    for ( String st : mShowScans ) {
+      if ( st.equals( name ) ) return true;
+    }
+    return false;
+  }
+
 
   /** update the connection status feedbacks
    * @param status  new status
@@ -3010,6 +3039,7 @@ public class ShotWindow extends Activity
    */
   void renumberShotsFrom( long bid ) // 20251205
   {
+    NativeName native_name = NativeName.get();
     List< DBlock > shots = mApp_mData.selectAllShotsAfter( bid, TDInstance.sid, TDStatus.NORMAL );
     // TDLog.v("Renumber: shots from " + bid + " size " + shots.size() );
     if ( shots.isEmpty() ) return;
@@ -3030,7 +3060,7 @@ public class ShotWindow extends Activity
         if ( ! TDString.isNullOrEmpty( f ) ) {
           fi = station_map.get( f );
           if ( fi == null ) {
-            fi = NativeName.incrementName( last_station, stations );
+            fi = ( native_name != null )? native_name.incrementName( last_station, stations ) : DistoXStationName.incrementName( last_station, stations );
             last_station = fi;
             stations.add( fi );
             station_map.put( f, fi );
@@ -3040,7 +3070,7 @@ public class ShotWindow extends Activity
         if ( ! TDString.isNullOrEmpty( t ) ) {
           ti = station_map.get( t );
           if ( ti == null ) {
-            ti = NativeName.incrementName( last_station, stations );
+            ti = ( native_name != null )? native_name.incrementName( last_station, stations ): DistoXStationName.incrementName( last_station, stations );
             last_station = ti;
             stations.add( ti );
             station_map.put( t, ti );
@@ -3497,7 +3527,7 @@ public class ShotWindow extends Activity
    */
   void updateScanSet( DBlock blk, String from, int pos, int block_type )
   {
-    long leg_type = DBlock.getLegType( block_type );
+    long leg_type = LegType.BlockToLeg[ block_type ]; // DBlock.getLegType( block_type );
     // TDLog.v("update scan set from " + blk.mId + " block type " + block_type + " leg type " + leg_type );
     mApp_mData.updateScanSetName( blk.mId, TDInstance.sid, blk.mFrom, from, blk.getLegType(), leg_type );
     blk.mFrom = from;
@@ -3527,7 +3557,7 @@ public class ShotWindow extends Activity
    */
   void doDeleteScanShot( long id, String st, long leg_type )
   {
-    if ( mApp_mData.updateScanSetStatus( id, TDInstance.sid, TDStatus.NORMAL, TDStatus.DELETED  ) ) {
+    if ( mApp_mData.updateScanSetStatus( id, TDInstance.sid, TDStatus.DELETED  ) ) {
       updateDisplay();
     }
   }

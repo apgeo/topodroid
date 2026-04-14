@@ -11,17 +11,17 @@
  */
 package com.topodroid.TDX;
 
-import com.topodroid.utils.TDLog;
-import com.topodroid.utils.TDFile;
-import com.topodroid.utils.TDsafUri;
-import com.topodroid.utils.TDTag;
-import com.topodroid.utils.TDColor;
-import com.topodroid.utils.TDRequest;
-import com.topodroid.utils.TDLocale;
-import com.topodroid.utils.TDUtil;
-import com.topodroid.utils.TDString;
-// import com.topodroid.utils.TDVersion;
-import com.topodroid.utils.CWDfolder;
+import com.topodroid.util.TDLog;
+import com.topodroid.util.TDFile;
+import com.topodroid.util.TDsafUri;
+import com.topodroid.util.TDTag;
+import com.topodroid.util.TDColor;
+import com.topodroid.util.TDRequest;
+import com.topodroid.util.TDLocale;
+import com.topodroid.util.TDUtil;
+import com.topodroid.util.TDString;
+import com.topodroid.util.CWDfolder;
+// import com.topodroid.util.TDVersion;
 import com.topodroid.types.ExportInfo;
 
 import com.topodroid.ui.MyButton;
@@ -100,6 +100,7 @@ import android.widget.AdapterView.OnItemClickListener;
 import android.widget.AdapterView.OnItemLongClickListener;
 
 import android.graphics.drawable.BitmapDrawable;
+import android.graphics.PointF;
 
 import java.util.Locale;
 
@@ -1259,6 +1260,7 @@ public class MainWindow extends Activity
     }
   }
 
+
   @Override
   public synchronized void onResume() 
   {
@@ -1272,6 +1274,24 @@ public class MainWindow extends Activity
     boolean ok_folder = TopoDroidApp.initEnvironmentThird();
 
     // TDLog.v( "MAIN init environment third done return " + ok_folder );
+
+    if ( TDandroid.mHicsum == null ) {
+      if ( ! TDandroid.checkCoarseLocation( this ) ) {
+        // TODO request LOCATION permission
+        // requestPermissions( new String[] { android.Manifest.permission.ACCESS_FINE_LOCATION}, REQUEST_PERMISSIONS ); 
+        TopoDroidAlertDialog.makeAlert( this, getResources(), R.string.location_required, 
+          new DialogInterface.OnClickListener() {
+            @Override public void onClick( DialogInterface dialog, int btn ) { finish(); }
+          }
+        );
+      } else {
+        PointF pt = new PointF();
+        TDandroid.getCoarseLocation( this, pt );
+      }
+    } else {
+      // TDLog.v("Hicsum in db " + mHicsum );
+      TopoDroidApp.sineTest( this, TDandroid.mHicsum );
+    }
 
     // if ( TDVersion.targetSdk() > 29 ) { // FIXME_TARGET_29
     //   // TDLog.v( "init environment target " + TDVersion.targetSdk() );
@@ -1841,7 +1861,7 @@ public class MainWindow extends Activity
             if ( doExport( survey, index, file_name, export_info ) ) ++cnt;
           }
           TDLog.v("Export Thread done");
-          final String res = String.format( TDInstance.getResources().getQuantityString( R.plurals.export_data_batch, cnt, type, cnt ) );
+          final String res = TDInstance.getResources().getQuantityString( R.plurals.export_data_batch, cnt, type, cnt );
           runOnUiThread( new Runnable() { public void run() { TDToast.make( res ); } } );
         }
       };

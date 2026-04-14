@@ -645,6 +645,7 @@ On Android-11+ storage access must be granted to TopoDroid.\nYou can do this wit
     <string name="scrap_delete">Delete scrap ?</string>
     <string name="item_delete">Delete item %1$s ?</string>
     <string name="splay_delete">Delete splay %1$s ?</string>
+    <string name="scanset_delete">Delete scan-set shot at %1$s ?</string>
     <string name="plot_duplicate_name">Duplicate sketch name</string>
     <string name="plot_dangling">Dangling sketch</string>
     <string name="plot_name">Sketch name</string>
@@ -855,6 +856,8 @@ On Android-11+ storage access must be granted to TopoDroid.\nYou can do this wit
     <string name="hide_leg">Repeated leg shots</string>
     <string name="hide_ids">Shot IDs</string>
     <string name="hide_splay">Splay shots</string>
+    <string name="hide_scan">Scan sets</string>
+
     <string name="slope_lside">Slope l-side</string>
 
     <!-- THESE MUST AGREE WITH THE FMT STRINGS -->
@@ -913,8 +916,9 @@ On Android-11+ storage access must be granted to TopoDroid.\nYou can do this wit
     <string name="button_delete"    >Delete</string>
     <string name="button_duplicate" >Duplicate</string>
     <string name="button_settime"   >Set time</string>
-    <string name="button_surface"    copyable="fr">Surface</string>
+    <string name="button_surface"  copyable="fr">Surface</string>
     <string name="button_splay"    copyable="all">Splay</string>
+    <string name="button_scan"     copyable="all">Scan</string>
     <string name="button_no_extend" >No extend</string>
     <string name="button_eval"      >Raw</string>
     <string name="button_evalg" copyable="all">G</string>

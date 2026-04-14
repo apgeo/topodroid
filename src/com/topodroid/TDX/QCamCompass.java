@@ -11,9 +11,9 @@
  */
 package com.topodroid.TDX;
 
-import com.topodroid.utils.TDMath;
-import com.topodroid.utils.TDLog;
-import com.topodroid.utils.TDUtil;
+import com.topodroid.util.TDMath;
+import com.topodroid.util.TDLog;
+import com.topodroid.util.TDUtil;
 import com.topodroid.ui.MyButton;
 import com.topodroid.ui.TDLayout;
 import com.topodroid.ui.ExifInfo;
@@ -194,8 +194,9 @@ class QCamCompass extends Dialog
   @Override
   public void onCreate(Bundle savedInstanceState) 
   {
-    super.onCreate(savedInstanceState);
     requestWindowFeature( Window.FEATURE_NO_TITLE );
+    super.onCreate(savedInstanceState);
+    // requestWindowFeature( Window.FEATURE_NO_TITLE ); // moved at start of method
     // TDLog.v("QCAM camera " + mCamera );
     if ( mCamera == PhotoInfo.CAMERA_TOPODROID ) {
       setContentView(R.layout.qcam_compass);

@@ -11,18 +11,18 @@
  */
 package com.topodroid.TDX;
 
-import com.topodroid.utils.TDMath;
-import com.topodroid.utils.TDLog;
-import com.topodroid.utils.TDFile;
-import com.topodroid.utils.TDsafUri;
-import com.topodroid.utils.TDTag;
-import com.topodroid.utils.TDColor;
-import com.topodroid.utils.TDStatus;
-import com.topodroid.utils.TDString;
-import com.topodroid.utils.TDRequest;
-import com.topodroid.utils.TDLocale;
-import com.topodroid.utils.TDUtil;
-import com.topodroid.utils.StringPair;
+import com.topodroid.util.TDMath;
+import com.topodroid.util.TDLog;
+import com.topodroid.util.TDFile;
+import com.topodroid.util.TDsafUri;
+import com.topodroid.util.TDTag;
+import com.topodroid.util.TDColor;
+import com.topodroid.util.TDStatus;
+import com.topodroid.util.TDString;
+import com.topodroid.util.TDRequest;
+import com.topodroid.util.TDLocale;
+import com.topodroid.util.TDUtil;
+import com.topodroid.util.StringPair;
 import com.topodroid.num.TDNum;
 import com.topodroid.num.NumStation;
 import com.topodroid.num.NumShot;
@@ -42,6 +42,9 @@ import com.topodroid.ui.MyHorizontalButtonView;
 import com.topodroid.ui.MyTurnBitmap;
 import com.topodroid.ui.ItemButton;
 import com.topodroid.ui.MotionEventWrap;
+import com.topodroid.ui.FilterClickListener;
+import com.topodroid.ui.IFilterClickHandler;
+// import com.topodroid.ui.IJoinClickHandler;
 import com.topodroid.help.HelpDialog;
 import com.topodroid.help.UserManualActivity;
 import com.topodroid.prefs.TDSetting;
@@ -3273,7 +3276,12 @@ public class DrawingWindow extends ItemDrawer
     // TDLog.v("PLOT multileg list size " + list.size() + " stations " + stations.size() + " splays " + list0.size() + " froms " + mFroms.size() + " tos " + mTos.size() );
     return list;
   }
-
+ 
+  /** @return the list of x-section shots
+   * @param type  xsection type
+   * @param from  viewing station or station at-station x-section
+   * @param to    viewed station or null for at-station x-section
+   */
   private List<DBlock> getXSectionShots( long type, String from, String to )
   {
     List< DBlock > list = null;
@@ -4086,20 +4094,20 @@ public class DrawingWindow extends ItemDrawer
    */
   private void deleteSplay( DrawingSplayPath p, SelectionPoint sp, DBlock blk )
   {
-    if ( blk.isScan() ) {
-      // long id0 = mApp_mData.getScanSetFirstBlockId( blk.mId, TDInstance.sid, blk.mFrom, blk.getLegType(), TDStatus.NORMAL );
-      long id0 = mApp_mData.getShotIdx( blk.mId, TDInstance.sid );
-      if ( id0 > 0 ) {
-        mApp_mData.updateScanSetStatus( id0, TDInstance.sid, TDStatus.NORMAL, TDStatus.DELETED );      
-        recomputeReferences( true );
-      }
-    } else {
+    // if ( blk.isScan() ) {
+    //   // long id0 = mApp_mData.getScanSetFirstBlockId( blk.mId, TDInstance.sid, blk.mFrom, blk.getLegType(), TDStatus.NORMAL );
+    //   long id0 = mApp_mData.getShotIdx( blk.mId, TDInstance.sid );
+    //   if ( id0 > 0 ) {
+    //     mApp_mData.updateScanSetStatus( id0, TDInstance.sid, TDStatus.DELETED );      
+    //     recomputeReferences( true );
+    //   }
+    // } else {
       mDrawingSurface.deleteSplay( p, sp ); 
       mApp_mData.deleteShot( blk.mId, TDInstance.sid, TDStatus.DELETED );
       if ( TopoDroidApp.mShotWindow != null ) {
         TopoDroidApp.mShotWindow.updateDisplay(); // FIXME ???
       }
-    }
+    // }
   }
 
   /** delete a drawing point
@@ -7660,8 +7668,19 @@ public class DrawingWindow extends ItemDrawer
    */
   private void askDeleteSplay( final DrawingSplayPath p, final SelectionPoint sp, final DBlock blk )
   {
-    TopoDroidAlertDialog.makeAlert( mActivity, getResources(), 
-                              String.format( getResources().getString( R.string.splay_delete ), blk.Name() ), 
+    long id0 = 0;
+    String title;
+    if ( blk.isScan() ) {
+      id0 = mApp_mData.getShotIdx( blk.mId, TDInstance.sid );
+      if ( id0 > 0 ) {
+        title = String.format( getResources().getString( R.string.scanset_delete ), blk.mFrom );
+      } else {
+        title = String.format( getResources().getString( R.string.splay_delete ), blk.Name() );
+      }
+    } else {
+      title = String.format( getResources().getString( R.string.splay_delete ), blk.Name() );
+    }
+    TopoDroidAlertDialog.makeAlert( mActivity, getResources(), title,
       new DialogInterface.OnClickListener() {
         @Override
         public void onClick( DialogInterface dialog, int btn ) {

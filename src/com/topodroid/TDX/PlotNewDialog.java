@@ -11,9 +11,9 @@
  */
 package com.topodroid.TDX;
 
-// import com.topodroid.utils.TDLog;
-import com.topodroid.utils.TDUtil;
-import com.topodroid.utils.TDString;
+// import com.topodroid.util.TDLog;
+import com.topodroid.util.TDUtil;
+import com.topodroid.util.TDString;
 import com.topodroid.ui.MyKeyboard;
 import com.topodroid.ui.MyDialog;
 import com.topodroid.prefs.TDSetting;
@@ -165,7 +165,7 @@ class PlotNewDialog extends MyDialog
    */
   private boolean handleOK( )
   {
-    String plot_name  = mEtName.getText().toString(); 
+    String plot_name  = TDString.spacesToUnderscore( mEtName.getText().toString() ); // this trims the string
 
     String plot_start = TDString.noSpaces( mEtStart.getText().toString() );
     // String view  = mEditView.getText().toString();
@@ -173,7 +173,6 @@ class PlotNewDialog extends MyDialog
     if ( ! TDString.checkName( plot_name, mEtName, mContext.getResources() ) ) {
       return false;
     }
-    plot_name = TDString.spacesToUnderscore( plot_name ); // this trims the string
 
     // if ( mApp.hasSurveyPlotName( plot_name ) ) { // this checks "plot_name"
     //   mEtName.setError( resString( R.string.error_name_duplicate ) );

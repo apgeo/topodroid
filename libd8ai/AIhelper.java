@@ -11,8 +11,8 @@
  */
 package com.topodroid.help;
 
-import com.topodroid.utils.TDLog;
-import com.topodroid.utils.TDColor;
+import com.topodroid.util.TDLog;
+import com.topodroid.util.TDColor;
 import com.topodroid.TDX.TDToast;
 // import com.topodroid.TDX.TopoDroidApp;
 import com.topodroid.TDX.R;
@@ -78,6 +78,7 @@ public class AIhelper // extends AsyncTask< String, Void, String >
 
   public AIhelper( Context ctx, AIdialog dialog, String user_key, String page )
   {
+    TDLog.v("AI helper: cstr" );
     mContext = ctx;
     mDialog  = dialog;
     mUserKey = user_key;
@@ -93,6 +94,7 @@ public class AIhelper // extends AsyncTask< String, Void, String >
    */
   void setModel( String model_name, int r_ai_model )
   {
+    TDLog.v("AI helper: set model " + model_name );
     if ( ! model_name.equals( mModelName ) ) {
       mModelName = model_name;
       GenerationConfig.Builder gcb = new GenerationConfig.Builder();
@@ -139,12 +141,13 @@ public class AIhelper // extends AsyncTask< String, Void, String >
    */
   public void ask( String user_prompt, AIdialog dialog, boolean local_context )
   {
+    TDLog.v("AI helper: ask " + user_prompt );
     if ( chat != null ) {
       final String error_format = mContext.getResources().getString( R.string.ai_error );
       final WeakReference<AIdialog> dialogRef = new WeakReference<>(dialog);
 
       StringBuilder sb = new StringBuilder();
-      if ( local_context && mRefPage != null ) sb.append("CONTTEXT: The user is currently reading the manual page: \'").append( mRefPage ).append("\'\n");
+      if ( local_context && mRefPage != null ) sb.append("CONTEXT: The user is currently reading the manual page: \'").append( mRefPage ).append("\'\n");
       sb.append("QUESTION: ").append( user_prompt ).append("\n");
  
       Content content = new Content.Builder().addText( sb.toString() ).build();
@@ -197,7 +200,7 @@ public class AIhelper // extends AsyncTask< String, Void, String >
    */
   public static void validateApiKey( final String api_key, final ValidationCallback callback )
   {
-    TDLog.v("Validate API key " + api_key );
+    TDLog.v("AI helper: validate API key " + api_key );
     GenerativeModel gm = new GenerativeModel( "gemini-2.5-flash", api_key );
     GenerativeModelFutures model = GenerativeModelFutures.from( gm );
     Content.Builder cb = new Content.Builder();

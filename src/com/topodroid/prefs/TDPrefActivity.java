@@ -11,11 +11,11 @@
  */
 package com.topodroid.prefs;
 
-import com.topodroid.utils.TDLog;
-import com.topodroid.utils.TDTag;
-import com.topodroid.utils.TDFile;
-import com.topodroid.utils.TDString;
-import com.topodroid.utils.TDRequest;
+import com.topodroid.util.TDLog;
+import com.topodroid.util.TDTag;
+import com.topodroid.util.TDFile;
+import com.topodroid.util.TDString;
+import com.topodroid.util.TDRequest;
 import com.topodroid.ui.TDLayout;
 import com.topodroid.ui.MyButton;
 import com.topodroid.help.IHelpViewer;
@@ -124,6 +124,8 @@ public class TDPrefActivity extends Activity
   @Override
   public void onCreate(Bundle savedInstanceState)
   {
+    requestWindowFeature(Window.FEATURE_NO_TITLE);
+
     super.onCreate( savedInstanceState );
 
     getWindow().getDecorView().setSystemUiVisibility( TDSetting.mUiVisibility );
@@ -134,7 +136,7 @@ public class TDPrefActivity extends Activity
     TDLog.v( "has local LLM " + mWithLocalModel );
     // END GEMMA3 */
 
-    requestWindowFeature(Window.FEATURE_NO_TITLE);
+    // requestWindowFeature(Window.FEATURE_NO_TITLE); // moved to begin pf method
 
     // mApp = (TopoDroidApp) getApplication();
     mCtx = TDInstance.context;
@@ -422,7 +424,7 @@ public class TDPrefActivity extends Activity
     int cnt = 0;
     if ( mPrefs != null ) {
       for ( TDPref pref : mPrefs ) {
-	if ( TDLevel.mLevel >= pref.level ) {
+	if ( TDLevel.atLeastLevel( pref.level ) ) {
           LinearLayout.LayoutParams lp = TDLayout.getLayoutParamsFill( 10, 10, 10, 40 );
           layout.addView( pref.getView( this, li, null ), lp );
 	  ++ cnt;

@@ -11,7 +11,7 @@
  */
 package com.topodroid.TDX;
 
-// import com.topodroid.utils.TDLog;
+import com.topodroid.util.TDLog;
 
 //  import android.util.FloatMath;
 // import java.util.List;
@@ -19,6 +19,8 @@ import java.util.Set;
 
 class NativeName
 {
+  static NativeName mNativeName = null; // singleton
+
   public native static String incrementName( String name, Set<String> stations );
 
   public native void initLog();
@@ -27,11 +29,27 @@ class NativeName
     System.loadLibrary( "nativename" );
   }
 
-  NativeName()
+  private NativeName()
   {
     initLog();
   }
 
+  /** factory method
+   * @return the NativeName or null if failed to create
+   */
+  static NativeName get()
+  {
+    if ( mNativeName == null ) {
+      try {
+        mNativeName = new NativeName();
+        // TDLog.v( "Using native name lib" );
+      } catch ( java.lang.UnsatisfiedLinkError e ) {
+        TDLog.e("Native link error " + e.getMessage() );
+        mNativeName = null;
+      }
+    }
+    return mNativeName;
+  }
 
 
 }

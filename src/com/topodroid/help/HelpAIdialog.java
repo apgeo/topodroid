@@ -11,9 +11,9 @@
  */
 package com.topodroid.help;
 
-import com.topodroid.utils.TDLog;
-import com.topodroid.utils.TDString;
-import com.topodroid.utils.TDColor;
+import com.topodroid.util.TDLog;
+import com.topodroid.util.TDString;
+import com.topodroid.util.TDColor;
 // import com.topodroid.ui.MyDialog;
 import com.topodroid.prefs.TDSetting;
 import com.topodroid.TDX.R;
@@ -60,7 +60,7 @@ public class HelpAIdialog extends AIdialog
     mPattern = Pattern.compile( "\\[([^]]+\\.htm)\\]" );
     mRtitle = R.string.title_ai_dialog;
 
-    TDLog.v("HelpAI man page " + page );
+    TDLog.v("Help AI dialog: cstr man page " + page + " user key " + user_key );
     if ( mSystemInstruction == null ) {
       mSystemInstruction = getOrderedUserManual( context );
       // TDLog.v("HelpAI System instr. length " + mSystemInstruction.length() );
@@ -247,6 +247,7 @@ public class HelpAIdialog extends AIdialog
   @Override
   public void showResponse( String message )
   {
+      TDLog.v("Help AI dialog: response " + message );
     TextView tv = mAnswer;
     if ( tv == null ) return;
     ArrayList< PageLink > pages = new ArrayList<>();
@@ -267,7 +268,7 @@ public class HelpAIdialog extends AIdialog
       offset = matcher.end() + 1;
     }
     for ( PageLink page : pages ) {
-      TDLog.v("page: " + page.mFilename );
+      TDLog.v("Help AI dialog: page " + page.mFilename );
       page.mLinkText = getTitle( page.mFilename );
     }
     offset = 0;

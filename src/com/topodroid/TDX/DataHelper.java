@@ -15,17 +15,19 @@
  */
 package com.topodroid.TDX;
 
-import com.topodroid.utils.TDMath;
-import com.topodroid.utils.TDLog;
-// import com.topodroid.utils.TDsaf;
-import com.topodroid.utils.TDFile;
-import com.topodroid.utils.TDUtil;
-import com.topodroid.utils.TDVersion;
-import com.topodroid.utils.TDString;
-import com.topodroid.utils.TDStatus;
+import com.topodroid.util.TDMath;
+import com.topodroid.util.TDLog;
+// import com.topodroid.util.TDsaf;
+import com.topodroid.util.TDFile;
+import com.topodroid.util.TDUtil;
+import com.topodroid.util.TDVersion;
+import com.topodroid.util.TDString;
+import com.topodroid.util.TDStatus;
+// import com.topodroid.util.TDRange;
 import com.topodroid.prefs.TDSetting;
 import com.topodroid.inport.ParserShot;
 import com.topodroid.types.LegType;
+// import com.topodroid.types.BlockType;
 import com.topodroid.types.ExtendType;
 import com.topodroid.types.PlotType;
 import com.topodroid.dev.Device;
@@ -401,7 +403,7 @@ public class DataHelper extends DataSetObservable
     
     blk.setExtend( (int)cursor.getLong(9), (float)( cursor.getDouble(16) ) );
     blk.resetFlag( cursor.getLong(10) );
-    blk.setBlockLegType( (int)leg );
+    blk.setBlockTypeFromLegType( (int)leg );
     blk.mComment  = cursor.getString(12);
     blk.setShotType( (int)cursor.getLong(13) );
     blk.mTime     = cursor.getLong(14);
@@ -1719,72 +1721,55 @@ public class DataHelper extends DataSetObservable
   
 
 
-  // /** @return the ID of the first block in a scan-set (or -1)
-  //  * @param id      id of first block of the scan set
-  //  * @param sid     survey ID
-  //  * @param old_st  old station name
-  //  * @param old_leg old leg type
-  //  * @note used only by DrawingWindow
-  //  */
-  // long getScanSetFirstBlockId( long id, long sid, String st, long leg_type, int status )
-  // {
-  //   TDLog.v("Scan set get first block-ID of " + id + " station " + st + " leg-type " + leg_type );
-  //   Cursor cursor = myDB.rawQuery( qScanShotsBefore, new String[] { Long.toString( sid ), Long.toString( id ), Long.toString(status), st, Long.toString(leg_type) } );
-  //   long ret = -1;
-  //   if (cursor.moveToFirst()) {
-  //     ret = cursor.getLong( 0 );
-  //   }
-  //   if ( /* cursor != null && */ !cursor.isClosed()) cursor.close();
-  //   return ret;
-  // }
-
-  // /** @return the Block of the first block in a scan-set (or null)
-  //  * @param id      id of first block of the scan set
-  //  * @param sid     survey ID
-  //  * @param old_st  old station name
-  //  * @param old_leg old leg type
-  //  */
-  // DBlock getScanSetFirstBlock( long id0, long sid, String st, long leg_type, int status )
-  // {
-  //   TDLog.v("Scan set get first block of " + id0 + " station " + st + " leg-type " + leg_type );
-  //   long id = -1L;
-  //   Cursor cursor = myDB.rawQuery( qScanShotsBefore, new String[] { Long.toString( sid ), Long.toString( id0 ), Long.toString(status), st, Long.toString(leg_type) } );
-  //   if (cursor.moveToFirst()) {
-  //     id = cursor.getLong( 0 );
-  //   }
-  //   if ( /* cursor != null && */ !cursor.isClosed()) cursor.close();
-  //   TDLog.v("Scan set first block of " + id0 + " : " + id );
-  //   if ( id > 0 ) return selectShot( id, sid );
-  //   return null;
-  // }
-
   /** @return the ID value at the end (one past the last) of a scan set
    * @param id      id of first block of the scan set
    * @param sid     survey ID
    * @param idx     scan-set first block ID
-   * @param status  scan set status
    * @note return -1 if old_leg is not a "scan" leg-type
    */
-  private long getScanSetEnd( long id0, long sid, long idx, int status )
+  private long getScanSetEnd( long id0, long sid, long idx )
   {
-    long id = id0;
-    Cursor cursor = myDB.rawQuery( qScanShotsAfter, new String[] { Long.toString( sid ), Long.toString( id0 ), Long.toString(status), Long.toString(idx) } );
+    long id = id0 + 1;
+    // Cursor cursor = myDB.rawQuery( qScanShotsMax, new String[] { Long.toString( sid ), Long.toString( id0 ), Long.toString(status), Long.toString(idx) } );
+    Cursor cursor = myDB.rawQuery( qScanShotsMax, new String[] { Long.toString( sid ), Long.toString( id0 ), Long.toString(idx) } );
     if (cursor.moveToFirst()) {
-      do { 
-        long cid = cursor.getLong( 0 );
-        if ( cid != id ) {
-          TDLog.v(" got " + cid + " expected " + id );
-          break;
-        }
-        ++id;
-      } while (cursor.moveToNext());
-    } else {
-      id ++;
+      id = cursor.getLong( 0 ) + 1;
     }
     if ( /* cursor != null && */ !cursor.isClosed()) cursor.close();
     TDLog.v("Scan set end block of " + id0 + " : " + id );
     return id;
   }
+
+  // get the intervals of bearing and of clino
+  // boolean getScanSetAngles( long idx, long sid, TDRange azimuth, TDRange clino )
+  // {  
+  //   Cursor cursor = myDB.rawQuery( qScanShotsAngles, new String[] { Long.toString( sid ), Long.toString( idx ), Long.toString(TDStatus.NORMAL) } );
+  //   if (cursor.moveToFirst()) {
+  //     double a = cursor.getDouble( 0 );
+  //     azimuth.min = azimuth.max = a;
+  //     if ( a < 180 ) a += 360;
+  //     TDRange a360 = new TDRange( a );
+  //     clino.min   = clino.max   = cursor.getDouble( 1 );
+  //     if ( cursor.moveToNext() ) {
+  //       do {
+  //         a = cursor.getDouble( 0 );
+  //         azimuth.update( a );
+  //         if ( a < 180 ) a += 360; 
+  //         a360.update( a );
+  //         clino.update( cursor.getDouble( 1 ) );
+  //       } while (cursor.moveToNext());
+  //     }
+  //     if ( a360.span() < 180 && a360.span() < azimuth.span() && a360.max > 360 && a360.min < 360 ) {
+  //       azimuth.min = a360.max - 360;
+  //       azimuth.max = a360.min;
+  //     }
+  //   } else { 
+  //     return false;
+  //   }
+  //   if ( /* cursor != null && */ !cursor.isClosed()) cursor.close();
+  //   return true;
+  // }
+ 
 
   /** update the station and leg-type of a scan-set
    * @param id      id of first block of the scan set
@@ -1798,8 +1783,9 @@ public class DataHelper extends DataSetObservable
   void updateScanSetName(  long id, long sid, String old_st, String new_st, long old_leg, long new_leg )
   {
     if ( myDB == null ) return;
-    long id0 = id;
-    long id1 = getScanSetEnd( id, sid, id, TDStatus.NORMAL );
+    long id0 = getShotIdx( id, sid );
+    if  (id0 == -1L ) return;
+    long id1 = getScanSetEnd( id, sid, id );
     if ( id1 == -1L ) return;
     // TDLog.v("Update scan from " + id0 + " to " + id + " station " + new_st + " leg type " + new_leg );
     StringWriter sw = new StringWriter();
@@ -1812,14 +1798,16 @@ public class DataHelper extends DataSetObservable
   /** mark as deleted the scan shots of a scan set
    * @param id      id of first block of the scan set
    * @param sid     survey ID
+   * @param new_status new status
    * @return true if success
-   * @note this is always called for transition NORMAL to DELETED
+   * @note the scan-set is deleted or recovered as a whole
    */ 
-  boolean updateScanSetStatus( long id, long sid, int old_status, int new_status )
+  boolean updateScanSetStatus( long id, long sid, int new_status )
   {
     if ( myDB == null ) return false;
-    long id0 = id;
-    long id1 = getScanSetEnd( id, sid, id, old_status );
+    long id0 = getShotIdx( id, sid );
+    if  (id0 == -1L ) return false;
+    long id1 = getScanSetEnd( id, sid, id );
     if ( id1 == -1L ) return false;
     StringWriter sw = new StringWriter();
     PrintWriter pw = new PrintWriter( sw );
@@ -2124,20 +2112,24 @@ public class DataHelper extends DataSetObservable
       TDLog.v("undelete ID " + id + " station " + station + " leg type " + leg_type );
     }
     if ( /* cursor != null && */ !cursor.isClosed()) cursor.close();
-    if ( leg_type >= LegType.SCAN && leg_type <= LegType.VSCAN ) { // this is like updateScanSetStatus
-      long id0 = id;
-      long id1 = getScanSetEnd( id, sid, id, TDStatus.DELETED );
-      if ( id1 == -1L ) {
+    if ( leg_type >= LegType.SCAN && leg_type <= LegType.VSCAN ) { // this is like updateScanSetStatus( ... TDStatus.NORMAL )
+      long id0 = getShotIdx( id, sid );
+      if ( id0 == -1L ) {
         updateStatus( SHOT_TABLE, id, sid, TDStatus.NORMAL );
       } else {
-        // for ( id = id0; id < id1; ++id ) {
-        //   updateStatus( SHOT_TABLE, id, sid, TDStatus.NORMAL );
-        // } 
-        StringWriter sw = new StringWriter();
-        PrintWriter pw = new PrintWriter( sw );
-        pw.format( "UPDATE shots SET status=%d WHERE surveyId=%d AND id>=%d AND id<%d", TDStatus.NORMAL, sid, id0, id1 );
-        TDLog.v("Scan set: " + sw.toString() );
-        doExecShotSQL( id0, sw );
+        long id1 = getScanSetEnd( id0, sid, id0 );
+        if ( id1 == -1L ) {
+          updateStatus( SHOT_TABLE, id, sid, TDStatus.NORMAL );
+        } else {
+          // for ( id = id0; id < id1; ++id ) {
+          //   updateStatus( SHOT_TABLE, id, sid, TDStatus.NORMAL );
+          // } 
+          StringWriter sw = new StringWriter();
+          PrintWriter pw = new PrintWriter( sw );
+          pw.format( "UPDATE shots SET status=%d WHERE surveyId=%d AND id>=%d AND id<%d", TDStatus.NORMAL, sid, id, id1 );
+          TDLog.v("Scan set: " + sw.toString() );
+          doExecShotSQL( id0, sw );
+        }
       }
     } else {
       updateStatus( SHOT_TABLE, id, sid, TDStatus.NORMAL );
@@ -3172,7 +3164,9 @@ public class DataHelper extends DataSetObservable
 
   private static final String qShotStations = "select fStation, tStation from shots where surveyId=? AND id=? ";
   private static final String qShotsByStations = "select id, distance, bearing, clino from shots where surveyId=? AND status=0 AND fStation=? AND tStation=? ";
-  private static final String qScanShotsAfter  = "select id from shots where surveyId=? AND id>=? AND status=? AND idx=? ORDER BY id ";
+  // private static final String qScanShotsMax    = "select max(id) from shots where surveyId=? AND id>=? AND status=? AND idx=? ";
+  private static final String qScanShotsMax    = "select max(id) from shots where surveyId=? AND id>=? AND idx=? ";
+  private static final String qScanShotsAngles = "select bearing, clino from shots where surveyId=? AND idx=? AND status=? ";
   // private static final String qScanShotsBefore = "select id from shots where surveyId=? AND id<=? AND status=? AND fStation=? AND leg=? ORDER BY id ";
   private static final String qShotIdx = "select idx from shots where surveyId=? AND id>=? ";
   private static final String qShotLegType = "select leg, fStation from shots where surveyId=? AND id>=? ";
@@ -4600,7 +4594,7 @@ public class DataHelper extends DataSetObservable
     long ret = -1;
     long extend = ExtendType.EXTEND_LEFT;
     long flag   = DBlock.FLAG_SURVEY;
-    long leg    = DBlock.BLOCK_MAIN_LEG;
+    long leg    = LegType.NORMAL;  // was BlockType.MAIN_LEG;
     String comment = TDString.EMPTY;
     if ( myDB == null ) return ret;
     Cursor cursor = myDB.query( SHOT_TABLE, new String[] { "id", "fStation", "tStation", "extend", "flag", "leg", "comment" },
@@ -4966,7 +4960,7 @@ public class DataHelper extends DataSetObservable
     if (cursor.moveToFirst()) {
       do {
         int leg = (int)( cursor.getLong(11) );
-        if ( leg == 0 || leg == 2 ) { // skip leg-blocks (11 = "leg" flag): 0==splay, 1==leg, 2==x-splay
+        if ( leg == 0 || leg >= 2 ) { // skip leg-blocks (11 = "leg" flag): 0 normal, 1 repeated-leg, 2 x-splay, 3 backleg, ...
           DBlock block = new DBlock();
           fullFillBlock( sid, block, cursor ); // FIXME FULL_FILL ?
           list.add( block );

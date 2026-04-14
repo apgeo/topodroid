@@ -11,9 +11,9 @@
  */
 package com.topodroid.TDX;
 
-import com.topodroid.utils.TDLog;
-import com.topodroid.utils.TDString;
-import com.topodroid.utils.TDUtil;
+import com.topodroid.util.TDLog;
+import com.topodroid.util.TDString;
+import com.topodroid.util.TDUtil;
 import com.topodroid.ui.MyDialog;
 import com.topodroid.prefs.TDSetting;
 
@@ -191,8 +191,8 @@ class SurveyNewDialog extends MyDialog
       }
 
       // if ( mEditName.getText() == null ) return;
-      String name = mEditName.getText().toString();
-      if ( ! TDString.checkName( name, mEditName, mContext.getResources() ) ) return;
+      String name = TDString.spacesToUnderscore( mEditName.getText().toString() ); // this trims the string
+      if ( ! TDString.checkName( name, mEditName, mContext.getResources() ) ) return; // check against null, empty, special chars
       if ( mApp.hasSurveyName( name ) ) {
         mEditName.setError( resString( R.string.survey_exists ) );
         return;
