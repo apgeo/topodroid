@@ -1720,6 +1720,24 @@ On Android-11+ storage access must be granted to TopoDroid.\nYou can do this wit
   <string name="silexgis_visibility_club">club</string>
   <string name="silexgis_visibility_authenticated">signed-in users</string>
   <string name="silexgis_visibility_public">public</string>
+  <string name="silexgis_title">SilexGIS server</string>
+  <string name="silexgis_url_hint" translatable="false">https://silexgis.example.org</string>
+  <string name="silexgis_key_hint">Paste the access key (sgx_...)</string>
+  <string name="silexgis_button_test">Test</string>
+  <string name="silexgis_testing">Testing the access to the server...</string>
+  <string name="silexgis_account">Account: %1$s</string>
+  <string name="silexgis_server">Server: %1$s %2$s</string>
+  <string name="silexgis_compiles">The server compiles the surveys (%1$s)</string>
+  <string name="silexgis_no_compiler">This server keeps the files but does not compile them</string>
+  <string name="silexgis_forgotten">The access key has been removed from this device. Revoke it in SilexGIS (Settings, Access keys)</string>
+  <string name="silexgis_not_configured">Set the server URL and paste an access key</string>
+  <string name="silexgis_url_cleartext">The server URL must start with https:// (http:// only for 10.0.2.2, 127.0.0.1 and localhost)</string>
+  <string name="silexgis_url_invalid">The server URL is not valid</string>
+  <string name="silexgis_key_refused">The access key was refused: create a new one in SilexGIS (Settings, Access keys) and paste it here</string>
+  <string name="silexgis_key_not_accepted">The server does not accept an access key for this request</string>
+  <string name="silexgis_problem">Server error %1$d: %2$s</string>
+  <string name="silexgis_network">Cannot reach the server: %1$s</string>
+  <string name="silexgis_bad_response">The answer is not that of a SilexGIS server</string>
   <string name="pref_vtopo_splays_title">VisualTopo splays</string>
   <string name="pref_vtopo_splays_summary">Export splays in VisualTopo files</string>
   <string name="pref_vtopo_lrud_title">LRUD at From</string>

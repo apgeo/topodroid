@@ -31,6 +31,7 @@ import com.topodroid.TDX.TDToast;
 // import com.topodroid.TDX.TDPath;
 import com.topodroid.TDX.TopoDroidAlertDialog;
 import com.topodroid.TDX.TopoDroidApp;
+import com.topodroid.TDX.SilexGisSettingsDialog;
 // import com.topodroid.TDX.CWDActivity;
 import com.topodroid.TDX.R;
 
@@ -511,6 +512,25 @@ public class TDPrefActivity extends Activity
             new OnClickListener() {
               @Override
               public void onClick( View v ) { startActivityForResult( pt_intent, REQUEST_GRAPH_PAPER_SCALE ); }
+          } );
+        }
+      }
+    } else if (mPrefCategory == TDPrefCat.PREF_CATEGORY_SILEXGIS ) {
+      TDPref account_pref = findPreference( "DISTOX_SILEXGIS_ACCOUNT" );
+      if ( account_pref != null ) {
+        account_pref.setButtonValue( TDString.isNullOrEmpty( TDSetting.mSilexGisAccount )? "---" : TDSetting.mSilexGisAccount );
+        View v = account_pref.getView();
+        if ( v != null ) {
+          v.setOnClickListener( new OnClickListener() {
+            @Override
+            public void onClick( View v ) { 
+              SilexGisSettingsDialog dialog = new SilexGisSettingsDialog( TDPrefActivity.this, null, null );
+              dialog.setOnDismissListener( new DialogInterface.OnDismissListener() {
+                @Override
+                public void onDismiss( DialogInterface d ) { loadCategory( TDPrefCat.PREF_CATEGORY_SILEXGIS ); } // show the new URL, key and account
+              } );
+              dialog.show();
+            }
           } );
         }
       }
