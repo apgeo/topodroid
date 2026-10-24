@@ -651,5 +651,6 @@ public class TDConst
   public static final int NUMBER_SIGNED          = NUMBER | InputType.TYPE_NUMBER_FLAG_SIGNED;
   public static final int NUMBER_DECIMAL_SIGNED  = NUMBER_DECIMAL | InputType.TYPE_NUMBER_FLAG_SIGNED;
   public static final int TEXT                   = InputType.TYPE_CLASS_TEXT;
+  public static final int TEXT_PASSWORD          = TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD;
 
 }

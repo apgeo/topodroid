@@ -1490,6 +1490,7 @@ On Android-11+ storage access must be granted to TopoDroid.\nYou can do this wit
     <string name="title_settings_kml">KML export settings</string>
     <string name="title_settings_srv">Walls export settings</string>
     <string name="title_settings_ply">Polygon export settings</string>
+    <string name="silexgis_title_settings">SilexGIS export settings</string>
 
     <string name="title_settings_sketch">3d sketch settings</string>
     <string name="title_settings_survey">Survey settings</string>
@@ -1588,6 +1589,7 @@ On Android-11+ storage access must be granted to TopoDroid.\nYou can do this wit
   <string name="pref_cat_exportkml" translatable="false">KML</string>
   <string name="pref_cat_exportcsx" translatable="false">cSurvey</string>
   <string name="pref_cat_exportcsv" translatable="false">CSV</string>
+  <string name="silexgis_pref_cat" translatable="false">SilexGIS</string>
 
   <string name="pref_cat_calib">CALIBRATIONS</string>
   <!-- UNUSED string name="pref_cat_min_algo">MIN ALGO</string -->
@@ -1686,6 +1688,38 @@ On Android-11+ storage access must be granted to TopoDroid.\nYou can do this wit
   <string name="pref_ply_lrud_summary">LRUD or add TO station to splays in Polygon</string>
   <string name="pref_ply_minus_title">Polygon splay name</string>
   <string name="pref_ply_minus_summary">Dash or numbered splays in Polygon</string>
+  <string name="silexgis_pref_url_title">Server URL</string>
+  <string name="silexgis_pref_url_summary">Address of the SilexGIS server (https)</string>
+  <string name="silexgis_pref_key_title">Access key</string>
+  <string name="silexgis_pref_key_summary">Personal access key created in SilexGIS (Settings, Access keys)</string>
+  <string name="silexgis_pref_account_title">Account</string>
+  <string name="silexgis_pref_account_summary">Test the access to the server, or forget the key</string>
+  <string name="silexgis_pref_with_th_title">Therion files</string>
+  <string name="silexgis_pref_with_th_summary">Upload also the Therion survey and sketches (th, th2)</string>
+  <string name="silexgis_pref_with_svx_title">Survex file</string>
+  <string name="silexgis_pref_with_svx_summary">Upload also the Survex export</string>
+  <string name="silexgis_pref_with_dat_title">Compass file</string>
+  <string name="silexgis_pref_with_dat_summary">Upload also the Compass export</string>
+  <string name="silexgis_pref_with_csv_title">CSV file</string>
+  <string name="silexgis_pref_with_csv_summary">Upload also the CSV export</string>
+  <string name="silexgis_pref_with_kml_title">KML file</string>
+  <string name="silexgis_pref_with_kml_summary">Upload also the KML export</string>
+  <string name="silexgis_pref_with_gpx_title">GPX file</string>
+  <string name="silexgis_pref_with_gpx_summary">Upload also the GPX export</string>
+  <string name="silexgis_pref_with_out_title">Out folder</string>
+  <string name="silexgis_pref_with_out_summary">Upload also every other file in the survey out folder</string>
+  <string name="silexgis_pref_compile_title">Compile</string>
+  <string name="silexgis_pref_compile_summary">Ask the server to compile the survey</string>
+  <string name="silexgis_pref_outputs_title">Outputs</string>
+  <string name="silexgis_pref_outputs_summary">Outputs to ask the server for, comma separated (lox, 3d, plan-pdf, extended-pdf, ...)</string>
+  <string name="silexgis_pref_visibility_title">Visibility</string>
+  <string name="silexgis_pref_visibility_summary">Who may see a cave created by the upload</string>
+  <string name="silexgis_pref_public_link_title">Public link</string>
+  <string name="silexgis_pref_public_link_summary">Ask for a public link to the results</string>
+  <string name="silexgis_visibility_private">private</string>
+  <string name="silexgis_visibility_club">club</string>
+  <string name="silexgis_visibility_authenticated">signed-in users</string>
+  <string name="silexgis_visibility_public">public</string>
   <string name="pref_vtopo_splays_title">VisualTopo splays</string>
   <string name="pref_vtopo_splays_summary">Export splays in VisualTopo files</string>
   <string name="pref_vtopo_lrud_title">LRUD at From</string>

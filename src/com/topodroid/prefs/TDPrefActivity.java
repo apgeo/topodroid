@@ -348,6 +348,7 @@ public class TDPrefActivity extends Activity
       case TDPrefCat.PREF_CATEGORY_TRO:       mPrefs = TDPref.makeTroPrefs(      this, hlp ); break;
       case TDPrefCat.PREF_CATEGORY_SRV:       mPrefs = TDPref.makeSrvPrefs(      this, hlp ); break;
       case TDPrefCat.PREF_CATEGORY_PLY:       mPrefs = TDPref.makePlyPrefs(      this, hlp ); break;
+      case TDPrefCat.PREF_CATEGORY_SILEXGIS:  mPrefs = TDPref.makeSilexgisPrefs( this, hlp ); break;
       case TDPrefCat.PREF_CATEGORY_SVG:       mPrefs = TDPref.makeSvgPrefs(      this, hlp ); break;
       case TDPrefCat.PREF_CATEGORY_SHP:       mPrefs = TDPref.makeShpPrefs(      this, hlp ); break;
       case TDPrefCat.PREF_CATEGORY_DXF:       mPrefs = TDPref.makeDxfPrefs(      this, hlp ); break;
@@ -455,6 +456,7 @@ public class TDPrefActivity extends Activity
       linkPreference( "DISTOX_EXPORT_GPX_PREF",     TDPrefCat.PREF_CATEGORY_GPX );
       linkPreference( "DISTOX_EXPORT_KML_PREF",     TDPrefCat.PREF_CATEGORY_KML );
       linkPreference( "DISTOX_EXPORT_CSV_PREF",     TDPrefCat.PREF_CATEGORY_CSV );
+      linkPreference( "DISTOX_EXPORT_SILEXGIS_PREF", TDPrefCat.PREF_CATEGORY_SILEXGIS );
     } else if (mPrefCategory == TDPrefCat.PREF_CATEGORY_SURVEY ) {
       linkPreference( "DISTOX_LOCATION_SCREEN",     TDPrefCat.PREF_LOCATION );
       linkPreference( "DISTOX_ACCURACY_SCREEN",     TDPrefCat.PREF_ACCURACY );
