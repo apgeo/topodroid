@@ -216,17 +216,23 @@ public class SilexGisSettingsDialog extends MyDialog
   {
     mBtnTest.setEnabled( true );
     Resources r = mContext.getResources();
-    for ( SilexGisClient.Result result : res ) {
-      if ( ! result.isOk() ) {
-        mTVresult.setText( errorMessage( r, result ) );
-        return;
-      }
+    if ( ! res[0].isOk() ) {
+      mTVresult.setText( errorMessage( r, res[0] ) );
+      return;
     }
+    // the key is good once me() answers: a failure of about or capabilities is reported below the account
     mTestedUrl = url;
     mTestedKey = key;
     mAccount   = SilexGisClient.accountLabel( res[0] );
     StringBuilder sb = new StringBuilder();
     sb.append( String.format( r.getString( R.string.silexgis_account ), mAccount ) ).append( "\n" );
+    for ( int k = 1; k < res.length; ++k ) {
+      if ( ! res[k].isOk() ) {
+        sb.append( errorMessage( r, res[k] ) );
+        mTVresult.setText( sb.toString() );
+        return;
+      }
+    }
     sb.append( String.format( r.getString( R.string.silexgis_server ), res[1].getString( "name", "" ), res[1].getString( "version", "" ) ) ).append( "\n" );
     if ( SilexGisClient.compilerAvailable( res[2] ) ) {
       JSONObject compiler = res[2].json.optJSONObject( "compiler" );
