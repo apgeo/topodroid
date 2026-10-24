@@ -175,7 +175,7 @@ public class TDPref implements AdapterView.OnItemSelectedListener
 	    mEdittext.setInputType( TDConst.TEXT );
             break;
         }
-        if ( name.equals( "DISTOX_SILEXGIS_KEY" ) ) mEdittext.setInputType( TDConst.TEXT_PASSWORD ); // the access key is not displayed
+        if ( TDPrefKey.isSecret( name ) ) mEdittext.setInputType( TDConst.TEXT_PASSWORD ); // the access key is not displayed
         mEdittext.addTextChangedListener( this );
         mEdittext.setOnKeyListener(this);
         mEdittext.setOnFocusChangeListener(this);
@@ -214,7 +214,7 @@ public class TDPref implements AdapterView.OnItemSelectedListener
       ((TextView) v.findViewById( R.id.summary )).setVisibility( View.GONE );
     } else {
       ((TextView) v.findViewById( R.id.summary )).setText( summary );
-      if ( name.equals( "DISTOX_SILEXGIS_KEY" ) ) showMaskedKey( v );
+      if ( TDPrefKey.isSecret( name ) ) showMaskedKey( v );
     }
     mView = v;
     return v;
@@ -295,7 +295,7 @@ public class TDPref implements AdapterView.OnItemSelectedListener
 	  // TDLog.v("commit value <" + text + ">" );
 	  mEdittext.setText( text );
 	}
-        if ( name.equals( "DISTOX_SILEXGIS_KEY" ) ) showMaskedKey( mView );
+        if ( TDPrefKey.isSecret( name ) ) showMaskedKey( mView );
       }
       commit = false;
     }

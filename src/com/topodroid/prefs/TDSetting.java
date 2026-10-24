@@ -3724,7 +3724,7 @@ public class TDSetting
           if ( TDPrefKey.repeatedKey( j, k ) ) continue;
           TDPrefKey kay = TDPrefKey.getKey( j, k );
           // if ( kay != null && kay.key.equals("DISTOX_GEMINI") ) continue;  // really make sure API_key not exported
-          if ( kay != null && kay.key.equals("DISTOX_SILEXGIS_KEY") ) continue;  // really make sure the SilexGIS access key is not exported
+          if ( kay != null && TDPrefKey.isSecret( kay.key ) ) continue;  // really make sure the SilexGIS access key is not exported
           if ( ( flag & (1<<kay.group) ) != 0 ) {
             String val;
             boolean bval;
@@ -4434,8 +4434,8 @@ B DISTOX_SAP5_BIT16_BUG true
               mPlyMinus = Boolean.parseBoolean( value ); setPreference( editor, kay, mPlyMinus );
               break;
             case "DISTOX_SILEXGIS_URL":
-              mSilexGisUrl = value; setPreference( editor, kay, mSilexGisUrl );
               if ( ! value.equals( mSilexGisUrl ) ) { mSilexGisAccount = ""; setPreference( editor, "DISTOX_SILEXGIS_ACCOUNT", mSilexGisAccount ); } // the account was found on the old server
+              mSilexGisUrl = value; setPreference( editor, kay, mSilexGisUrl );
               break;
             case "DISTOX_SILEXGIS_WITH_TH":
               mSilexGisWithTh  = Boolean.parseBoolean( value ); setPreference( editor, kay, mSilexGisWithTh );

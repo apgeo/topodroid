@@ -1133,6 +1133,11 @@ class TDPrefKey
    */
   static TDPrefKey getKey( int j, int k ) { return mKeySet[j][k]; }
 
+  /** @return if the setting is a secret: edited as a password, shown masked, never exported or imported
+   * @param name   setting key
+   */
+  static boolean isSecret( String name ) { return "DISTOX_SILEXGIS_KEY".equals( name ); }
+
   /** @return if the key is a repeatition
    * @param j   index of keyset
    * @param k   index of the key
