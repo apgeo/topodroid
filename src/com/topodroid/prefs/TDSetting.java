@@ -3749,6 +3749,7 @@ public class TDSetting
                 break;
               case TDPrefKey.STR:
                 val = prefs.getString( kay.key, kay.dflt );
+                if ( ( val == null || val.isEmpty() ) && kay.key.startsWith("DISTOX_SILEXGIS_") ) break; // an empty value would make a line without value, which the import cannot read
                 pw.printf(Locale.US, "S %s %s\n", kay.key, val );
                 // ++cnt;
                 break;
