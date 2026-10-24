@@ -51,6 +51,7 @@ public class SilexGisClient
   public static final int PROBLEM          = 5; // any other refusal, with the Problem Details of the server
   public static final int NETWORK          = 6; // the server could not be reached
   public static final int BAD_RESPONSE     = 7; // the answer is not a JSON object
+  public static final int BAD_KEY          = 8; // the access key is not of the form sgx_... (refused without connecting)
 
   public static final String CODE_KEY_NOT_ACCEPTED = "auth.access_key_not_accepted";
 
@@ -155,6 +156,22 @@ public class SilexGisClient
    */
   public boolean isConfigured() { return ! mBaseUrl.isEmpty() && ! mKey.isEmpty(); }
 
+  /** @return true if the access key has the form of a SilexGIS key: "sgx_" followed by base64url characters
+   * @param key   access key
+   * @note a pasted key can carry a newline, a tab or an invisible character, which cannot go in a header
+   */
+  public static boolean checkKey( String key )
+  {
+    if ( key == null ) return false;
+    key = key.trim();
+    if ( key.length() <= 4 || ! key.startsWith( "sgx_" ) ) return false;
+    for ( int i = 4; i < key.length(); ++i ) {
+      char c = key.charAt( i );
+      if ( ! ( ( c >= 'A' && c <= 'Z' ) || ( c >= 'a' && c <= 'z' ) || ( c >= '0' && c <= '9' ) || c == '_' || c == '-' ) ) return false;
+    }
+    return true;
+  }
+
   /** @return the access key masked for display: the first eight characters followed by an ellipsis
    * @param key   access key
    */
@@ -213,6 +230,7 @@ public class SilexGisClient
   {
     if ( ! isConfigured() ) return new Result( NOT_CONFIGURED, 0, null, null, null, null, mUrlCheck );
     if ( mUrlCheck != URL_OK ) return new Result( BAD_URL, 0, null, null, null, null, mUrlCheck );
+    if ( ! checkKey( mKey ) ) return new Result( BAD_KEY, 0, null, null, null, null, URL_OK );
     HttpURLConnection http = null;
     try {
       URL url = new URL( mBaseUrl + path );
@@ -254,6 +272,8 @@ public class SilexGisClient
       }
       return new Result( PROBLEM, status, code, title, detail, null, URL_OK );
     } catch ( IOException e ) {
+      return new Result( NETWORK, 0, null, null, e.getMessage(), null, URL_OK );
+    } catch ( RuntimeException e ) { // e.g. a header value or a host the connection refuses: never let it out of a background task
       return new Result( NETWORK, 0, null, null, e.getMessage(), null, URL_OK );
     } finally {
       if ( http != null ) http.disconnect();

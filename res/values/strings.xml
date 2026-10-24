@@ -1738,6 +1738,7 @@ On Android-11+ storage access must be granted to TopoDroid.\nYou can do this wit
   <string name="silexgis_problem">Server error %1$d: %2$s</string>
   <string name="silexgis_network">Cannot reach the server: %1$s</string>
   <string name="silexgis_bad_response">The answer is not that of a SilexGIS server</string>
+  <string name="silexgis_key_invalid">This is not a SilexGIS access key: a key starts with sgx_ and has only letters, digits, - and _</string>
   <string name="pref_vtopo_splays_title">VisualTopo splays</string>
   <string name="pref_vtopo_splays_summary">Export splays in VisualTopo files</string>
   <string name="pref_vtopo_lrud_title">LRUD at From</string>

@@ -67,7 +67,7 @@ public class SilexGisSettingsDialog extends MyDialog
   public static boolean ensureConfigured( Context context, Runnable on_configured )
   {
     SilexGisClient client = new SilexGisClient( TDSetting.mSilexGisUrl, TDSetting.mSilexGisKey );
-    if ( client.isConfigured() && SilexGisClient.checkBaseUrl( client.getBaseUrl() ) == SilexGisClient.URL_OK ) return true;
+    if ( client.isConfigured() && SilexGisClient.checkBaseUrl( client.getBaseUrl() ) == SilexGisClient.URL_OK && SilexGisClient.checkKey( TDSetting.mSilexGisKey ) ) return true;
     (new SilexGisSettingsDialog( context, context.getResources().getString( R.string.silexgis_not_configured ), on_configured )).show();
     return false;
   }
@@ -95,6 +95,7 @@ public class SilexGisSettingsDialog extends MyDialog
       case SilexGisClient.KEY_NOT_ACCEPTED: return res.getString( R.string.silexgis_key_not_accepted );
       case SilexGisClient.NETWORK:          return String.format( res.getString( R.string.silexgis_network ), r.message() );
       case SilexGisClient.BAD_RESPONSE:     return res.getString( R.string.silexgis_bad_response );
+      case SilexGisClient.BAD_KEY:          return res.getString( R.string.silexgis_key_invalid );
     }
     return String.format( res.getString( R.string.silexgis_problem ), r.status, r.message() ); // PROBLEM
   }
@@ -164,6 +165,9 @@ public class SilexGisSettingsDialog extends MyDialog
         mTVresult.setText( R.string.silexgis_not_configured );
       } else if ( check != SilexGisClient.URL_OK ) {
         mTVresult.setText( ( check == SilexGisClient.URL_CLEARTEXT )? R.string.silexgis_url_cleartext : R.string.silexgis_url_invalid );
+      } else if ( ! SilexGisClient.checkKey( key ) ) {
+        mETkey.setError( resString( R.string.silexgis_key_invalid ) );
+        mTVresult.setText( R.string.silexgis_key_invalid );
       } else {
         mTVresult.setText( R.string.silexgis_testing );
         mBtnTest.setEnabled( false );
@@ -187,6 +191,10 @@ public class SilexGisSettingsDialog extends MyDialog
           mETurl.setError( resString( ( check == SilexGisClient.URL_CLEARTEXT )? R.string.silexgis_url_cleartext : R.string.silexgis_url_invalid ) );
           return;
         }
+      }
+      if ( ! key.isEmpty() && ! SilexGisClient.checkKey( key ) ) {
+        mETkey.setError( resString( R.string.silexgis_key_invalid ) );
+        return;
       }
       TDSetting.setSilexGisAccess( url, key );
       if ( mAccount != null && url.equals( mTestedUrl ) && key.equals( mTestedKey ) ) {
