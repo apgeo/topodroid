@@ -13,9 +13,11 @@ package com.topodroid.TDX;
 
 import com.topodroid.util.TDLog;
 import com.topodroid.util.TDLocale;
-import com.topodroid.util.TDStatus;
 import com.topodroid.util.TDRequest;
+import com.topodroid.util.TDAnalytics;
+import com.topodroid.util.TDColor;
 // import com.topodroid.util.TDLocale;
+import com.topodroid.types.TDStatus;
 import com.topodroid.prefs.TDSetting;
 import com.topodroid.mag.WorldMagneticModel;
 // import com.topodroid.ui.MyMenuAdapter;
@@ -28,6 +30,7 @@ import com.topodroid.help.UserManualActivity;
 // import java.util.Locale;
 
 import android.os.Bundle;
+import android.os.ParcelFileDescriptor;
 
 import android.content.Context;
 // import android.content.ComponentName;
@@ -62,7 +65,7 @@ import android.app.Activity;
 import android.view.KeyEvent;
 // import android.view.ViewGroup.LayoutParams;
 
-// import android.widget.TextView;
+import android.widget.TextView;
 // import android.widget.EditText;
 import android.widget.Button;
 import android.widget.ListView;
@@ -71,13 +74,12 @@ import android.widget.AdapterView;
 import android.widget.AdapterView.OnItemClickListener;
 // import android.widget.TextView.OnEditorActionListener;
 
-// import android.inputmethodservice.KeyboardView;
 
 // import android.location.Location;
 // import android.location.LocationListener;
 import android.location.LocationManager;
 
-public class FixedActivity extends Activity
+public class FixedActivity extends MyActivity
                            implements View.OnClickListener
                            , OnItemClickListener
 {
@@ -141,6 +143,21 @@ public class FixedActivity extends Activity
 
 
 // -------------------------------------------------------------------
+  /** DEBUG 
+   * @param k flag of he current GPS app
+   * @return the name of the current GPS app
+   */
+  private String getGpsAppName( int k ) 
+  {
+    if ( k == FLAG_MOBILE_TOPOGRAPHER ) { return "MobileTopographer"; }
+    if ( k == FLAG_GPX_RECORDER       ) { return "GPX Recorder"; }
+    if ( k == FLAG_GPS_POSITION       ) { return "GPS position"; }
+    if ( k == FLAG_GPS_TEST           ) { return "GPStest"; }
+    if ( k == FLAG_GPS_LOGGER         ) { return "GPS logger"; }
+    if ( k == FLAG_GPS_POINT          ) { return "GPS point"; }
+    return "unknown";
+  }
+
   @Override
   protected void onCreate(Bundle savedInstanceState) 
   {
@@ -157,12 +174,14 @@ public class FixedActivity extends Activity
     hasGPSTest  = TDandroid.hasPackage( this, "com.android.gpstest" );
     mImportFlag = TDandroid.getImportPointFlag( this );
     mImportAppNr = 0;
-    // TDLog.v("FIXED import flag " + mImportFlag );
+    // TDLog.v("FIXED activity: import flag " + mImportFlag + " has GPStest " + hasGPSTest + " has GPS " + hasGps );
     if ( mImportFlag > 0 ) {
       int app = TDSetting.mGeoImportApp;
+      // TDLog.v("FIXED activity: import app [1] " + app );
       for ( int k=1; k<= FLAG_GPS_MAX; k<<=1 ) {
         if ( ( mImportFlag & k ) > 0 ) { ++mImportAppNr; } else if ( app == k ) { app = 0; }
       }
+      // TDLog.v("FIXED activity: import app [2] " + app );
       if ( app == 0 ) {
         if ( ( mImportFlag & FLAG_MOBILE_TOPOGRAPHER ) > 0 ) { app =  1; }
         else if ( ( mImportFlag & FLAG_GPX_RECORDER  ) > 0 ) { app =  2; }
@@ -173,6 +192,7 @@ public class FixedActivity extends Activity
         TDSetting.setGeoImportApp( this, app );
         // setTheTitle();
       }
+      TDLog.v("FIXED activity: import app " + app + ": " + getGpsAppName( app ) );
     }
     // Bundle extras = getIntent().getExtras();
     // if ( extras != null ) {
@@ -253,6 +273,7 @@ public class FixedActivity extends Activity
       default:
         setTitle( R.string.title_fixed );
     }
+    // setTitleColor( TDColor.TITLE_NORMAL );
   }
 
   /** life-cycle - on resume
@@ -311,8 +332,9 @@ public class FixedActivity extends Activity
                               final double alt,  // ellipsoid meters
                               final double acc ) // accuracy
   {
-    runOnUiThread( new Runnable() {
-      public void run() {
+    // runOnUiThread(
+    TDandroid.runOnMainThread(
+      new Runnable() { public void run() {
         WorldMagneticModel wmm = new WorldMagneticModel( TDInstance.context );
         double geo = wmm.ellipsoidToGeoid( lat, lng, alt ); 
         int nr = 0;
@@ -403,7 +425,7 @@ public class FixedActivity extends Activity
     closeMenu();
     int p = 0;
     if ( p++ == pos ) { // CLOSE 
-      super.onBackPressed();
+      super.onBackPressed(); // FIXME issue 167
     } else if ( mImportAppNr > 1 && p++ == pos ) { // IMPORT APP
       int app = TDSetting.mGeoImportApp; // app cannot be 0 because mImportFlag > 0 
       do { 
@@ -447,7 +469,7 @@ public class FixedActivity extends Activity
     //   doHelp();
     //   return;
     // } else if ( b == mBtClose ) {
-    //   super.onBackPressed();
+    //   onBackPressed(); // FIXME issue 167
     //   return;
     // }
 
@@ -507,22 +529,28 @@ public class FixedActivity extends Activity
     TDLog.v("FIXED import app " + TDSetting.mGeoImportApp );
     int request = 0;
     Intent intent = new Intent( Intent.ACTION_OPEN_DOCUMENT ); // API_19 - TODO use TDandroid.getOpenDocumentIntent
-    if ( TDSetting.mGeoImportApp == FLAG_MOBILE_TOPOGRAPHER ) { // point-list file
+    if ( TDSetting.mGeoImportApp == FLAG_MOBILE_TOPOGRAPHER ) { // point-list file ".pts"
+      TopoDroidApp.updateAnalytic( TDAnalytics.MOB_TOP );
       intent.setType( "application/octet-stream" );
       request = TDRequest.REQUEST_MOBILE_TOPOGRAPHER;
     } else if ( TDSetting.mGeoImportApp == FLAG_GPX_RECORDER  ) { // gpx
+      TopoDroidApp.updateAnalytic( TDAnalytics.GPX_REC );
       intent.setType( "application/octet-stream" );
       request = TDRequest.REQUEST_GPX_RECORDER;
     } else if (  TDSetting.mGeoImportApp == FLAG_GPS_POSITION ) { // csv
+      TopoDroidApp.updateAnalytic( TDAnalytics.GPS_POS );
       intent.setType( "text/*" );
       request = TDRequest.REQUEST_GPS_POSITION;
     } else if (  TDSetting.mGeoImportApp == FLAG_GPS_TEST ) { // csv
+      TopoDroidApp.updateAnalytic( TDAnalytics.GPS_TST );
       intent.setType( "text/*" );
       request = TDRequest.REQUEST_GPS_TEST;
     } else if (  TDSetting.mGeoImportApp == FLAG_GPS_LOGGER ) { // csv
+      TopoDroidApp.updateAnalytic( TDAnalytics.GPS_LOG );
       intent.setType( "text/*" );
       request = TDRequest.REQUEST_GPS_LOGGER;
     } else if (  TDSetting.mGeoImportApp == FLAG_GPS_POINT ) { // plain text
+      TopoDroidApp.updateAnalytic( TDAnalytics.GPS_PT );
       intent.setType( "text/*" );
       request = TDRequest.REQUEST_GPS_POINT;
     }
@@ -609,6 +637,7 @@ public class FixedActivity extends Activity
    */
   void tryProj4( FixedDialog dialog, String cs_to, FixedInfo fxd )
   {
+    TopoDroidApp.updateAnalytic( TDAnalytics.PROJ4 );
     if ( cs_to == null ) return;
     try {
       Intent intent = new Intent( "Proj4.intent.action.Launch" );
@@ -864,25 +893,56 @@ public class FixedActivity extends Activity
         Uri uri = intent.getData();
         try { 
           boolean ok = true;
+          String filepath = uri.getPath();
+          TDLog.v("Import MT <" + filepath + ">" );
+          // ParcelFileDescriptor pfd = TDsafUri.docReadFileDescriptor( uri );
+          // FileReader fr = TDsafUri.docFileReader( pfd );
+          // BufferedReader br = new BufferedReader( fr );
+
           InputStreamReader isr = new InputStreamReader( this.getContentResolver().openInputStream( uri ) );
           BufferedReader br = new BufferedReader( isr );
           String line = br.readLine();
           if ( line != null ) {
-            // TDLog.v( "read " + line );
             ArrayList< String > gps_points = new ArrayList<>();
-            do {
-              // syntax: name, lat, lng, h_ell, h_geo
-              // units:        dec.degree meters
-              String[] vals = line.split(",");
-              int len = vals.length;
-              if ( len != 5 ) {
-                ok = false;
-                break;
+            if ( filepath.endsWith(".txt") ) { // |pt|lat|long|alt|E|N|Z|height|
+              while ( line != null && ! line.startsWith( "|Point" ) ) {
+                line = br.readLine();
+                TDLog.v("Import MT 1 <" + line.trim() + ">" );
               }
-              gps_points.add( line.trim() ); // add the whole line - needed for item click processing
               line = br.readLine();
-              // TDLog.v( "read " + line );
-            } while ( line != null );
+              TDLog.v("Import MT 2 <" + line.trim() + ">" );
+              line = br.readLine();
+              TDLog.v("Import MT <" + line.trim() + ">" );
+              while ( line != null ) {
+                String[] vals = line.split("|");
+                int len = vals.length;
+                TDLog.v("length " + len );
+                if ( len != 10 ) {
+                  ok = false;
+                  break;
+                }
+                gps_points.add( vals[1] + ", " + vals[2] + ", " + vals[3] + ", " + vals[4] + ", " + vals[8] );
+                line = br.readLine();
+                TDLog.v("Import MT <" + line.trim() + ">" );
+              }
+            } else if ( filepath.endsWith(".pts") ) {
+              TDLog.v( "read " + line );
+              do {
+                // syntax: name, lat, lng, h_ell, h_geo
+                // units:        dec.degree meters
+                String[] vals = line.split(",");
+                int len = vals.length;
+                if ( len != 5 ) {
+                  ok = false;
+                  break;
+                }
+                gps_points.add( line.trim() ); // add the whole line - needed for item click processing
+                line = br.readLine();
+                // TDLog.v( "read " + line );
+              } while ( line != null );
+            } else {
+              TDToast.make("Not a MobileTopographer file");
+            }
             if ( ! ok ) {
               TDToast.makeBad( R.string.MT_bad_file );
             } else if ( gps_points.size() > 0 ) {
@@ -901,6 +961,19 @@ public class FixedActivity extends Activity
     }
   }
 
+  @Override
+  protected void onDestroy() { super.onDestroy(); }
+
+  @Override
+  public void onBackPressed() { super.onBackPressed(); }
+
+  /** handle key up event // alternative-169
+   * @param code  key code
+   * @param ev    key event
+   */
+  @Override
+  public boolean onKeyUp( int code, KeyEvent event ) { return backKeyUp( code, event ); }
+
   /** react to a user hw key press
    * @param code key code
    * @param event key event
@@ -910,11 +983,13 @@ public class FixedActivity extends Activity
   public boolean onKeyDown( int code, KeyEvent event )
   {
     switch ( code ) {
+      // case KeyEvent.KEYCODE_BACK: // HARDWARE BACK (4)
+      //   onBackPressed(); // FIXME issue 167
+      //   return true;
+      case KeyEvent.KEYCODE_BACK: // HARDWARE BACK (4) // alternative-169
+        return backKeyDown( code, event );
       case KeyEvent.KEYCODE_MENU:   // HARDWARE MENU (82)
         doHelp();
-        return true;
-      case KeyEvent.KEYCODE_BACK: // HARDWARE BACK (4)
-        super.onBackPressed();
         return true;
       // case KeyEvent.KEYCODE_VOLUME_UP:   // (24)
       // case KeyEvent.KEYCODE_VOLUME_DOWN: // (25)
@@ -942,5 +1017,19 @@ public class FixedActivity extends Activity
     TDLocale.resetTheLocale();
   }
 
+  // ----------------------------------------------------------------
+  // TITLE BAR
+
+  @Override
+  public void setTitle( CharSequence t )
+  {
+    ((TextView)findViewById( R.id.title )).setText( t );
+  }
+
+  // @Override
+  // public void setTitleColor( int color )
+  // {
+  //   ((TextView)findViewById( R.id.title )).setTextColor( color );
+  // }
 }
 

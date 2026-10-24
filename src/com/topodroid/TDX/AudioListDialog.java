@@ -117,7 +117,7 @@ class AudioListDialog extends MyDialog
     }
     mList.setAdapter( arrayAdapter );
     
-    ( (Button) findViewById(R.id.button_back ) ).setOnClickListener( new View.OnClickListener() {
+    ( (Button) findViewById(R.id.button_cancel ) ).setOnClickListener( new View.OnClickListener() {
       @Override public void onClick(View v) 
       {
         // TDLog.v( "audio list on click");
@@ -208,11 +208,13 @@ class AudioListDialog extends MyDialog
 
   /** implements user back-press
    */
+  @SuppressWarnings("deprecated") // from API-33 use android.window.OnBackInvokedDispatcher to register android.window.OnBackInvokedCallback
   @Override
   public void onBackPressed()
   {
     releaseMP();
-    super.onBackPressed();
+    // super.onBackPressed(); // issue 167
+    dismiss();
   }
 
   /** release the media player

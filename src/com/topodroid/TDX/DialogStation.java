@@ -3,7 +3,7 @@
  * @author marco corvi
  * @date nov 2011
  *
- * @brief Cave3D drawing infos dialog
+ * @brief Cave3D drawing infos dialog for a station
  * --------------------------------------------------------
  *  Copyright This software is distributed under GPL-3.0 or later
  *  See the file COPYING.
@@ -11,7 +11,7 @@
  */
 package com.topodroid.TDX;
 
-// import com.topodroid.util.TDLog;
+import com.topodroid.util.TDLog;
 import com.topodroid.ui.MyDialog;
 import com.topodroid.dem.DEMsurface;
 
@@ -38,14 +38,18 @@ class DialogStation extends MyDialog
   private final TglParser  mParser;
   private final Cave3DStation  mStation;
   private final DEMsurface  mSurface;
+  private final String      mEquates;
+  private final boolean     mCallerIsBar; // whether the caller is the station-bar
 
-  public DialogStation( Context context, TopoGL topogl, TglParser parser, String fullname, DEMsurface surface )
+  public DialogStation( Context context, TopoGL topogl, TglParser parser, String fullname, DEMsurface surface, boolean caller_is_bar )
   {
     super(context, null, R.string.DialogStation ); // null app
     mTopoGl  = topogl;
     mParser  = parser;
     mStation = mParser.getStation( fullname );
+    mEquates = mParser.getEquates( fullname );
     mSurface = ( surface != null )? surface : parser.getSurface();
+    mCallerIsBar = caller_is_bar;
   }
 
   @Override
@@ -55,7 +59,11 @@ class DialogStation extends MyDialog
       initLayout( R.layout.cave3d_station_dialog, R.string.STATIONS );
 
       TextView tv = ( TextView ) findViewById(R.id.st_name);
-      tv.setText( mStation.getFullName() );
+      if ( mEquates == null ) {
+        tv.setText( mStation.getFullName() );
+      } else {
+        tv.setText( mEquates );
+      }
 
       StringWriter sw1 = new StringWriter();
       PrintWriter  pw1 = new PrintWriter( sw1 );
@@ -75,6 +83,7 @@ class DialogStation extends MyDialog
       tv.setText( sw3.getBuffer().toString() );
 
       ((Button) findViewById( R.id.button_close )).setOnClickListener( this );
+      ((Button) findViewById( R.id.button_cancel )).setOnClickListener( this );
 
       mTvSurface  = (TextView) findViewById( R.id.st_surface );
       if ( mSurface != null ) {
@@ -82,7 +91,7 @@ class DialogStation extends MyDialog
         // TDLog.v("Surface station " + mStation.z + " surface " + zs );
         StringWriter sw = new StringWriter();
         PrintWriter pw = new PrintWriter( sw );
-        pw.format(Locale.US, "Depth %.1f", zs - mStation.z );
+        pw.format(Locale.US, mContext.getResources().getString( R.string.depth_format), zs - mStation.z );
         mTvSurface.setText( sw.getBuffer().toString() );
       } else {
         mTvSurface.setVisibility( View.GONE );
@@ -90,19 +99,30 @@ class DialogStation extends MyDialog
 
   }
 
+  /** close the current station and dismiss the dialog
+   * @param view   unused
+   * @note only for button_close
+   */
   @Override
   public void onClick(View v)
   {
-    // only for button_close
-    mTopoGl.closeCurrentStation();
+    if ( v.getId() == R.id.button_close ) {
+      mTopoGl.closeCurrentStation( false );
+    } else if ( v.getId() == R.id.button_cancel ) {
+      // nothing
+    }
     dismiss();
   }
 
+  /** close the current station and dismiss the dialog
+   */
   @Override
   public void onBackPressed()
   {
-    mTopoGl.closeCurrentStation();
-    super.onBackPressed();
+    TDLog.v("Dialog station on back pressed");
+    mTopoGl.closeCurrentStation( mCallerIsBar );
+    // super.onBackPressed(); // issue 167
+    dismiss();
   }
 }
 

@@ -17,14 +17,15 @@ import com.topodroid.util.TDUtil;
 import com.topodroid.util.TDMath;
 import com.topodroid.util.TDLog;
 import com.topodroid.util.TDVersion;
+import com.topodroid.util.TDAnalytics;
 import com.topodroid.math.Point2D;
-import com.topodroid.math.BezierCurve;
 import com.topodroid.prefs.TDSetting;
 // import com.topodroid.types.PlotType;
 import com.topodroid.num.TDNum;
 import com.topodroid.TDX.DBlock;
 import com.topodroid.TDX.TDPath;
 import com.topodroid.TDX.TDInstance;
+import com.topodroid.TDX.TopoDroidApp;
 import com.topodroid.TDX.ICanvasCommand;
 import com.topodroid.TDX.BrushManager;
 import com.topodroid.TDX.LinePoint;
@@ -151,7 +152,7 @@ public class DrawingDxf
 	          + (y1-y0)*(y1-y0) + (y2-y1)*(y2-y1) + (y3-y2)*(y3-y2) + (y3-y0)*(y3-y0);
 	int np = (int)( TDMath.sqrt( len ) * bezier_step + 0.5f );
 	if ( np > 1 ) {
-	  BezierCurve bc = new BezierCurve( x0, y0, x1, y1, x2, y2, x3, y3 );
+	  com.topodroid.algo.bezier.BezierCurve bc = new com.topodroid.algo.bezier.BezierCurve( x0, y0, x1, y1, x2, y2, x3, y3 );
           if ( layer != null ) {
 	    for ( int n=1; n < np; ++n ) {
 	      Point2D pb = bc.evaluate( (float)n / (float)np );
@@ -196,12 +197,13 @@ public class DrawingDxf
    * @param yoff   Y offset
    * @param z      Z "level" (used only if layer is not null)
    * @param p3D    3d polyline
+   * @param size   width size //HBDxf
    */
   static private int printPolyline( PrintWriter pw, DrawingPointLinePath line, float scale, int handle, int ref,
-              String layer, boolean closed, float xoff, float yoff, float z, String linetype, int color, boolean p3D )
+              String layer, boolean closed, float xoff, float yoff, float z, String linetype, int color, boolean p3D, int size ) //HBDxf
   {
     int npt = countInterpolatedPolylinePoints( line, closed );
-    handle = DXF.printPolylineHeader( pw, handle, ref, layer, closed, npt, linetype, color, z, p3D );
+    handle = DXF.printPolylineHeader( pw, handle, ref, layer, closed, npt, linetype, color, z, p3D, size); //HBDxf
     int polyline_handle = handle;
     handle = printInterpolatedPolyline( pw, line, scale, handle, handle, layer, closed, xoff, yoff, z, linetype, color, false );
     handle = DXF.printPolylineFooter( pw, handle, polyline_handle, layer );
@@ -386,6 +388,7 @@ public class DrawingDxf
    */
   public static void writeDxf( BufferedWriter out, TDNum num, /* DrawingUtil util, */ DrawingCommandManager plot, long type )
   {
+    TopoDroidApp.updateAnalytic( TDAnalytics.EXPORT_DXF2 );
     DXF.mVersion9  = (TDSetting.mAcadVersion == DXF.ACAD_9);
     DXF.mVersion13 = (TDSetting.mAcadVersion == DXF.ACAD_12);
     DXF.mVersion14 = (TDSetting.mAcadVersion == DXF.ACAD_14);
@@ -419,7 +422,7 @@ public class DrawingDxf
       SymbolLineLibrary line_lib   = BrushManager.getLineLib();
       SymbolAreaLibrary area_lib   = BrushManager.getAreaLib();
       // header
-      DXF.writeComment( out, "DXF created by TopoDroid v. " + TDVersion.string() 
+      DXF.writeComment( out, "DXF created by " + TDVersion.APP_NAME + " v. " + TDVersion.string() 
         + " " + TDSetting.mAcadVersion + " " + (TDSetting.mAutoStations? "T ":"F ") + (TDSetting.mAutoXSections? "T ":"F ") + TDSetting.getBezierStep() );
 
       xmin -= 2;  xmax += 2;
@@ -794,6 +797,8 @@ public class DrawingDxf
           z = TDSetting.mAcadLayer? path.mLevel : path.mScrap;
           int scrap_flag = TDSetting.mAcadLayer? path.mScrap : path.mLevel;
 
+          int size = path.getScale(); //HBDxf
+			
           StringWriter sw5 = new StringWriter();
           PrintWriter pw5  = new PrintWriter(sw5);
 
@@ -805,11 +810,11 @@ public class DrawingDxf
           }
           else if ( path.mType == DrawingPath.DRAWING_PATH_LINE )
           {
-            handle = toDxf( pw5, handle, model_record_handle, (DrawingLinePath)path, scale, xoff, yoff, z, scrap_flag, false );
+            handle = toDxf( pw5, handle, model_record_handle, (DrawingLinePath)path, scale, xoff, yoff, z, scrap_flag, false, size); //HBDxf
           }
           else if ( path.mType == DrawingPath.DRAWING_PATH_AREA )
           {
-            handle = toDxf( pw5, handle, model_record_handle, (DrawingAreaPath)path, scale, xoff, yoff, z, scrap_flag, false );
+            handle = toDxf( pw5, handle, model_record_handle, (DrawingAreaPath)path, scale, xoff, yoff, z, scrap_flag, false, size); //HBDxf
           }
           else if ( path.mType == DrawingPath.DRAWING_PATH_POINT )
           {
@@ -838,7 +843,7 @@ public class DrawingDxf
               DXF.printFloat(pw5, 40, point.getScaleValue() * 1.4f / 5 );
               DXF.printFloat(pw5, 50, 360.0f - (float)(point.mOrientation));
               DXF.printFloat(pw5, 51, 0.0f );
-              DXF.printString(pw5, 1, label.mPointText);
+              DXF.printString(pw5, 1, label.getPointText() );
               if ( DXF.mVersion13_14 ) {
                 DXF.printString(pw5, 100, "AcDbText" );
               }
@@ -997,7 +1002,7 @@ public class DrawingDxf
       DrawingLabelPath label = (DrawingLabelPath)point;
       // TDLog.v( "LABEL PATH label <" + label.mPointText + ">" );
       return DXF.printText( pw, handle, ref_handle,
-              label.mPointText,
+              label.getPointText(),
               (point.cx+xoff)*scale,
               -(point.cy+yoff)*scale, 360.0f-(float)label.mOrientation,
               LABEL_SCALE,
@@ -1035,9 +1040,10 @@ public class DrawingDxf
    * @param z          Z "level"
    * @param scrap      scrap index or (unused) layer
    * @param p3D        3d polyline (future use)
+   * @param size       line size //HBDxf
    */
   static private int toDxf( PrintWriter pw, int handle, int ref_handle, DrawingLinePath line, float scale,
-                            float xoff, float yoff, float z, int scrap, boolean p3D )
+                            float xoff, float yoff, float z, int scrap, boolean p3D, int size ) //HBDxf
   {
     if ( line == null ) return handle;
     String layer = "L_" + replaceColon( line.getThName( ) );
@@ -1054,7 +1060,7 @@ public class DrawingDxf
       try {
         color = DxfColor.rgbToIndex( line2.getColor() );
       } catch ( NullPointerException e ) {
-        TDLog.e( e.getMessage() );
+        TDLog.e( "DXF " + e.getMessage() );
       }
       // TDLog.v( "HBX_DXF <" + line.getThName() + "> " + String.format("%X %X ", ref_handle, color) + layer + layer2+" "+color);
     } else {
@@ -1066,7 +1072,7 @@ public class DrawingDxf
     if ( DXF.mVersion13_14 && checkSpline( line ) ) {
       if ( TDSetting.mAcadSpline ) {
         int npt = countInterpolatedPolylinePoints( line, line.isClosed() );
-        handle = DXF.printPolylineHeader( pw, handle, ref_handle, layer2, line.isClosed(), npt, linetype, color, z, p3D );
+        handle = DXF.printPolylineHeader( pw, handle, ref_handle, layer2, line.isClosed(), npt, linetype, color, z, p3D, size ); //HBDxf
         int polyline_handle = handle;
         handle = printInterpolatedPolyline( pw, line, scale, handle, handle, layer2, line.isClosed(), xoff, yoff, z, linetype, color, p3D );
         handle = DXF.printPolylineFooter( pw, handle, polyline_handle, layer2 );
@@ -1075,7 +1081,7 @@ public class DrawingDxf
       }
     } else {
       // handle = printLWPolyline( pw5, line, scale, handle, layer, false );
-      handle = printPolyline( pw, line, scale, handle, ref_handle, layer2, line.isClosed(), xoff, yoff, z, linetype, color, p3D );
+      handle = printPolyline( pw, line, scale, handle, ref_handle, layer2, line.isClosed(), xoff, yoff, z, linetype, color, p3D, size ); //HBDxf
     }
     return handle;
   }
@@ -1091,9 +1097,10 @@ public class DrawingDxf
    * @param z          Z "level"
    * @param scrap      scrap index or (unused) layer
    * @param p3D        3d polyline (future use)
+   * @param size       area density //HBDxf
    */
   static private int toDxf( PrintWriter pw, int handle, int ref_handle, DrawingAreaPath area, float scale,
-                            float xoff, float yoff, float z, int scrap, boolean p3D )
+                            float xoff, float yoff, float z, int scrap, boolean p3D, int size ) //HBDxf
   {
     if ( area == null ) return handle;
     // float bezier_step = TDSetting.getBezierStep();
@@ -1111,7 +1118,7 @@ public class DrawingDxf
       try {
         DxfColor.rgbToIndex(area2.getColor());
       } catch ( NullPointerException e ) {
-        TDLog.e( e.getMessage() );
+        TDLog.e( "DXF " + e.getMessage() );
       }
     } else {
       linetype = DXF.lt_byLayer;
@@ -1122,7 +1129,7 @@ public class DrawingDxf
     if ( DXF.mVersion13_14 && checkSpline( area ) ) {
       if ( TDSetting.mAcadSpline ) {
         int npt = countInterpolatedPolylinePoints( area, true );
-        handle = DXF.printPolylineHeader( pw, handle, ref_handle, layer2, true, npt, linetype, color, z, p3D );
+        handle = DXF.printPolylineHeader( pw, handle, ref_handle, layer2, true, npt, linetype, color, z, p3D, size ); //HBDxf
         int polyline_handle = handle;
         handle = printInterpolatedPolyline( pw, area, scale, handle, handle, layer2, true, xoff, yoff, z, linetype, color, false );
         handle = DXF.printPolylineFooter( pw, handle, polyline_handle, layer2 );
@@ -1131,7 +1138,7 @@ public class DrawingDxf
       }
     } else {
       // handle = printLWPolyline( pw5, line, scale, handle, layer, true );
-      handle = printPolyline( pw, area, scale, handle, ref_handle, layer2, true, xoff, yoff, z, linetype, color, false );
+      handle = printPolyline( pw, area, scale, handle, ref_handle, layer2, true, xoff, yoff, z, linetype, color, false, size ); //HBDxf
     }
     if ( DXF.mVersion13_14 ) {
       int npt = countInterpolatedPolylinePoints( area, true );
@@ -1185,11 +1192,11 @@ public class DrawingDxf
             break;
           case 'L':
             path = DrawingLinePath.loadDataStream( version, dis, dx, dy /*, null */ );
-            handle = toDxf( pw, handle, ref_handle, (DrawingLinePath)path, scale, xoff, yoff, z, scrap, false );
+            handle = toDxf( pw, handle, ref_handle, (DrawingLinePath)path, scale, xoff, yoff, z, scrap, false, ((DrawingLinePath) path).size() ); //HBDxf
             break;
           case 'A':
             path = DrawingAreaPath.loadDataStream( version, dis, dx, dy /*, null */ );
-            handle = toDxf( pw, handle, ref_handle, (DrawingAreaPath)path, scale, xoff, yoff, z, scrap, false );
+            handle = toDxf( pw, handle, ref_handle, (DrawingAreaPath)path, scale, xoff, yoff, z, scrap, false, ((DrawingAreaPath) path).size() ); //HBDxf
             break;
           case 'U':
             /* path = */ DrawingStationUser.loadDataStream( version, dis ); // consume DrawingStationName data

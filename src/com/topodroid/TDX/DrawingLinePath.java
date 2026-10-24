@@ -24,6 +24,10 @@ import android.graphics.Paint;
 import android.graphics.Path;
 import android.graphics.Matrix;
 import android.graphics.RectF;
+import android.graphics.PathEffect;
+import android.graphics.DashPathEffect;
+import android.graphics.ComposePathEffect;
+import android.graphics.PathDashPathEffect;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
@@ -40,11 +44,10 @@ public class DrawingLinePath extends DrawingPointLinePath
   public static final int OUTLINE_NONE = 0;
   public static final int OUTLINE_UNDEF = -2;
 
-
   /** test whether the line has the outline
    * @return true if the line has either outline OUT or IN
    */
-  boolean hasOutline() { return mOutline == OUTLINE_OUT || mOutline == OUTLINE_IN; }
+  public boolean hasOutline() { return mOutline == OUTLINE_OUT || mOutline == OUTLINE_IN; }
 
   // static int mCount = 0;
   // int mCnt;
@@ -52,6 +55,7 @@ public class DrawingLinePath extends DrawingPointLinePath
   public int mOutline; // TH2EDIT package
   private boolean mReversed;
   private int mLSide = -1;
+  private PathEffect mPathEffect = null;
 
   // FIXME-COPYPATH
   // @Override 
@@ -64,29 +68,64 @@ public class DrawingLinePath extends DrawingPointLinePath
   //   return ret;
   // }
 
+  /** set the line l-side
+   * @param lside  l-side value ( if less than 1 l-side is unset )
+   */
   void setLSide( int lside ) 
   {
     mLSide = ( lside < 1 )? -1 : lside;
   }
 
+  /** @return the l-side value
+   */
   int getLSide() { return mLSide; }
 
   /** cstr
    * @param line_type   type of the line
    * @param scrap       index of the scrap of this line
+   * @param scale       line scale
    */
-  public DrawingLinePath( int line_type, int scrap )
+  public DrawingLinePath( int line_type, int scrap, int scale )
   {
     // visible = true,  closed = false
     super( DrawingPath.DRAWING_PATH_LINE, true, false, scrap );
     // mCnt = ++ mCount;
-    // TDLog.Log( TDLog.LOG_PATH, "DrawingLinePath " + mCnt + " cstr type " + line_type );
+    // TDLog.v( "Drawing Line Path cstr: type " + line_type + " scale " + scale );
 
     mLineType = line_type;
     mReversed = false;
     mOutline  = ( BrushManager.isLineWall(mLineType) )? OUTLINE_OUT : OUTLINE_NONE;
     setPathPaint( BrushManager.getLinePaint( mLineType, mReversed ) );
-    mLevel     = BrushManager.getLineLevel( mLineType );
+    mLevel    = BrushManager.getLineLevel( mLineType );
+    setScale( scale ); // this sets also mScale
+  }
+
+  /** cstr of a shifted outline, copy of the given line
+   * @param line   given line
+   * @param dx     X shift 
+   * @param dy     Y shift 
+   */
+  DrawingLinePath( DrawingLinePath line, float dx, float dy )
+  {
+    super( DrawingPath.DRAWING_PATH_LINE, true, false, line.mScrap );
+    mLineType = line.mLineType;
+    mReversed = line.mReversed;
+    setPathPaint( BrushManager.outlinePaint );
+    mOutline  = line.mOutline;
+    mLevel    = line.mLevel;
+    setScale( line.mScale );
+    LinePoint lp = line.mFirst; 
+    this.addStartPoint( lp.x + dx, lp.y + dy );
+    for ( lp=lp.mNext; lp != null; lp = lp.mNext ) 
+    {
+      if ( lp.has_cp ) {
+        this.addPoint3( lp.x1+dx, lp.y1+dy, lp.x2+dx, lp.y2+dy, lp.x+dx, lp.y+dy );
+      } else {
+        this.addPoint( lp.x+dx, lp.y+dy );
+      }
+    }
+    // TDLog.v( "line " + mCnt + " split: " + size() + " --> " + line1.size() + " + " + line2.size() );
+    this.computeUnitNormal();
   }
 
   /** factory: deserialize a line from a data stream
@@ -103,6 +142,7 @@ public class DrawingLinePath extends DrawingPointLinePath
     int level = DrawingLevel.LEVEL_DEFAULT;
     int scrap = 0;
     int lside = -1;
+    int scale = 0;
     String thname, options;
     String group = null;
     try {
@@ -115,6 +155,7 @@ public class DrawingLinePath extends DrawingPointLinePath
       if ( version >= 602055 ) lside = dis.readInt();
       if ( version >= 401090 ) level = dis.readInt();
       if ( version >= 401160 ) scrap = dis.readInt();
+      if ( version >= 604088 ) scale = dis.readInt();
       options = dis.readUTF();
 
       // BrushManager.tryLoadMissingLine( thname ); // LOAD_MISSING
@@ -126,7 +167,7 @@ public class DrawingLinePath extends DrawingPointLinePath
         options = (options != null)? options + " -symbol " + thname : "-symbol " + thname;
       }
 
-      DrawingLinePath ret = new DrawingLinePath( type, scrap );
+      DrawingLinePath ret = new DrawingLinePath( type, scrap, scale );
       ret.mOutline  = outline;
       ret.mLevel    = level;
       ret.mOptions  = options;
@@ -170,7 +211,7 @@ public class DrawingLinePath extends DrawingPointLinePath
       if ( closed ) {
         ret.closePath();
       }
-      ret.retracePath();
+      ret.retracePath( );
       return ret;
     } catch ( IOException e ) {
       TDLog.e( "LINE in error " + e.getMessage() );
@@ -238,6 +279,82 @@ public class DrawingLinePath extends DrawingPointLinePath
       }
     }
   }
+
+  final static float[] mEffectScale = { 0.42f, 0.55f, 0.71f, 0.92f, 1.27f };
+  
+  /** set the line scale
+   * @param scale  new line scale (in [-2,2] )
+   */
+  @Override
+  void setScale( int scale )
+  {
+    float width = BrushManager.WIDTH_FIXED;
+    switch ( scale ) {
+      case -2: width /= 1.7f; break;
+      case -1: width /= 1.3f; break;
+      case  1: width *= 1.3f; break;
+      case  2: width *= 1.7f; break;
+    }
+    // TDLog.v("Line set scale " + scale + " width " + width );
+    mPaint.setStrokeWidth( width );
+    mScale = scale;
+    if ( scale >= -2 && scale <= 2 ) {
+      if ( BrushManager.hasLineEffect( mLineType ) ) {
+        float s  = mEffectScale[ 2 + scale ];
+        setPathEffectScale( s );
+      }
+    }
+  }
+
+  /** rescale path-effect
+   * @param s scale factor (greater than 1: make effect bigger)
+   */
+  private void setPathEffectScale( float s )
+  {
+    if ( ! BrushManager.hasLineEffect( mLineType ) ) return;
+    // TDLog.v("set path effect scale " + s );
+    DashPathEffect dash_effect = null;
+    float[] dash0 = BrushManager.getLineLib().getLineDash( mLineType );
+    if ( dash0 != null ) {
+      float[] dash = new float[ dash0.length ];
+      for (int i=0; i<dash0.length; ++i ) dash[i] = dash0[i]*s;
+      dash_effect = new DashPathEffect( dash, 0 );
+    }
+    Path base_effect = BrushManager.getLineLib().getLineEffectPath( mLineType, mReversed );
+    if ( base_effect != null ) {
+      Matrix m = new Matrix();
+      m.setScale( s, s );
+      Path line_effect = new Path( base_effect );
+      float len = BrushManager.getLineLib().getLineEffectLength( mLineType );
+      line_effect.transform( m );
+      len *= s;
+      PathDashPathEffect path_effect = new PathDashPathEffect( line_effect, len, 0, PathDashPathEffect.Style.MORPH );
+      if ( dash_effect != null ) {
+        mPathEffect = new ComposePathEffect( path_effect, dash_effect );
+      } else {
+        mPathEffect = path_effect;
+      }
+    } else if ( dash_effect != null ) {
+      mPathEffect = dash_effect;
+    }
+    mPaint.setPathEffect( mPathEffect );
+  }
+
+  /**
+   * @param scale   zoom scale
+   */
+  void zoomPathEffect( float scale )
+  {
+    if ( ! BrushManager.hasLineEffect( mLineType ) ) return;
+    float s  = mEffectScale[ 2 + mScale ] * scale;
+    setPathEffectScale( s );
+  }
+
+  // @override
+  // void resetPath( float f )
+  // {
+  //   mPaint.setStrokeWidth( f );
+  // }
 
   /** split the line at a point
    * @param lp0   splitting point
@@ -382,6 +499,11 @@ public class DrawingLinePath extends DrawingPointLinePath
    */
   public boolean isReversed() { return mReversed; }
 
+
+  /** @return true if the linetype is reverse
+   */
+  public boolean isReverse() { return BrushManager.isLineReverse( mLineType ); }
+
   /** get the line type
    * @return the type of the line
    */
@@ -410,6 +532,16 @@ public class DrawingLinePath extends DrawingPointLinePath
    */
   public String getFullThNameEscapedColon() { return  BrushManager.getLineFullThNameEscapedColon( mLineType ); }
 
+  /** set the line paint
+   * @param paint  line paint copyed in this line paint 
+   */
+  @Override
+  void setPathPaint( Paint paint )
+  {
+    mPaint = new Paint( paint );
+    setScale( mScale );
+  }
+
   /** draw the line with the specified paint
    * @param canvas   canvas
    * @param matrix   transform matrix
@@ -427,6 +559,16 @@ public class DrawingLinePath extends DrawingPointLinePath
       canvas.drawPath( mTransformedPath, paint );
     }
   }
+
+  // public void drawWithPaint( Canvas canvas, Matrix matrix, RectF bbox )
+  // {
+  //   if ( intersects( bbox ) ) 
+  //   {
+  //     mTransformedPath = new Path( mPath );
+  //     mTransformedPath.transform( matrix );
+  //     canvas.drawPath( mTransformedPath, mPaint );
+  //   }
+  // }
 
 //   @Override
 //   void toCsurvey( PrintWriter pw, String survey, String cave, String branch, String bind /* , DrawingUtil mDrawingUtil */ )
@@ -547,6 +689,8 @@ public class DrawingLinePath extends DrawingPointLinePath
         dos.writeInt( mLevel );
       // if ( version >= 401160 )
         dos.writeInt( (scrap >= 0)? scrap : mScrap );
+      // if ( version >= 604088 )
+        dos.writeInt( mScale );
       dos.writeUTF( ( mOptions != null )? mOptions : "" );
       
       int npt = size(); // number of line points
@@ -613,6 +757,11 @@ public class DrawingLinePath extends DrawingPointLinePath
     }
     pw.format( Locale.US, "ENDLINE\n" );
   }
+
+  /** @return true if the line has a path-effect
+   */
+  boolean hasPathEffect() { return mPathEffect != null; }
+
 
 }
 

@@ -12,6 +12,7 @@
 package com.topodroid.TDX;
 
 import com.topodroid.util.TDLog;
+import com.topodroid.util.CT;
 import com.topodroid.prefs.TDSetting;
 
 import android.content.Context;
@@ -33,6 +34,7 @@ public class TDLevel
   // static final private int COMPLETE = 5;
 
   private static int mLevel = 1; // activity level
+  public static int mMaior = DEBUG;
 
   public static boolean overBasic    = true;
   public static boolean overNormal   = false;
@@ -41,18 +43,24 @@ public class TDLevel
   public static boolean overTester   = false;
   private static boolean mDebug = false;
 
+  private static boolean isDebug = false;    // whether the build is debug
+  private static boolean hasIsDebug = false; // control to check if build is debug only once
+
   /** @return true if the app is debug-build
    */
   public static boolean isDebugBuild( )
   {
-    Context ctx = TDInstance.context;
-    try {
-      final PackageInfo info = ctx.getPackageManager().getPackageInfo( ctx.getPackageName(), 0);
-      return (info.applicationInfo.flags & ApplicationInfo.FLAG_DEBUGGABLE) != 0;
-    } catch ( NameNotFoundException e ) {
-      TDLog.e( e.getMessage() );
+    if ( ! hasIsDebug ) {
+      Context ctx = TDInstance.context;
+      try {
+        final PackageInfo info = ctx.getPackageManager().getPackageInfo( ctx.getPackageName(), 0);
+        isDebug = (info.applicationInfo.flags & ApplicationInfo.FLAG_DEBUGGABLE) != 0;
+        hasIsDebug = true;
+      } catch ( NameNotFoundException e ) {
+        TDLog.e( "TD level " + e.getMessage() );
+      }
     }
-    return false;
+    return isDebug;
   }
 
   /** @return true at a specific level
@@ -72,7 +80,6 @@ public class TDLevel
   public static void setLevel( Context ctx, int level )
   {
     mLevel = level;
-
     // FIXME_DEVELOPER
     mDebug = ( TDSetting.mWithDebug )? isDebugBuild( ) : false;
     overBasic    = mLevel > BASIC;
@@ -109,6 +116,13 @@ public class TDLevel
       } else {
         overTester = false;
       }
+    }
+  }
+
+  public static void setMaior( Context ctx, int maior )
+  {
+    if ( maior != mMaior ) {
+      mMaior = maior;
     }
   }
     

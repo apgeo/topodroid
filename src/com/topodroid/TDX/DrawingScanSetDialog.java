@@ -15,7 +15,7 @@ import com.topodroid.util.TDLog;
 import com.topodroid.util.TDUtil;
 import com.topodroid.util.TDString;
 import com.topodroid.util.TDColor;
-import com.topodroid.util.TDStatus;
+import com.topodroid.util.TDAnalytics;
 import com.topodroid.ui.MyKeyboard;
 import com.topodroid.ui.MyCheckBox;
 import com.topodroid.ui.MyButton;
@@ -25,6 +25,7 @@ import com.topodroid.ui.TDLayout;
 import com.topodroid.prefs.TDSetting;
 import com.topodroid.types.ExtendType;
 import com.topodroid.types.LegType;
+import com.topodroid.types.TDStatus;
 // import com.topodroid.types.PlotType;
 
 import android.os.Bundle;
@@ -44,7 +45,6 @@ import android.widget.ArrayAdapter;
 import android.widget.AdapterView;
 
 // import android.text.InputType;
-// import android.inputmethodservice.KeyboardView;
 
 class DrawingScanSetDialog extends MyDialog
                            implements View.OnClickListener
@@ -82,7 +82,8 @@ class DrawingScanSetDialog extends MyDialog
     mIdx     = TopoDroidApp.mData.getShotIdx( shot.mBlock.mId, TDInstance.sid );
     mLegType = shot.mBlock.getLegType();
     mFrom    = shot.mBlock.mFrom;
-    TDLog.v("Scan-set dialog ID " + mIdx + " FROM " + mFrom + " leg-type " + mLegType );
+    // TDLog.v("Scan-set dialog ID " + mIdx + " FROM " + mFrom + " leg-type " + mLegType );
+    TopoDroidApp.updateAnalytic( TDAnalytics.PLOT_SCAN );
   }
 
   @Override
@@ -119,7 +120,6 @@ class DrawingScanSetDialog extends MyDialog
     // mCBplan.setOnClickListener( this );
     // mCBprofile.setOnClickListener( this );
 
-    // mKeyboard = new MyKeyboard( mContext, (KeyboardView)findViewById( R.id.keyboardview ), R.xml.my_keyboard_base, R.xml.my_keyboard_qwerty );
     mKeyboard= MyKeyboard.getMyKeyboard( mContext, findViewById( R.id.keyboardview ), R.xml.my_keyboard_base, R.xml.my_keyboard_qwerty );
 
     mBtnOK     = (Button) findViewById(R.id.btn_ok);
@@ -227,6 +227,7 @@ class DrawingScanSetDialog extends MyDialog
 
   /** implements a user BACK press
    */
+  @SuppressWarnings("deprecated")
   @Override
   public void onBackPressed()
   {

@@ -96,7 +96,7 @@ public class Cave3DSurvey
       nm = dis.readUTF();
       col = dis.readInt();
     } catch ( IOException e ) {
-      TDLog.e( e.getMessage() );
+      TDLog.e( "3D deserialize: " + e.getMessage() );
     }
     // TDLog.v("Cave3D survey deserialized " + id + " " + nm + " color " + col );
     return new Cave3DSurvey( nm, id, -1, col );
@@ -270,24 +270,23 @@ public class Cave3DSurvey
     return null;
   }
  
-  /** mark a shot "used"
-   * @param sh   shot to mark "used"
-   */
-  private void markShotUsed( Cave3DShot sh )
-  {
-    mLenShots += sh.len;
-    sh.setSurvey( this );
-  }
+  // /** mark a shot "used" (data reduction)
+  //  * @param sh   shot to mark "used"
+  //  */
+  // private void markShotUsed( Cave3DShot sh )
+  // {
+  //   mLenShots += sh.len;
+  //   sh.setSurvey( this );
+  // }
  
-  /** mark a splay "used"
-   * @param sh   splay to mark "used"
-   */
-  private void markSplayUsed( Cave3DShot sh )
-  {
-    mLenSplays += sh.len;
-    sh.setSurvey( this );
-  }
-  //
+  // /** mark a splay "used" (data reduction)
+  //  * @param sh   splay to mark "used"
+  //  */
+  // private void markSplayUsed( Cave3DShot sh )
+  // {
+  //   mLenSplays += sh.len;
+  //   sh.setSurvey( this );
+  // }
 
   // --------------------------- STATS
   /** @return the number of shots

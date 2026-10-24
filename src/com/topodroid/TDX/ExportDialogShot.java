@@ -40,6 +40,8 @@ import android.view.View;
 // import android.view.KeyEvent;
 // import android.view.ViewGroup.LayoutParams;
 
+import java.util.List;
+
 public class ExportDialogShot extends MyDialog
                    implements AdapterView.OnItemSelectedListener
                    , View.OnClickListener
@@ -58,12 +60,14 @@ public class ExportDialogShot extends MyDialog
   private String    mSelected;
   private final int mTitle;
   private int mSelectedPos;
+  private List<String> mSurveys;
   private String    mSurvey;
-  private String    mExportPrefix = null;
+  static private String mExportPrefix = null; // saved export-prefix
   private String    mExportName   = null;
   private long      mExportFirst  = -1L; // index of first shot to export
   private boolean   mDiving = false; // diving-mode survey
-  private boolean   mWithName = true;
+  private boolean   mWithName;  // true if called by SurveyWindow, false if called by MainWindow
+  private boolean   mExportDataShare = false; // whether to share export
 
   private LinearLayout mLayoutZip;
   private LinearLayout mLayoutCompass;
@@ -89,17 +93,17 @@ public class ExportDialogShot extends MyDialog
    * @param diving      whether survey is diving-mode
    * @param with_name   whether to use survey name
    */
-  public ExportDialogShot( Context context, IExporter parent, String[] types, int title, String survey, boolean diving, boolean with_name )
+  public ExportDialogShot( Context context, IExporter parent, String[] types, int title, String survey, List<String> surveys, boolean diving, boolean with_name )
   {
     super( context, null, R.string.ExportDialog ); // null app
     mParent   = parent;
     mTypes    = types;
     mSelected = null;
     mTitle    = title;
+    mSurveys  = surveys;
     mSurvey   = with_name? survey : resString( R.string.with_prefix );
     mDiving   = diving;
     mWithName = with_name;
-    // mExportPrefix = null; // already in declaration
     // mExportName   = null;
     // mExportFirst  = -1L;
     // TDLog.v("EXPORT SHOT " + survey + " Types " + types.length + " diving " + diving );
@@ -146,9 +150,9 @@ public class ExportDialogShot extends MyDialog
 
     mBtnOk   = (Button) findViewById(R.id.button_ok );
     mBtnOk.setOnClickListener( this );
-    // mBtnBack = (Button) findViewById(R.id.button_back );
+    // mBtnBack = (Button) findViewById(R.id.button_cancel );
     // mBtnBack.setOnClickListener( this );
-    ( (Button) findViewById(R.id.button_back ) ).setOnClickListener( this );
+    ( (Button) findViewById(R.id.button_cancel ) ).setOnClickListener( this );
 
     // Bundle extras = getIntent().getExtras();
     // String title  = extras.getString( TopoDroidApp.TOPODROID_SURVEY );
@@ -162,14 +166,23 @@ public class ExportDialogShot extends MyDialog
       ((EditText) findViewById( R.id.winkarst_prefix )).setFocusable( false );
       // ((EditText) findViewById( R.id.csurvey_prefix )).setFocusable( false );
       ((EditText) findViewById( R.id.trobot_name )).setFocusable( false );
-      ((EditText) findViewById( R.id.vtopo_series )).setFocusable( false );
+      ((EditText) findViewById( R.id.vtopo_name )).setFocusable( false );
     }
 
-    if ( ! TDString.isNullOrEmpty( TDSetting.mExportPrefix ) ) {
+    if ( TDSetting.mExportStationsPrefix ) {
       mCBcompassPrefix.setChecked( true );
       mCBwinkarstPrefix.setChecked( true );
       ((EditText) findViewById( R.id.compass_prefix )).setText( mSurvey );
       ((EditText) findViewById( R.id.winkarst_prefix )).setText( mSurvey );
+      ((EditText) findViewById( R.id.trobot_name )).setText( mSurvey + TDPath.TRB );
+      ((EditText) findViewById( R.id.vtopo_name )).setText( mSurvey );
+    } else {
+      mCBcompassPrefix.setChecked( false );
+      mCBwinkarstPrefix.setChecked( false );
+      ((EditText) findViewById( R.id.compass_prefix )).setText( "" );
+      ((EditText) findViewById( R.id.winkarst_prefix )).setText( "" );
+      ((EditText) findViewById( R.id.trobot_name )).setText( "" );
+      ((EditText) findViewById( R.id.vtopo_name )).setText( "" );
     }
 
     initOptions();
@@ -266,9 +279,9 @@ public class ExportDialogShot extends MyDialog
       TDLog.v("Survey format selected " + mSelected + " pos " + mSelectedPos + ": " + TDConst.mSurveyExportIndex[ mSelectedPos ] + " export name " + mExportName  + " prefix " + mExportPrefix );
       int selected_pos = ( mSelectedPos == TDConst.SURVEY_POS_VTOPO && TDSetting.mVTopoTrox )? -mSelectedPos : mSelectedPos;
       if ( mExportName != null ) {
-        mParent.doExport( mSelected, mExportName, mExportPrefix, mExportFirst, false ); // second = false
+        mParent.doExport( mSelected, mExportName, mExportPrefix, mExportFirst, false, mSurveys, mExportDataShare ); // second = false
       } else {
-        mParent.doExport( mSelected, TDConst.getSurveyFilename( selected_pos, mSurvey ), mExportPrefix, mExportFirst, false ); // second = false
+        mParent.doExport( mSelected, TDConst.getSurveyFilename( selected_pos, mSurvey ), mExportPrefix, mExportFirst, false, mSurveys, mExportDataShare ); // second = false
       }
     // } else if ( b == mBtnBack ) {
     //   /* nothing */
@@ -412,7 +425,7 @@ public class ExportDialogShot extends MyDialog
    */
   private boolean setOptions()
   {
-    TDSetting.mExportDataShare = ((CheckBox) findViewById( R.id.export_share )).isChecked();
+    mExportDataShare = ((CheckBox) findViewById( R.id.export_share )).isChecked();
     //mZipShare = TDSetting.mExportDataShare;
     switch ( mSelectedPos ) {
       case TDConst.SURVEY_POS_ZIP: // Zip 
@@ -426,6 +439,12 @@ public class ExportDialogShot extends MyDialog
         {
           // TDSetting.mExportStationsPrefix = ((CheckBox) findViewById( R.id.compass_prefix )).isChecked();
           TDSetting.mCompassSplays = ((CheckBox) findViewById( R.id.compass_splays )).isChecked();
+          // TDSetting.mCompassSplayMode = 0;
+          // if ( ((CheckBox) findViewById( R.id.compass_splays_old )).isChecked() ) { 
+          //   TDSetting.mCompassSplayMode = 1;
+          // } else if ( ((CheckBox) findViewById( R.id.compass_splays_new )).isChecked() ) {
+          //   TDSetting.mCompassSplayMode = 2;
+          // }
           TDSetting.mSwapLR = ((CheckBox) findViewById( R.id.compass_swap_lr )).isChecked();
           if ( mCBcompassPrefix.isChecked() )
             setExportPrefix( ((EditText) findViewById( R.id.compass_prefix )).getText() );
@@ -493,7 +512,7 @@ public class ExportDialogShot extends MyDialog
           TDSetting.mVTopoSplays     = ((CheckBox) findViewById( R.id.vtopo_splays )).isChecked();
           TDSetting.mVTopoLrudAtFrom = ((CheckBox) findViewById( R.id.vtopo_lrud )).isChecked();
           TDSetting.mVTopoFaverjon   = ((CheckBox) findViewById( R.id.vtopo_faverjon )).isChecked();
-          setExportPrefix( ((EditText) findViewById( R.id.vtopo_series )).getText() );
+          setExportPrefix( ((EditText) findViewById( R.id.vtopo_name )).getText() );
         }
         break;
       case TDConst.SURVEY_POS_WALLS: // Walls
@@ -541,7 +560,7 @@ public class ExportDialogShot extends MyDialog
    */
   private void initOptions()
   {
-    ((CheckBox) findViewById( R.id.export_share )).setChecked( TDSetting.mExportDataShare );
+    ((CheckBox) findViewById( R.id.export_share )).setChecked( false ); // ( TDSetting.mExportDataShare );
     // ((CheckBox) findViewById( R.id.zip_share )).setChecked( TDSetting.mZipShare );
     ((CheckBox) findViewById( R.id.zip_overwrite )).setChecked( TDSetting.mZipOverwrite );
 
@@ -551,7 +570,16 @@ public class ExportDialogShot extends MyDialog
     } else {
       mBtnCompassSurvey.setText( R.string.export_prefix_set );
     }
+
     ((CheckBox) findViewById( R.id.compass_splays )).setChecked( TDSetting.mCompassSplays );
+    // if ( TDSetting.mCompassSplayMode == 0 ) {
+    //   ((RadioButton) findViewById( R.id.compass_splays_none )).setChecked( true );
+    // } else if ( TDSetting.mCompassSplayMode == 1 ) {
+    //   ((RadioButton) findViewById( R.id.compass_splays_old )).setChecked( true );
+    // } else if ( TDSetting.mCompassSplayMode == 2 ) {
+    //   ((RadioButton) findViewById( R.id.compass_splays_new )).setChecked( true );
+    // }
+
     ((CheckBox) findViewById( R.id.compass_swap_lr )).setChecked( TDSetting.mSwapLR );
 
     ((CheckBox) findViewById( R.id.csurvey_prefix )).setChecked( TDSetting.mExportStationsPrefix );
@@ -600,10 +628,16 @@ public class ExportDialogShot extends MyDialog
     ((EditText) findViewById( R.id.trobot_index )).setHint("-1");
     ((CheckBox) findViewById( R.id.jean_botazzi )).setChecked( TDSetting.TRobotJB );
 
-    if ( ! TDString.isNullOrEmpty( TDSetting.mExportPrefix ) ) {
-      ((EditText)findViewById( R.id.vtopo_series )).setText( TDSetting.mExportPrefix );
+    if ( mWithName && ! TDString.isNullOrEmpty( mExportPrefix ) ) {
+      ((EditText)findViewById( R.id.vtopo_name )).setText( mExportPrefix );
     }
   }
+
+  // @Override
+  // public void onBackPressed()
+  // {
+  //   dismiss();
+  // }
 
 }
 

@@ -15,6 +15,8 @@ package com.topodroid.TDX;
 import com.topodroid.util.TDLocale;
 import com.topodroid.util.TDTag;
 import com.topodroid.util.TDUtil;
+import com.topodroid.util.TDAnalytics;
+import com.topodroid.util.TDColor;
 // import com.topodroid.util.TDColor;
 import com.topodroid.prefs.TDSetting;
 import com.topodroid.help.UserManualActivity;
@@ -33,6 +35,7 @@ import android.content.res.Configuration;
 import android.widget.RadioButton;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.TextView;
 import android.view.View;
 import android.view.KeyEvent;
 
@@ -42,7 +45,7 @@ import android.hardware.SensorEvent;
 import android.hardware.SensorManager;
 
 
-public class SensorActivity extends Activity
+public class SensorActivity extends MyActivity
                             implements View.OnClickListener
 { 
   // private TopoDroidApp mApp;
@@ -71,13 +74,13 @@ public class SensorActivity extends Activity
   public void onCreate(Bundle savedInstanceState)
   {
     super.onCreate( savedInstanceState );
+    TopoDroidApp.updateAnalytic( TDAnalytics.SENSOR );
 
     getWindow().getDecorView().setSystemUiVisibility( TDSetting.mUiVisibility );
 
     TDandroid.setScreenOrientation( this );
 
     setContentView(R.layout.sensor_activity);
-    setTitle(R.string.sensor_title);
     // mApp = (TopoDroidApp) getApplication();
     mSensorManager = (SensorManager)getSystemService( Context.SENSOR_SERVICE );
 
@@ -152,6 +155,7 @@ public class SensorActivity extends Activity
     ( ( Button ) findViewById( R.id.sensor_ok ) ).setOnClickListener( this );
     ( ( Button ) findViewById( R.id.sensor_cancel ) ).setOnClickListener( this );
 
+    setTitle( getResources().getString( R.string.sensor_title ) );
     // setTitleColor( TDColor.TITLE_NORMAL );
 
     // mETtype.setText( null );
@@ -338,6 +342,19 @@ public class SensorActivity extends Activity
      super.onStop();
   }
 
+  @Override
+  protected void onDestroy() { super.onDestroy(); }
+
+  @Override
+  public void onBackPressed() { super.onBackPressed(); }
+
+  /** handle key up event // alternative-169
+   * @param code  key code
+   * @param ev    key event
+   */
+  @Override
+  public boolean onKeyUp( int code, KeyEvent event ) { return backKeyUp( code, event ); }
+
   /** process a user key-press
    * @param code   key code
    * @param event  key event
@@ -346,12 +363,14 @@ public class SensorActivity extends Activity
   public boolean onKeyDown( int code, KeyEvent event )
   {
     switch ( code ) {
+      // case KeyEvent.KEYCODE_BACK: // HARDWARE BACK (4)
+      //   onBackPressed(); // FIXME issue 167
+      //   return true;
+      case KeyEvent.KEYCODE_BACK: // HARDWARE BACK (4) // alternative-169
+        return backKeyDown( code, event );
       case KeyEvent.KEYCODE_MENU:   // HARDWARE MENU (82)
         String help_page = getResources().getString( R.string.SensorActivity );
         /* if ( help_page != null ) */ UserManualActivity.showHelpPage( this, help_page );
-        return true;
-      case KeyEvent.KEYCODE_BACK: // HARDWARE BACK (4)
-        super.onBackPressed();
         return true;
       // case KeyEvent.KEYCODE_VOLUME_UP:   // (24)
       // case KeyEvent.KEYCODE_VOLUME_DOWN: // (25)
@@ -361,6 +380,21 @@ public class SensorActivity extends Activity
     return false;
   }
 
+
+  // ----------------------------------------------------------------
+  // TITLE BAR
+
+  @Override
+  public void setTitle( CharSequence t )
+  {
+    ((TextView)findViewById( R.id.title )).setText( t );
+  }
+
+  // @Override
+  // public void setTitleColor( int color )
+  // {
+  //   ((TextView)findViewById( R.id.title )).setTextColor( color );
+  // }
 }
 
 

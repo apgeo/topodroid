@@ -165,6 +165,7 @@ class SetupTextSizeDialog extends MyDialog
      }
    }
 
+  @SuppressWarnings("deprecated")
    @Override
    public void onBackPressed()
    {

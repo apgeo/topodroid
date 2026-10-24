@@ -20,7 +20,7 @@ LOGNAME = topodroid-X
 PACKAGE = com.topodroid.$(APPCODE)
 VERSION_TARGET = $(VERSION)-$(TARGET_SDK)
 
-LANGS := cn fr hu it pt ru
+LANGS := bg cn de fr es hu it pt ru
 
 default: debug-signed
 
@@ -93,7 +93,8 @@ less:
 	$(ANT) debug 2>&1 | less
 
 lint:
-	../../../cmdline-tools/latest/bin/lint --ignore IconLocation --ignore ObsoleteLayoutParam . > lint.out
+	../../../cmdline-tools/latest/bin/lint --ignore IconLocation --ignore ObsoleteLayoutParam . > lint.raw
+	cat lint.raw | grep Error > lint.out
 
 strings:
 	@ for i in $(LANGS); do echo "$$i" `grep \"$$i\" lint.out | wc -l`; done
@@ -156,16 +157,17 @@ SRC = \
   ./symbols-git/*/*/* \
   ./howto/* \
   ./utils/* \
+  ./src/androidx/annotation/*.java \
+  ./src/com/topodroid/algo/*/*.java \
   ./src/com/topodroid/c3db/*.java \
   ./src/com/topodroid/c3in/*.java \
   ./src/com/topodroid/c3out/*.java \
-  ./src/com/topodroid/c3walls/*/*.java \
   ./src/com/topodroid/types/*.java \
   ./src/com/topodroid/calib/*.java \
+  ./src/com/topodroid/dem/*.java \
   ./src/com/topodroid/dev/*.java \
   ./src/com/topodroid/dev/*/*.java \
   ./src/com/topodroid/$(APPCODE)/*.java \
-  ./src/com/topodroid/dln/*.java \
   ./src/com/topodroid/help/*.java \
   ./src/com/topodroid/inport/*.java \
   ./src/com/topodroid/io/*/*.java \
@@ -174,7 +176,6 @@ SRC = \
   ./src/com/topodroid/num/*.java \
   ./src/com/topodroid/packetX/*.java \
   ./src/com/topodroid/prefs/*.java \
-  ./src/com/topodroid/ptopo/*.java \
   ./src/com/topodroid/tdm/*.java \
   ./src/com/topodroid/trb/*.java \
   ./src/com/topodroid/ui/*.java \
@@ -186,7 +187,19 @@ SRC = \
   ./libs/armeabi-v7a/libnativename.so \
   ./libs/armeabi-v7a/libpowercrust.so \
   ./libs/armeabi-v7a/libtiffdecoder.so \
-  ./libs/armeabi-v7a/libtiff.so 
+  ./libs/armeabi-v7a/libtiff.so \
+  ./jni/*.mk \
+  ./jni/*.c \
+  ./jni/*.h \
+  ./jni/jpeg/* \
+  ./jni/png/* \
+  ./jni/libs/arm64-v8a/* \
+  ./jni/libs/armeabi-v7a/* \
+  ./jni/tiff/*.mk \
+  ./jni/tiff/libtiff/* \
+  ./jni/tiff/config/* ./jni/tiff/configure* ./jni/tiff/Makefile* ./jni/tiff/autogen.sh ./jni/tiff/aclocal.m4 \
+  ./jni/tiff/port/* ./jni/tiff/m4/* ./jni/tiff/nmake.opt \
+  ./jni/tiff/README* ./jni/tiff/VERSION ./jni/tiff/COPYRIGHT ./jni/tiff/HOWTO-RELEASE ./jni/tiff/SConstruct
 
 EXTRA_SRC = \
   ./studio/* \
@@ -196,8 +209,10 @@ version:
 	echo $(VERSION)
 
 archive:
-	tar -chvzf ../topodroid-`date -I`.tgz --exclude-vcs $(SRC)
+	echo -n "cannot make archive from this folder"
 
 release-archive:
-	tar -chvzf ../topodroidX-`date -I`.tgz --exclude-vcs $(SRC) $(APPVERSION)-$(TARGET_SDK).apk
+	echo -n "cannot make archive from this folder"
 
+save-archive:
+	tar -chvzf ../topodroid-`date -I`-old.tgz --exclude-vcs $(SRC)

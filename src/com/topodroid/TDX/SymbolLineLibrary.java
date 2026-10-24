@@ -22,19 +22,22 @@ import com.topodroid.util.TDLocale;
 import java.io.File; // external app files
 
 import android.graphics.Paint;
+import android.graphics.Path;
 import android.graphics.DashPathEffect;
+import android.graphics.ComposePathEffect;
 import android.content.res.Resources;
 
 public class SymbolLineLibrary extends SymbolLibrary
 {
   static final private String[] DefaultLines = {
-    ARROW, BORDER, CHIMNEY, PIT, WALL_PRESUMED, ROCK_BORDER, SLOPE
+    ARROW, BORDER, CHIMNEY, PIT, WALL_PRESUMED, ROCK_BORDER, SLOPE, GRADIENT,
   };
 
   int mLineUserIndex; // PRIVATE
   int mLineWallIndex;
   int mLineSlopeIndex;
   int mLineSectionIndex;
+  // int mLineGradientIndex;
 
   SymbolLineLibrary( Resources res )
   {
@@ -43,6 +46,7 @@ public class SymbolLineLibrary extends SymbolLibrary
     mLineWallIndex    = -1;
     mLineSlopeIndex   = -1;
     mLineSectionIndex = -1;
+    // mLineGradientIndex   = -1;
     loadSystemLines( res );
     loadUserLines();
     initIndices();
@@ -61,6 +65,10 @@ public class SymbolLineLibrary extends SymbolLibrary
 
   boolean isClosed( int k ) { return k >= 0 && k < size() && ((SymbolLine)mSymbols.get(k)).mClosed; }
 
+  boolean isReverse( int k ) { return k >= 0 && k < size() && ((SymbolLine)mSymbols.get(k)).mReverse; }
+
+  int getClippable( int k ) { return (k >= 0 && k < size())? ((SymbolLine)mSymbols.get(k)).mClippable : 0; }
+
   int getStyleX( int k ) { return ( k < 0 || k >= size() )? 1 : ((SymbolLine)mSymbols.get(k)).mStyleX; }
 
   // String getLineGroup( int k ) { return ( k < 0 || k >= size() )? null : ((SymbolLine)mSymbols.get(k)).mGroup; }
@@ -74,6 +82,37 @@ public class SymbolLineLibrary extends SymbolLibrary
     if ( k < 0 || k >= size() ) return BrushManager.errorPaint;
     SymbolLine s = (SymbolLine)mSymbols.get(k);
     return reversed ? s.mRevPaint : s.mPaint;
+  }
+
+  /** return the lne path effect, or null
+   * @param k        line index
+   * @param reversed whether to return the reversed effect
+   */
+  Path getLineEffectPath( int k, boolean reversed )
+  {
+    if ( k < 0 || k >= size() ) return null;
+    SymbolLine line = (SymbolLine)mSymbols.get(k);
+    if ( line == null ) return null;
+    return reversed ? line.mPathRev : line.mPathDir;
+  }
+ 
+  /** return the lne path effect length, or zero
+   * @param k        line index
+   */
+  float getLineEffectLength( int k )
+  {
+    if ( k < 0 || k >= size() ) return 0;
+    SymbolLine line = (SymbolLine)mSymbols.get(k);
+    if ( line == null ) return 0;
+    return line.mEffectLen;
+  }
+
+  float[] getLineDash( int k )
+  {
+     if ( k < 0 || k >= size() ) return null;
+    SymbolLine line = (SymbolLine)mSymbols.get(k);
+    if ( line == null ) return null;
+    return line.mDashX;
   }
 
   // ========================================================================
@@ -95,6 +134,7 @@ public class SymbolLineLibrary extends SymbolLibrary
     DashPathEffect dash = new DashPathEffect( x, 0 );
     // String section = res.getString ( R.string.p_section );
     symbol = new SymbolLine( res.getString( R.string.thl_section ), SECTION, null, SECTION, 0xffcccccc, 1, dash, dash, DrawingLevel.LEVEL_USER, Symbol.W2D_DETAIL_SHP );
+    symbol.mClippable = 0;
     addSymbol( symbol );
 
     // mSymbolNr = mSymbols.size();
@@ -197,10 +237,11 @@ public class SymbolLineLibrary extends SymbolLibrary
   @Override
   protected void makeSpecialIndices()
   {    
-    mLineUserIndex    = getSymbolIndexByThName( USER );
-    mLineWallIndex    = getSymbolIndexByThName( WALL );
-    mLineSlopeIndex   = getSymbolIndexByThName( SLOPE );
-    mLineSectionIndex = getSymbolIndexByThName( SECTION );
+    mLineUserIndex     = getSymbolIndexByThName( USER );
+    mLineWallIndex     = getSymbolIndexByThName( WALL );
+    mLineSlopeIndex    = getSymbolIndexByThName( SLOPE );
+    mLineSectionIndex  = getSymbolIndexByThName( SECTION );
+    // mLineGradientIndex = getSymbolIndexByThName( GRADIENT );
   }
 
   void makeEnabledListFromPalette( SymbolsPalette palette, boolean clear )

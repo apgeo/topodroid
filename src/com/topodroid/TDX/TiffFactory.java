@@ -19,10 +19,17 @@ import android.graphics.Bitmap;
 
 public class TiffFactory
 {
+  static boolean hasLib = false;
+
   static {
     // TDLog.v("load TIFF library" );
-    System.loadLibrary( "tiff" );
-    System.loadLibrary( "tiffdecoder" );
+    try {
+      System.loadLibrary( "tiff" );
+      System.loadLibrary( "tiffdecoder" );
+      hasLib = true;
+    } catch ( UnsatisfiedLinkError e ) {
+      // TODO ?
+    }
   }
 
   public static native Bitmap getBitmap( String path, double x1, double y1, double x2, double y2 );

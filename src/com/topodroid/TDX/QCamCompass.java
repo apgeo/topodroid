@@ -169,9 +169,9 @@ class QCamCompass extends Dialog
   void enableButtonsOnUiThread( final boolean enable ) // TEXTURE
   {
     if ( mParent != null ) {
-      mParent.runOnUiThread( new Runnable() {
-        @Override
-        public void run() { 
+      // mParent.runOnUiThread(
+      TDandroid.runOnMainThread(
+        new Runnable() { @Override public void run() { 
           enableButtonCancel( enable );
           enableButtonSave( enable );
         }
@@ -251,7 +251,7 @@ class QCamCompass extends Dialog
     }
     buttonSave   = MyButton.getButton( mContext, this, R.drawable.iz_save_off );
     ll_buttons.addView( buttonSave, lp );
-    buttonCancel = MyButton.getButton( mContext, this, R.drawable.iz_clear ); // iz_cancel_transp
+    buttonCancel = MyButton.getButton( mContext, this, R.drawable.iz_clear_blue ); // iz_cancel_transp
     ll_buttons.addView( buttonCancel, lp );
 
     enableButtonSave( false );
@@ -408,7 +408,7 @@ class QCamCompass extends Dialog
           buttonClick.setVisibility( View.GONE );
           TDToast.makeWarn( getString( R.string.photo_max_captures ) );
         }
-        TimerTask timer = new TimerTask( this, -TimerTask.Z_AXIS, wait, count );
+        TimerTask timer = new TimerTask( mParent, this, -TimerTask.Z_AXIS, wait, count );
         timer.execute();
         mIsCapturing = false;
       }
@@ -590,7 +590,7 @@ class QCamCompass extends Dialog
         float x0 = event.getX(0);
         // float y0 = event.getY(0);
         // TDLog.v("Qcam DOWN " + x0 + " " + y0 );
-        mLine = new DrawingLinePath( BrushManager.getLineWallIndex(), 0 );
+        mLine = new DrawingLinePath( BrushManager.getLineWallIndex(), 0, 0 ); // FIXME_SCALE
         mLine.addStartPoint( x0, y0 );
         mPhotoSurface.addLine( mLine );
       } else if ( action == MotionEvent.ACTION_MOVE && mLine != null ) { 

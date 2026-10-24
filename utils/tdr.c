@@ -46,7 +46,8 @@ void readString( char * hdr, FILE * fp )
   printf("%s [length %d] <", hdr, len);
   for ( j=0; j<len; ++j ) {
     fread( &ch, sc, 1, fp );
-    printf("%c", ch, ch );
+    // printf("%c", ch, ch );
+    printf(" %02x", ch );
     if ( checkFilePos( fp ) ) break;
   }
   printf(">\n");
@@ -216,7 +217,8 @@ void readLine( FILE * fp )
   int lside = (VERSION >= 602055 )? readInt( fp ) : -1;
   int lvl = (VERSION >= 401090 )? readInt( fp ) : 0xff;
   int scrap = ( VERSION >= 401160 )? readInt( fp ) : 0;
-  printf("  Closed %d Rev. %d LSide %d Outline %d Level %02x Scrap %d\n", closed, reversed, lside, outline, lvl, scrap );
+  int scale = ( VERSION >= 604088 )? readInt( fp ) : 0;
+  printf("  Closed %d Rev. %d LSide %d Outline %d Level %02x Scrap %d Scale %d\n", closed, reversed, lside, outline, lvl, scrap, scale );
   readString( "  Options ", fp );     // options
   np = readInt( fp );   // nr. points
   printf("  Nr. Points %d\n", np );
@@ -242,8 +244,11 @@ void readArea( FILE * fp )
   float orient = readFloat( fp );
   int lvl = (VERSION >= 401090 )? readInt( fp ) : 0xff;
   int scrap = ( VERSION >= 401160 )? readInt( fp ) : 0;
+  int scale = ( VERSION >= 604096 )? readInt( fp ) : 0;
+  if ( VERSION >= 604098 )  readString( "  Options ", fp );
+
   int np = readInt( fp );       // nr points
-  printf("  Counter %d Visibility %d Orientation %.2f Level %02x Scrap %d Nr.Points %d\n", cnt, ch, orient, lvl, scrap, np );
+  printf("  Counter %d Visibility %d Orientation %.2f Level %02x Scrap %d Scale %d Nr.Points %d\n", cnt, ch, orient, lvl, scrap, scale, np );
   for ( int k=0; k<np; ++k ) {
     readLinePoint( fp, k );
     if ( checkFilePos( fp ) ) break;
@@ -279,7 +284,7 @@ void readUserStation( FILE * fp ) // user station has no group
   int s = readInt( fp );       // scale
   int lvl = (VERSION >= 401090 )? readInt( fp ) : 0xff;
   int scrap = (VERSION >= 401160 )? readInt( fp ) : 0;
-  printf("%ld= USER-STTAION:\n", pos);
+  printf("%ld= USER-STATION:\n", pos);
   readString( "  Name ", fp );            // name
   // if ( VERSION >= 401147 ) readString( "  Group ", fp ); // no group
   printf("  Scale %d X %.2f Y %.2f Level %02x Scrap %d\n", s, x, y, lvl, scrap );

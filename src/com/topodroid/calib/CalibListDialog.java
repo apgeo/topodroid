@@ -12,6 +12,7 @@
 package com.topodroid.calib;
 
 import com.topodroid.util.TDLog;
+import com.topodroid.util.TDAnalytics;
 import com.topodroid.ui.MyDialog;
 import com.topodroid.TDX.R;
 import com.topodroid.TDX.DeviceActivity;
@@ -46,7 +47,7 @@ public class CalibListDialog extends MyDialog
   private ArrayAdapter<String> mArrayAdapter;
   private Button mBtnNew;
   private Button mBtnImport;
-  // private Button mBtnCancel;
+  private Button mBtnCancel;
   private Button mBtnReset;
 
   private ListView mList;
@@ -75,7 +76,7 @@ public class CalibListDialog extends MyDialog
     mBtnNew    = (Button) findViewById(R.id.button_new);
     mBtnImport = (Button) findViewById(R.id.button_import);
     mBtnReset  = (Button) findViewById(R.id.button_reset);
-    // mBtnCancel = (Button) findViewById(R.id.button_cancel);
+    mBtnCancel = (Button) findViewById(R.id.button_cancel);
 
     mBtnNew.setOnClickListener( this );
     mBtnImport.setOnClickListener( this );
@@ -84,7 +85,7 @@ public class CalibListDialog extends MyDialog
     } else {
       mBtnReset.setVisibility( View.GONE );
     }
-    // mBtnCancel.setOnClickListener( this );
+    mBtnCancel.setOnClickListener( this );
 
     // setTitle( R.string.title_calib );
     updateList();
@@ -98,6 +99,7 @@ public class CalibListDialog extends MyDialog
       for ( String item : list ) {
         mArrayAdapter.add( item );
       }
+      // mList.setAdapter( mArrayAdapter ); 
     }
   }
  
@@ -108,6 +110,7 @@ public class CalibListDialog extends MyDialog
     Button b = (Button) v;
     hide();
     if ( b == mBtnNew ) {
+      TopoDroidApp.updateAnalytic( TDAnalytics.CAL_NEW );
       mParent.openCalibration( null );
     } else if ( b == mBtnImport ) {
       mParent.openCalibrationImportDialog();

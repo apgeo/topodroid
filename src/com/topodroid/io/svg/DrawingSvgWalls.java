@@ -13,6 +13,7 @@ package com.topodroid.io.svg;
 
 import com.topodroid.util.TDLog;
 import com.topodroid.util.TDVersion;
+import com.topodroid.util.TDAnalytics;
 import com.topodroid.num.TDNum;
 import com.topodroid.num.NumStation;
 import com.topodroid.prefs.TDSetting;
@@ -32,6 +33,7 @@ import com.topodroid.TDX.SymbolPoint;
 import com.topodroid.TDX.TDExporter;
 import com.topodroid.TDX.Scrap;
 import com.topodroid.TDX.DBlock;
+import com.topodroid.TDX.TopoDroidApp;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -92,10 +94,10 @@ public class DrawingSvgWalls extends DrawingSvgBase
         StringWriter sw5 = new StringWriter();
         PrintWriter pw5  = new PrintWriter(sw5);
         printPointWithCXCY( pw5, "<circle", xx, yy );
-        pw5.format(Locale.US, " r=\"%d\" ", RADIUS );
+        pw5.format(Locale.US, " r=\"%.2f\" ", RADIUS );
         // pw5.format(Locale.US, "<circle cx=\"%.2f\" cy=\"%.2f\" r=\"%d\" ", xx, yy, RADIUS );
         // if ( TDSetting.mFixmeClass ) {
-          pw5.format(Locale.US, " class=\"circle_label\" />\n" );
+          pw5.format(Locale.US, " class=\"circle-label\" />\n" );
         // } else {
         //   pw5.format(Locale.US, " style=\"fill:grey;stroke:black;stroke-width:%.2f\" />\n", TDSetting.mSvgLabelStroke );
         // }
@@ -123,7 +125,7 @@ public class DrawingSvgWalls extends DrawingSvgBase
       ArrayList<String> types = orderSymbolTypes(paths.keySet());
       for (String typeName : types) {
         ArrayList<DrawingPath> list = paths.get(typeName);
-        out.write("<g id=\"" + superType + "_" + typeName + "\"" + group_mode_open);
+        out.write("<g id=\"" + superType + "-" + typeName + "\"" + group_mode_open);
         for (DrawingPath path : list) {
           writePath(out, path, xoff, yoff, rt);
         }
@@ -161,6 +163,7 @@ public class DrawingSvgWalls extends DrawingSvgBase
   {
     // TDLog.v("SvgWalls write " + filename + " type " + type );
     // String wall_group = BrushManager.getLineWallGroup( );
+    TopoDroidApp.updateAnalytic( TDAnalytics.EXPORT_RTRIP );
 
     // int handle = 0;
     RectF bbox = plot.getBoundingBox( );
@@ -201,15 +204,16 @@ public class DrawingSvgWalls extends DrawingSvgBase
       out.write( walls_header );
       out.write( compass_header );
       out.write( svg_header );
-      out.write( " width=\"" + width + "pt\" height=\"" + height + "pt\"\n" );
+      out.write( widthHeight( width, height ) );
       // out.write( "  viewBox=\"0 0 " + width + " " + height + "\"\n" );
       // out.write( "  i:pageBounds=\"0 0 " + width + " " + (height) + "\"\n" ); // FIXME i: ???
       // out.write( "  style=\"overflow:visible;enable-background:new 0 0 " + width + " " + height + "\"\n" );
-      out.write( "  version=\"1.1\"\n" );
-      out.write( "  id=\"svg46\"\n" );
+      // out.write( "  version=\"1.1\"\n" );
+      // out.write( "  id=\"svg46\"\n" );
+      out.write( svg_options );
       out.write( "  sodipodi:docname=\"" + filename + "\"\n" );
       out.write( "  inkscape:version=\"0.92.4 (5da689c313, 2019-01-14)\">\n" );
-      out.write( "<!-- SVG created by TopoDroid v. " + TDVersion.string() + " -->\n" );
+      out.write( "<!-- SVG created by " + TDVersion.APP_NAME + " v. " + TDVersion.string() + " -->\n" );
       out.write(    metadata );
       out.write(      rdf );
       out.write(        dc_format );
@@ -220,50 +224,12 @@ public class DrawingSvgWalls extends DrawingSvgBase
 
       writeDefs( out, plot.getPointSymbols(), plot.getLineSymbols(), plot.getAreaSymbols() ); // replaces:
 
-      // out.write( "  <defs id=\"defs\">\n" );
-      // out.write( "    <marker id=\"Triangle\" viewBox=\"0 0 10 10\" refX=\"0\" refY=\"5\" \n");
-      // out.write( "      markerUnits=\"strokeWidth\" markerWidth=\"4\" markerHeight=\"3\" orient=\"auto\" >\n");
-      // out.write( "      <path d=\"M 0 0 L 10 5 L 0 10 z\" />\n");
-      // out.write( "    </marker>\n"); 
-      // // if ( TDSetting.mSvgLineDirection ) {
-      //   // TDLog.v( "SVG line direction");
-      // StringWriter swD = new StringWriter();
-      // PrintWriter pwD  = new PrintWriter(swD);
-      // pwD.format("    <marker id=\"dir\" viewBox=\"0 0 10 30\"  orient=\"auto\"");
-      // pwD.format("       markerUnits=\"strokeWidth\" markerWidth=\"4\" refX=\"0\" refY=\"30\"");
-      // pwD.format(Locale.US, "      markerHeight=\"30\" stroke=\"#cccc3a\" stroke-width=\"%.2f\" fill=\"none\" >\n", TDSetting.mSvgLineDirStroke );
-      // pwD.format("      <line x1=\"0\" y1=\"0\" x2=\"0\" y2=\"30\" />\n" );
-      // pwD.format("    </marker>\n");
-      // pwD.format("    <marker id=\"rev\" viewBox=\"0 0 10 30\"  orient=\"auto\"");
-      // pwD.format("      markerUnits=\"strokeWidth\" markerWidth=\"4\" refX=\"0\" refY=\"0\"");
-      // pwD.format(Locale.US, "      markerHeight=\"30\" stroke=\"#cccc3a\" stroke-width=\"%.2f\" fill=\"none\" >\n", TDSetting.mSvgLineDirStroke );
-      // pwD.format("      <line x1=\"0\" y1=\"0\" x2=\"0\" y2=\"30\" />\n" );
-      // pwD.format("    </marker>\n");
-      // out.write( swD.getBuffer().toString() );
-      // out.flush();
-      // }
-      // out.write( "    <g id=\"icons\" " ); out.write( group_mode_open );
-      // for ( int n = 0; n < BrushManager.getPointLibSize(); ++ n ) {
-      //   SymbolPoint pt = (SymbolPoint) BrushManager.getPointByIndex(n);
-      //   if (pt != null) {
-      //     // int block = 1 + n; // block_name = 1 + therion_code
-      //     out.write("    <marker id=\"" + pt.getThName() + "\">\n");
-      //     out.write("      " + pt.getSvg().replace("path", "path inkscape:connector-curvature=\"0\"") + "\n");
-      //     out.write("    </marker>\n");
-      //   }
-      // }
-      // out.write( "    </g>\n");
-      // out.write( "  </defs>\n");
-
       // out.write(    clip );
-      // out.write( "  <svg width=\"" + width + "\" height=\"" + height + "\"\n" );
-      out.write( "  <svg width=\"auto\" height=\"auto\"\n" );
-      out.write(      svg_options );
 
       // out.write( "<g id=\"canvas\" transform=\"translate(" + (int)(-xmin) + "," + (int)(-ymin) + ")\" >\n" );
 
-      out.write( group_bg ); out.write( group_mode_close );
-      out.write( group_ref );   out.write( group_mode_close ); 
+      out.write( group_bg );  out.write( group_mode_close );
+      out.write( group_ref ); out.write( group_mode_close ); 
 
       // COMPASS TRACING
       out.write( group_tracing ); out.write( group_mode_open ); 
@@ -272,7 +238,7 @@ public class DrawingSvgWalls extends DrawingSvgBase
       out.write( group_sketchmap1 ); out.write( group_mode_close );
       out.write( group_passage );    out.write( group_mode_close );
       out.write( group_lrud );       out.write( group_mode_close );
-      out.write( "    " + end_grp ); // group_tracing
+      out.write( end_grp ); // group_tracing
 
 
       out.write( group_mask ); out.write( group_mode_close );
@@ -283,37 +249,40 @@ public class DrawingSvgWalls extends DrawingSvgBase
       for ( Scrap scrap : plot.getScraps() ) {
         ArrayList<DrawingPath> paths = new ArrayList<>();
         scrap.addCommandsToList( paths );
-        out.write( "        <g id=\"scrap_" + scrap.mScrapIdx + "\">\n" );
+        out.write( "<g id=\"scrap-" + scrap.mScrapIdx + "-shp\">\n" );
         writePaths( out, paths, xoff, yoff, Symbol.W2D_DETAIL_SHP );
-        out.write( "        " + end_grp ); // scrap_
+        out.write( end_grp ); // scrap-
       }
-      out.write( "      " + end_grp ); // group_detail_shp
+      out.write( end_grp ); // group_detail_shp
       out.flush();
 
       out.write( group_detail_sym ); out.write( group_mode_open );
       for ( Scrap scrap : plot.getScraps() ) {
         ArrayList<DrawingPath> paths = new ArrayList<>();
         scrap.addCommandsToList( paths );
-        out.write( "        <g id=\"scrap_" + scrap.mScrapIdx + "\">\n" );
+        out.write( "<g id=\"scrap-" + scrap.mScrapIdx + "-sym\">\n" );
         writePaths( out, paths, xoff, yoff, Symbol.W2D_DETAIL_SYM );
-        out.write( "        " + end_grp ); // scrap_
+        out.write( end_grp ); // scrap-
       }
       out.flush();
       if ( TDSetting.mAutoXSections ) {
         for ( XSection xsection : xsections ) {
-          StringWriter sw7 = new StringWriter();
-          PrintWriter pw7  = new PrintWriter(sw7);
-          pw7.format("<g id=\"%s\">\n", xsection.mFilename );
-          out.write( sw7.getBuffer().toString() );
-          out.flush();
-          writeXSectionToSvg( out, xsection.mFilename, xsection.mFilename, xsection.mX, xsection.mY, -DrawingUtil.CENTER_X, -DrawingUtil.CENTER_Y );
-          pw7.format("</g>\n");
-          out.write( sw7.getBuffer().toString() );
-          out.flush();
+          writeXSection( out, xsection, -DrawingUtil.CENTER_X, -DrawingUtil.CENTER_Y ); // replaces the following
+          // StringWriter sw7 = new StringWriter();
+          // PrintWriter pw7  = new PrintWriter(sw7);
+          // pw7.format("<g id=\"xsection-%s\"" + group_mode_open, xsection.mFilename );
+          // out.write( sw7.getBuffer().toString() );
+          // out.flush();
+          // writeXSectionToSvg( out, xsection.mFilename, xsection.mFilename, xsection.mX, xsection.mY, -DrawingUtil.CENTER_X, -DrawingUtil.CENTER_Y );
+          // StringWriter sw8 = new StringWriter();
+          // PrintWriter pw8 = new PrintWriter(sw8);
+          // pw8.format(end_grp);
+          // out.write( sw8.getBuffer().toString() );
+          // out.flush();
         }
       }
-      out.write( "      " + end_grp ); // group_detail_sym
-      out.write( "    " + end_grp ); // group_detail
+      out.write( end_grp ); // group_detail_sym
+      out.write( end_grp ); // group_detail
       out.flush();
 
       out.write( group_walls );     out.write( group_mode_open );
@@ -321,38 +290,38 @@ public class DrawingSvgWalls extends DrawingSvgBase
       for ( Scrap scrap : plot.getScraps() ) {
         ArrayList<DrawingPath> paths = new ArrayList<>();
         scrap.addCommandsToList( paths );
-        out.write( "        <g id=\"scrap_" + scrap.mScrapIdx + "\">\n" );
+        out.write( "<g id=\"scrap-" + scrap.mScrapIdx + "\">\n" );
         writePaths( out, paths, xoff, yoff, Symbol.W2D_WALLS_SHP );
-        out.write( "        " + end_grp ); // scrap_
+        out.write( end_grp ); // scrap-
       }
-      out.write( "      " + end_grp ); // group_walls_shp
+      out.write( end_grp ); // group_walls_shp
       out.flush();
 
       out.write( group_walls_sym ); out.write( group_mode_open );
       for ( Scrap scrap : plot.getScraps() ) {
         ArrayList<DrawingPath> paths = new ArrayList<>();
         scrap.addCommandsToList( paths );
-        out.write( "        <g id=\"scrap_" + scrap.mScrapIdx + "\">\n" );
+        out.write( "<g id=\"scrap-" + scrap.mScrapIdx + "\">\n" );
         writePaths( out, paths, xoff, yoff, Symbol.W2D_WALLS_SYM );
-        out.write( "        " + end_grp ); // scrap_
+        out.write( end_grp ); // scrap-
       }
-      out.write( "      " + end_grp ); // group_walls_sym
-      out.write( "    " + end_grp ); // group_walls
+      out.write( end_grp ); // group_walls_sym
+      out.write( end_grp ); // group_walls
       out.flush();
 
       // SURVEY: VECTORS
-      out.write(     group_survey ); out.write( group_mode_open );
-      out.write(       group_vectors ); out.write( group_mode_open );
+      out.write( group_survey ); out.write( group_mode_open );
+      out.write( group_vectors ); out.write( group_mode_open );
       for ( DrawingPath sh : plot.getLegs() ) {
         DBlock blk = sh.mBlock;
         if ( blk == null ) continue;
-        String id = blk.mFrom  + "_" + blk.mTo;
+        String id = blk.mFrom  + "-" + blk.mTo;
         StringWriter sw4 = new StringWriter();
         PrintWriter pw4  = new PrintWriter(sw4);
         // if ( TDSetting.mFixmeClass ) { // FIXME_CLASS
-          pw4.format(Locale.US, "        <path id=\"%s\" class=\"legs\" d=\"", id );
+          pw4.format(Locale.US, "<path id=\"%s\" class=\"legs\" d=\"", id );
         // } else {
-        //   pw4.format(Locale.US, "        <path id=\"%s\" stroke-width=\"%.2f\" stroke=\"black\" d=\"", id, TDSetting.mSvgShotStroke );
+        //   pw4.format(Locale.US, "<path id=\"%s\" stroke-width=\"%.2f\" stroke=\"black\" d=\"", id, TDSetting.mSvgShotStroke );
         // }
         printSegmentWithClose( pw4, xoff+sh.x1, yoff+sh.y1, xoff+sh.x2, yoff+sh.y2 );
         // pw4.format(Locale.US, "M %.2f %.2f L %.2f %.2f\" />\n", xoff+sh.x1, yoff+sh.y1, xoff+sh.x2, yoff+sh.y2 );
@@ -364,13 +333,15 @@ public class DrawingSvgWalls extends DrawingSvgBase
         for ( DrawingPath sh : plot.getSplays() ) {
           DBlock blk = sh.mBlock;
           if ( blk == null ) continue;
-          String id = blk.mFrom + "_" + blk.mFrom + "ss" + TDExporter.nextSplayInt( splay_station, blk.mFrom );
+          // String id = ( TDSetting.mCompassSplayMode == 1 )? blk.mFrom + "-" + blk.mFrom + "ss" + TDExporter.nextSplayInt( splay_station, blk.mFrom )
+          //                                                 : blk.mFrom + "-)" + blk.mFrom + TDExporter.nextSplayInt( splay_station, blk.mFrom ) ;
+          String id = blk.mFrom + "-)" + blk.mFrom + TDExporter.nextSplayInt( splay_station, blk.mFrom ) ;
           StringWriter sw41 = new StringWriter();
           PrintWriter pw41  = new PrintWriter(sw41);
           // if ( TDSetting.mFixmeClass ) { // FIXME_CLASS
-            pw41.format(Locale.US, "        <path id=\"%s\" class=\"splays\" d=\"", id );
+            pw41.format(Locale.US, "<path id=\"%s\" class=\"splays\" d=\"", id );
           // } else {
-          //   pw41.format(Locale.US, "        <path id=\"%s\" stroke-width=\"%.2f\" stroke=\"grey\" d=\"", id, TDSetting.mSvgShotStroke );
+          //   pw41.format(Locale.US, "<path id=\"%s\" stroke-width=\"%.2f\" stroke=\"grey\" d=\"", id, TDSetting.mSvgShotStroke );
           // }
           printSegmentWithClose( pw41, xoff+sh.x1, yoff+sh.y1, xoff+sh.x2, yoff+sh.y2 );
           // pw41.format(Locale.US, "M %.2f %.2f L %.2f %.2f\" />\n", xoff+sh.x1, yoff+sh.y1, xoff+sh.x2, yoff+sh.y2 );
@@ -379,85 +350,54 @@ public class DrawingSvgWalls extends DrawingSvgBase
           out.flush();
         }
       }
-      out.write( "      " + end_grp ); // group_vectors
+      out.write( end_grp ); // group_vectors
 
       // survey:  MARKERS
-      out.write(       group_markers ); out.write( group_mode_open ); 
-        if ( TDSetting.mAutoStations ) {
-          StringWriter sw6m = new StringWriter();
-          PrintWriter pw6m  = new PrintWriter(sw6m);
-          for ( DrawingStationName st : plot.getStations() ) { // auto-stations
-            pw6m.format(Locale.US, "<use xlink:href=\"#_m\" width=\"2\" height=\"2\" x=\"-1\" y=\"-1\"" );
-            printMatrix( pw6m, 0.798f, 0.0f, (xoff + st.cx), (yoff + st.cy) );
-            pw6m.format(Locale.US, " style=\"display:inline\" />\n" );
-          }
-          out.write( sw6m.getBuffer().toString() );
-        } 
-      out.write( "      " + end_grp ); // group_markers
-      out.write(       group_flags ); out.write( group_mode_close );
+      out.write( group_markers ); out.write( group_mode_open ); 
+      if ( TDSetting.mAutoStations ) {
+        StringWriter sw6m = new StringWriter();
+        PrintWriter pw6m  = new PrintWriter(sw6m);
+        for ( DrawingStationName st : plot.getStations() ) { // auto-stations
+          pw6m.format(Locale.US, "<use xlink:href=\"#-m\" width=\"2\" height=\"2\" x=\"-1\" y=\"-1\"" );
+          printMatrix( pw6m, 0.798f, 0.0f, (xoff + st.cx), (yoff + st.cy) );
+          pw6m.format(Locale.US, " style=\"display:inline\" />\n" );
+        }
+        out.write( sw6m.getBuffer().toString() );
+      } 
+      out.write( end_grp ); // group_markers
+      out.write( group_flags ); out.write( group_mode_close );
+
+      writeStations( out, plot, xoff, yoff );
 
       // TDLog.v("survey: LABELS");
-      out.write(       group_labels ); out.write( group_mode_open );
-      if ( TDSetting.mAutoStations ) {
-        if ( TDSetting.mSvgStations ) {
-          StringWriter sw6s = new StringWriter();
-          PrintWriter pw6s  = new PrintWriter(sw6s);
-          for ( DrawingStationName name : plot.getStations() ) { // auto-stations
-            toSvg( pw6s, name, xoff, yoff );
-          }
-          out.write( sw6s.getBuffer().toString() );
-        }
-      } else {
-        if ( plot.hasUserStations() ) {
-          StringWriter sw7s = new StringWriter();
-          PrintWriter pw7s  = new PrintWriter(sw7s);
-          for ( DrawingStationUser st_path : plot.getUserStations() ) { // user-chosen
-            toSvg( pw7s, st_path, xoff, yoff );
-          }
-          out.write( sw7s.getBuffer().toString() );
-        }
-        // for ( ICanvasCommand cmd : plot.getCommands() ) {
-        //   if ( cmd.commandType() != 0 ) continue;
-        //   DrawingPath path = (DrawingPath)cmd;
-        //   if ( path.mType != DrawingPath.DRAWING_PATH_STATION ) continue;
-        //   // String color_str = pathToColor( path );
-        //   StringWriter sw5s = new StringWriter();
-        //   PrintWriter pw5s  = new PrintWriter(sw5s);
-        //   toSvg( pw5s, (DrawingStationUser)path, xoff, yoff );
-        //   out.write( sw5s.getBuffer().toString() );
-        // }
-      }
-      out.flush();
-      // TDLog.v("survey: LABELS stations done");
-
+      out.write( group_labels ); out.write( group_mode_open );
       for ( Scrap scrap : plot.getScraps() ) {
         ArrayList<DrawingPath> paths = new ArrayList<>();
         scrap.addCommandsToList( paths );
-        // TDLog.v("survey: SCRAP " + scrap.mScrapIdx + " paths " + paths.size() );
-        out.write( "        <g id=\"scrap_" + scrap.mScrapIdx + "\">\n" );
+        out.write( "<g id=\"scrap-" + scrap.mScrapIdx + "-labels\">\n" );
         for ( DrawingPath path : paths ) {
           if ( path instanceof DrawingLabelPath ) {
             DrawingLabelPath label = (DrawingLabelPath)path;
             StringWriter sw5l = new StringWriter();
             PrintWriter pw5l  = new PrintWriter( sw5l );
-            toSvgLabel( pw5l, label, pathToColor( path ), xoff, yoff );
+            writeLabel( pw5l, label, xoff, yoff );
             out.write( sw5l.getBuffer().toString() );
           }
         }
-        out.write( "      " + end_grp ); // scrap_
+        out.write( end_grp ); // scrap-
       }
-      out.write( "      " + end_grp ); // group_labels
-      out.write( "    " + end_grp ); // group_survey
+      out.write( end_grp ); // group_labels
+      out.write( end_grp ); // group_survey
       out.flush();
       // TDLog.v("survey: SURVEY done");
 
       // NOTES, GRID, LEGEND (SCALEBAR, NORTH), FRAME
-      out.write(      group_notes ); out.write( group_mode_close );
-      out.write(      group_grids ); out.write( group_mode_open );
+      out.write( group_notes ); out.write( group_mode_close );
+      out.write( group_grids ); out.write( group_mode_open );
       if ( TDSetting.mSvgGrid ) {
         writeGrid( out, plot, xoff, yoff, xmin, ymin, xmax, ymax );
       }
-      out.write( "    " + end_grp ); // group_grids
+      out.write( end_grp ); // group_grids
 
       if ( TDSetting.mSvgOrigin ) {
         NumStation origin = num.getOrigin();
@@ -471,19 +411,18 @@ public class DrawingSvgWalls extends DrawingSvgBase
         }
       }
 
-      out.write(     group_legend );     out.write( group_mode_open );
-      out.write(       group_scalebar ); out.write( group_mode_close );
-      out.write(       group_north );    out.write( group_mode_close );
-      out.write( "    " + end_grp ); // group_legend
-      out.write(     group_frame );  out.write( group_mode_close );
+      out.write( group_legend );     out.write( group_mode_open );
+      out.write( group_scalebar ); out.write( group_mode_close );
+      out.write( group_north );    out.write( group_mode_close );
+      out.write( end_grp ); // group_legend
+      out.write( group_frame );  out.write( group_mode_close );
 
-      out.write( "  " + end_svg );
       out.write( end_svg ); // svg_header
 
       out.flush();
     } catch ( IOException e ) {
       // FIXME
-      TDLog.e( "SVG io-exception " + e.getMessage() );
+      TDLog.e( "SVG i/o " + e.getMessage() );
     }
   }
 
@@ -492,44 +431,44 @@ public class DrawingSvgWalls extends DrawingSvgBase
   private static final String walls_header = "<?walls updated=\"no\" merged-content=\"no\" adjustable=\"no\"?>\n";
   private static final String compass_header = "<?compass inkscape-compatible=\"yes\"?>\n";
   
-  private static final String metadata = "  <metadata id=\"metadata52\">\n";
-  private static final String rdf = "    <rdf:RDF><cc:Work rdf:about=\"\">\n";
-  private static final String dc_format = "      <dc:format>image/svg+xml</dc:format>\n";
-  private static final String dc_type   = "      <dc:type rdf:resource=\"http://purl.org/dc/dcmitype/StillImage\" />\n";
-  private static final String end_rdf      = "    </cc:Work></rdf:RDF>\n";
-  private static final String end_metadata = "  </metadata>\n";
+  private static final String metadata = "<metadata id=\"metadata52\">\n";
+  private static final String rdf = "<rdf:RDF><cc:Work rdf:about=\"\">\n";
+  private static final String dc_format = "<dc:format>image/svg+xml</dc:format>\n";
+  private static final String dc_type   = "<dc:type rdf:resource=\"http://purl.org/dc/dcmitype/StillImage\" />\n";
+  private static final String end_rdf      = "</cc:Work></rdf:RDF>\n";
+  private static final String end_metadata = "</metadata>\n";
 
   // private static final String clip = "<!--Used to clip frame - Not compatible with AI10 - remove if necessary-->";
 
-  private static final String svg_options = " overflow=\"hidden\" version=\"1.1\" id=\"svg44\" style=\"display:inline;overflow:hidden\" >\n";
+  private static final String svg_options = " overflow=\"hidden\" version=\"1.1\" id=\"svg44\" style=\"display:inline;overflow:hidden\"\n";
 
-  private static final String group_bg      = "    <g id=\"w2d_Background\" ";
-  private static final String group_ref     = "    <g id=\"w2d_Ref\" ";
-  private static final String group_tracing = "    <g id=\"cmp_tracing\" ";
-  private static final String group_passage = "      <g id=\"cmp_passage\" ";
-  private static final String group_lrud    = "      <g id=\"cmp_LRUDs\" ";
-  private static final String group_sketchmap2 = "    <g id=\"cmp_Sketchmap2\" ";
-  private static final String group_sketchmap1 = "    <g id=\"cmp_Sketchmap1\" ";
-  private static final String group_mask       = "    <g id=\"w2d_Mask\" ";
-  private static final String group_detail     = "    <g id=\"w2d_Detail\" ";
-  private static final String group_detail_shp = "      <g id=\"w2d_Detail_shp\" ";
-  private static final String group_detail_sym = "      <g id=\"w2d_Detail_sym\" ";
+  private static final String group_bg      = "<g id=\"w2d-Background\" ";
+  private static final String group_ref     = "<g id=\"w2d-Ref\" ";
+  private static final String group_tracing = "<g id=\"cmp-tracing\" ";
+  private static final String group_passage = "<g id=\"cmp-passage\" ";
+  private static final String group_lrud    = "<g id=\"cmp-LRUDs\" ";
+  private static final String group_sketchmap2 = "<g id=\"cmp-Sketchmap2\" ";
+  private static final String group_sketchmap1 = "<g id=\"cmp-Sketchmap1\" ";
+  private static final String group_mask       = "<g id=\"w2d-Mask\" ";
+  private static final String group_detail     = "<g id=\"w2d-Detail\" ";
+  private static final String group_detail_shp = "<g id=\"w2d-Detail-shp\" ";
+  private static final String group_detail_sym = "<g id=\"w2d-Detail-sym\" ";
   
-  private static final String group_walls      = "    <g id=\"w2d_Walls\" ";
-  private static final String group_walls_shp  = "      <g id=\"w2d_Walls_shp\" ";
-  private static final String group_walls_sym  = "      <g id=\"w2d_Walls_sym\" ";
-  private static final String group_survey     = "    <g id=\"w2d_Survey\" ";
-  private static final String group_vectors    = "      <g id=\"w2d_Vectors\" ";
-  private static final String group_markers    = "      <g id=\"w2d_Markers\" ";
-  private static final String group_flags      = "      <g id=\"w2d_Flags\"  style=\"display:none\" ";
-  private static final String group_labels     = "      <g id=\"w2d_Labels\" style=\"display:inline\" ";
+  private static final String group_walls      = "<g id=\"w2d-Walls\" ";
+  private static final String group_walls_shp  = "<g id=\"w2d-Walls-shp\" ";
+  private static final String group_walls_sym  = "<g id=\"w2d-Walls-sym\" ";
+  private static final String group_survey     = "<g id=\"w2d-Survey\" ";
+  private static final String group_vectors    = "<g id=\"w2d-Vectors\" ";
+  private static final String group_markers    = "<g id=\"w2d-Markers\" ";
+  private static final String group_flags      = "<g id=\"w2d-Flags\"  style=\"display:none\" ";
+  private static final String group_labels     = "<g id=\"w2d-Labels\" style=\"display:inline\" ";
 
-  private static final String group_notes     = "    <g id=\"w2d_Notes\" style=\"display:none\" ";
-  private static final String group_grids     = "<g id=\"w2d_Grid\"  style=\"display:inline\" ";
-  private static final String group_legend   = "    <g id=\"w2d_Legend\" style=\"display:none\" ";
-  private static final String group_scalebar = "      <g id=\"Scalebar\"   ";
-  private static final String group_north    = "      <g id=\"NorthArrow\" ";
-  private static final String group_frame    = "    <g id=\"w2d_Frame\" style=\"display:none\" />";
+  private static final String group_notes    = "<g id=\"w2d-Notes\" style=\"display:none\" ";
+  private static final String group_grids    = "<g id=\"w2d-Grid\"  style=\"display:inline\" ";
+  private static final String group_legend   = "<g id=\"w2d-Legend\" style=\"display:none\" ";
+  private static final String group_scalebar = "<g id=\"Scalebar\"   ";
+  private static final String group_north    = "<g id=\"NorthArrow\" ";
+  private static final String group_frame    = "<g id=\"w2d-Frame\" style=\"display:none\" ";
 
 }
 

@@ -14,7 +14,7 @@ package com.topodroid.c3out;
 import com.topodroid.util.TDLog;
 import com.topodroid.util.TDMath;
 import com.topodroid.TDX.TglParser;
-import com.topodroid.TDX.Vector3D;
+import com.topodroid.math.Vector3D;
 import com.topodroid.TDX.Cave3DStation;
 import com.topodroid.TDX.Cave3DFix;
 import com.topodroid.mag.Geodetic;
@@ -106,7 +106,7 @@ public class ExportGeo
 
     origin = null;
     for ( Cave3DFix fix : fixes ) {
-      if ( ! fix.hasWGS84 ) continue;
+      if ( ! fix.hasWGS84() ) continue;
       // if ( fix.cs == null ) continue;
       // if ( ! fix.cs.name.equals("long-lat") ) continue;
       for ( Cave3DStation st : data.getStations() ) {

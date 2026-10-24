@@ -11,11 +11,14 @@
  */
 package com.topodroid.tdm;
 
+import com.topodroid.util.TDLog;
+
+import java.util.List;
 import java.util.ArrayList;
 
 class TdmEquate
 {
-  ArrayList< String > mStations; // full station names
+  ArrayList< String > mStations; // station fullnames
 
   /** cstr
    */
@@ -25,7 +28,7 @@ class TdmEquate
   }
 
   /** return true if the equate contains the given station
-   * @param name   station name
+   * @param name   station fullname
    */
   boolean contains( String name )
   {
@@ -48,6 +51,57 @@ class TdmEquate
       if ( names.length > 1 && survey.equals( names[1] ) ) return names[0];
     }
     return null;
+  }
+
+  /** @return the station name of a "station@survey" fullname, null if it is not of the given survey
+   * @param name    station fullname
+   * @param survey  survey name
+   */
+  private static String stationOfSurvey( String name, String survey )
+  {
+    int at = name.lastIndexOf( '@' );
+    if ( at <= 0 || at+1 >= name.length() ) return null;
+    if ( ! survey.equals( name.substring( at+1 ) ) ) return null;
+    return name.substring( 0, at );
+  }
+
+  /** @return the first view-station of a command for a station in this equate
+   * @param cmd   view-command
+   */
+  TdmViewStation getCommandStation( TdmViewCommand cmd )
+  {
+    String survey_name = cmd.mSurvey.mName;
+    // for (  TdmViewStation st : cmd.mStations ) {
+    //   String station = st.getName() + "@" + survey_name;
+    //   for ( String name : mStations ) if ( name.equals( station ) ) return st;
+    // }
+	for ( String name : mStations ) {
+      String station = stationOfSurvey( name, survey_name );
+      if ( station == null ) continue;
+      TdmViewStation st = cmd.getViewStation( station );
+      if ( st != null ) return st;
+    }
+    return null;
+  }
+
+  /** @return the view-stations of a command for the stations in this equate
+   * @param cmd   view-command
+   */
+  List< TdmViewStation > getCommandAllStation( TdmViewCommand cmd )
+  {
+    ArrayList< TdmViewStation > ret = new ArrayList<>();
+    String survey_name = cmd.mSurvey.mName;
+    // for (  TdmViewStation st : cmd.mStations ) {
+    //   String station = st.getName() + "@" + survey_name; 
+    //   for ( String name : mStations ) if ( name.equals( station ) ) ret.add( st );
+    // }
+	for ( String name : mStations ) {
+      String station = stationOfSurvey( name, survey_name );
+      if ( station == null ) continue;
+      TdmViewStation st = cmd.getViewStation( station );
+      if ( st != null ) ret.add( st );
+    }
+    return ret;
   }
 
   /** remove the stations of a given survey
@@ -98,4 +152,9 @@ class TdmEquate
     sb.deleteCharAt( sb.length() - 1 );
     return sb.toString();
   }
+
+  // void dumpEquate()
+  // {
+  //   TDLog.v("Equate "  + mStations.size() + ": " + stationsString() );
+  // }
 }

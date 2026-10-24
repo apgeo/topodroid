@@ -35,6 +35,7 @@ import android.content.pm.ConfigurationInfo;
 import android.os.Build;
 import android.os.Environment;
 import android.os.Looper;
+import android.os.Handler;
 import android.os.Bundle;
 // import android.os.Build.VERSION_CODES;
 
@@ -74,6 +75,9 @@ public class TDandroid
   final static public boolean BELOW_API_30 = ( Build.VERSION.SDK_INT < 30 ) ; // Build.VERSION_CODES.R );
   final static public boolean BELOW_API_31 = ( Build.VERSION.SDK_INT < 31 ) ; // Build.VERSION_CODES.S ); Android-12
   final static public boolean BELOW_API_33 = ( Build.VERSION.SDK_INT < 33 ) ; // Android-13
+  // final static public boolean BELOW_API_34 = ( Build.VERSION.SDK_INT < 34 ) ; // Android-14
+  final static public boolean BELOW_API_35 = ( Build.VERSION.SDK_INT < 35 ) ; // Android-15
+  final static public boolean BELOW_API_36 = ( Build.VERSION.SDK_INT < 36 ) ; // Android-16
 
   // final static public boolean ABOVE_API_16 = ( Build.VERSION.SDK_INT > Build.VERSION_CODES.JELLYBEAN );
   final static public boolean ABOVE_API_21 = ( Build.VERSION.SDK_INT > Build.VERSION_CODES.LOLLIPOP );
@@ -89,6 +93,9 @@ public class TDandroid
   final static public boolean AT_LEAST_API_24 = ( Build.VERSION.SDK_INT >= Build.VERSION_CODES.N ); // Android-6 Nougat
   // final static public boolean AT_LEAST_API_31 = ( Build.VERSION.SDK_INT >= 31 ); 
   final static public boolean AT_LEAST_API_33 = ( Build.VERSION.SDK_INT >= 33 );
+  // final static public boolean AT_LEAST_API_34 = ( Build.VERSION.SDK_INT >= 34 );
+  // final static public boolean AT_LEAST_API_35 = ( Build.VERSION.SDK_INT >= 35 );
+  final static public boolean AT_LEAST_API_36 = ( Build.VERSION.SDK_INT >= 36 );
 
   final static public boolean PRIVATE_STORAGE = false;
 
@@ -142,18 +149,18 @@ public class TDandroid
   // static final String mPermissionManageExternalStorage = android.Manifest.permission.MANAGE_EXTERNAL_STORAGE; // API-30
   static final String mPermissionManageExternalStorage = "android.permission.MANAGE_EXTERNAL_STORAGE";
 
-  static final int NR_PERMS_D = 6; // 5 API-31 
-  static final int NR_PERMS   = NR_PERMS_D + 3;
+  static final int NR_PERMS_D = 7; // 5 API-31 
+  static final int NR_PERMS   = NR_PERMS_D + 2;
 
   // private static final int PERM_BT         = 0;
   // private static final int PERM_BT_ADMIN   = 1;
-  private static final int PERM_BT_CONNECT  = 2; // 2 API-31, use -1 to fail test and skip \
-  private static final int PERM_BT_SCAN     = 3; // 3 API-31
-  private static final int PERM_WRITE       = 4;
-  private static final int PERM_READ        = 5; 
-  private static final int PERM_LOCATION   = NR_PERMS_D + 0;
-  private static final int PERM_CAMERA     = NR_PERMS_D + 1; 
-  // private static final int PERM_AUDIO      = NR_PERMS_D + 2;
+  private static final int PERM_BT_CONNECT = 2; // 2 API-31, use -1 to fail test and skip \
+  private static final int PERM_BT_SCAN    = 3; // 3 API-31
+  private static final int PERM_WRITE      = 4;
+  private static final int PERM_READ       = 5; 
+  private static final int PERM_LOCATION   = 6;
+  private static final int PERM_CAMERA     = NR_PERMS_D + 0; 
+  private static final int PERM_AUDIO      = NR_PERMS_D + 1;
   // private static final int PERM_MEDIA      = NR_PERMS_D + 3;
 
   /** app specific code - for callback in MainWindow
@@ -173,7 +180,19 @@ public class TDandroid
   public static final int TITLE_TOPOROBOT  = 0xffdbd100; // ORANGE
   public static final int TITLE_ANOMALY    = 0xffff3333; // BRIGHT RED
 
-  static String mHicsum = null;
+  /** @return the Android make (manufacturer + model)
+   * https://stackoverflow.com/questions/1995439/get-android-phone-model-programmatically-how-to-get-device-name-and-model-prog
+   */
+  public static String getAndroidModel()
+  {
+    String manufacturer = Build.MANUFACTURER;
+    String model = Build.MODEL;
+    if (model.toLowerCase( Locale.US ).startsWith(manufacturer.toLowerCase( Locale.US ))) {
+      return model;
+    } else {
+      return manufacturer + "-" + model;
+    }
+  }
 
   /** apply the changes stored in the editor
    * @param editor   preferences editor
@@ -223,14 +242,16 @@ public class TDandroid
 
     int not_granted = 0;
     for ( int k=0; k<NR_PERMS; ++k ) { // check whether the app has the six permissions
-      // TDLog.v("PERM Create permission " + permNames[k] );
+      // TDLog.v("PERM Create permission " + k + ": " + permNames[k] );
 
       if ( k == PERM_BT_CONNECT && BELOW_API_31 ) { // BT_CONNECT only for API >= 31 - API-31
+        // TDLog.v("PERM Create permission " + k + ": " + permNames[k] + " granted below 31" );
         GrantedPermission[k] = true;
         continue;
       } 
 
       if ( k == PERM_BT_SCAN && BELOW_API_31 ) { // BT_SCAN only for API >= 31 - API-31
+        // TDLog.v("PERM Create permission " + k + ": " + permNames[k] + " granted below 31" );
         GrantedPermission[k] = true;
         continue;
       } 
@@ -241,13 +262,14 @@ public class TDandroid
       // }
 
       if ( (k == PERM_WRITE || k == PERM_READ) && (PRIVATE_STORAGE || AT_LEAST_API_33) ) {
+        // TDLog.v("PERM Create permission " + k + ": " + permNames[k] + " not granted above 33" );
         // GrantedPermission[k] = false;
         continue;
       }
 
       GrantedPermission[k] = hasPermission( context, perms[k] );
       if ( ! GrantedPermission[k] ) {
-        TDLog.v( "PERM " + permNames[k] + " not granted ");
+        TDLog.v( "PERM " + permNames[k] + " not granted - request time " + time );
         if ( time > 1 ) {
           activity.requestPermissions( new String[] { perms[k] }, REQUEST_PERMISSIONS );
           GrantedPermission[k] = hasPermission( context, perms[k] );
@@ -256,8 +278,8 @@ public class TDandroid
           ++not_granted;
         }
         // if ( k < NR_PERMS_D ) MustRestart = true;
-      // } else {
-      //   // TDLog.v( "Perm " + permNames[k] + " granted ");
+      } else {
+        // TDLog.v( "PERM " + k + ": " + permNames[k] + " granted ");
       }
     }
     TDLog.v("PERM create perms " + time + ": not granted " + not_granted + " / " + NR_PERMS );
@@ -347,7 +369,7 @@ public class TDandroid
       if ( (k == PERM_WRITE || k == PERM_READ ) && ( PRIVATE_STORAGE || AT_LEAST_API_33 ) ) continue;
       // if ( k == PERM_CAMERA && AT_LEAST_API_21 ) continue; // CAMERA only for API >= 21
       if ( context.checkSelfPermission( perms[k] ) != PackageManager.PERMISSION_GRANTED ) {
-        TDLog.v("TD cannot perm " + permShortNames[k] + " - canRun() returns false" );
+        // TDLog.v("TD cannot perm " + k + ": " + permShortNames[k] + " - canRun() returns false" );
         // TDToast.makeLong( permShortNames[k] + " is needed to run. Bye.");
         return false;
       }
@@ -651,7 +673,7 @@ public class TDandroid
       PackageInfo pi = pm.getPackageInfo( package_name, 0 );
       return true;
     } catch ( PackageManager.NameNotFoundException e ) {
-      TDLog.e( e.getMessage() );
+      TDLog.e( "TD android " + e.getMessage() );
     }
     return false;
   }
@@ -668,51 +690,59 @@ public class TDandroid
       PackageInfo pi = pm.getPackageInfo( "gr.stasta.mobiletopographer", 0 );
       ret |= FixedActivity.FLAG_MOBILE_TOPOGRAPHER;
     } catch ( PackageManager.NameNotFoundException e ) {
-      // TDLog.e( e.getMessage() );
+      // TDLog.e( "TD android " + e.getMessage() );
     }
     try {
       PackageInfo pi = pm.getPackageInfo( "nz.ac.elec.gpsapp", 0 );
       ret |= FixedActivity.FLAG_GPS_POSITION;
     } catch ( PackageManager.NameNotFoundException e ) {
-      // TDLog.e( e.getMessage() );
+      // TDLog.e( "TD android " + e.getMessage() );
     }
     try {
       PackageInfo pi = pm.getPackageInfo( "com.doitintuitively.gpxrecorder", 0 );
       ret |= FixedActivity.FLAG_GPX_RECORDER;
     } catch ( PackageManager.NameNotFoundException e ) {
-      // TDLog.e( e.getMessage() );
+      // TDLog.e( "TD android " + e.getMessage() );
     }
     try {
       PackageInfo pi = pm.getPackageInfo( "com.android.gpstest", 0 );
       ret |= FixedActivity.FLAG_GPS_TEST;
     } catch ( PackageManager.NameNotFoundException e ) {
-      // TDLog.e( e.getMessage() );
+      // TDLog.e( "TD android " + e.getMessage() );
     }
     try {
       PackageInfo pi = pm.getPackageInfo( "eu.basicairdata.graziano.gpslogger", 0 );
       ret |= FixedActivity.FLAG_GPS_LOGGER;
     } catch ( PackageManager.NameNotFoundException e ) {
-      // TDLog.e( e.getMessage() );
+      // TDLog.e( "TD android " + e.getMessage() );
     }
     try {
       PackageInfo pi = pm.getPackageInfo( "sk.grecnar.gpspoint", 0 );
       ret |= FixedActivity.FLAG_GPS_POINT;
     } catch ( PackageManager.NameNotFoundException e ) {
-      // TDLog.e( e.getMessage() );
+      // TDLog.e( "TD android " + e.getMessage() );
     }
     TDLog.v("GPS apps support flag " + ret );
     return ret;
   }
 
   /** @return an open-document intent - requires API_19 - 20230118 new method
-   * @param index  index of mime type
+   * @param index  index of mime type - use 0xffffff to open a folder
+   * @note folder is used for bulk-import of surveys
    */
   public static Intent getOpenDocumentIntent( int index )
   {
-    Intent intent = new Intent( Intent.ACTION_OPEN_DOCUMENT ); // API_19
-    intent.setType(  TDConst.getMimeType( index ) );
-    intent.addCategory(Intent.CATEGORY_OPENABLE);
-    intent.addFlags(Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION); // API_19
+    TDLog.v("TD android open index " + index );
+    Intent intent = null;
+    if ( index == TDConst.FOLDER ) {
+      intent = new Intent( Intent.ACTION_OPEN_DOCUMENT_TREE ); // API_19
+      // intent.setType( "vnd.android.document/directory" );
+    } else {
+      intent = new Intent( Intent.ACTION_OPEN_DOCUMENT ); // API_19
+      intent.setType( TDConst.getMimeType( index ) );
+      intent.addCategory(Intent.CATEGORY_OPENABLE);
+      intent.addFlags(Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION); // API_19
+    }
     return intent;
   }
 
@@ -739,58 +769,59 @@ public class TDandroid
     return ( net_info != null && net_info.isConnectedOrConnecting() );
   }
 
+  /** @return true if the app has LOCATION permission
+   * @param ctx context
+   */
   public static boolean hasLocation( Context ctx )
   {
     LocationManager lm = (LocationManager)ctx.getSystemService( Context.LOCATION_SERVICE );
+    if ( lm == null ) return false;
     boolean gps_enabled = lm.isProviderEnabled( LocationManager.GPS_PROVIDER );
     // boolean network_enabled = lm.isProviderEnabled( LocationManager.NETWORK_PROVIDER );
     return gps_enabled;
   }
 
-
-  public static void setHicsum( Context ctx, float x, float y )
+  /** post a runnable on the queue of the main looper thread
+   * @param runnable  runnable to run on the main thread
+   */
+  public static void runOnMainThread( Runnable runnable )
   {
-    mHicsum = String.format(Locale.US, "%.5f %.5f", x, y );
-    if ( TopoDroidApp.mDData != null ) {
-      TopoDroidApp.mDData.setValue( "hicsum", mHicsum );
-      TDLog.v("Hicsum update " + mHicsum );
-    } else { 
-      TDLog.v("Hicsum set " + mHicsum );
+    if ( Looper.myLooper() == Looper.getMainLooper() ) { // MM inserted this if-part
+      runnable.run();
+    } else {
+      Handler handler = new Handler( Looper.getMainLooper() );
+      handler.post( runnable );
     }
-    TopoDroidApp.sineTest( ctx, mHicsum );
   }
 
-  /** get the coarse (netwrok) location
-   * @param ctx  context
-   * @param pt   output long-lat
-   * @return true if success
-   */
-  public static boolean getCoarseLocation( final Context ctx, PointF pt )
+  public static void toast( final String msg )
   {
-    if ( ! checkCoarseLocation( ctx ) ) return false;
-    LocationManager lm = (LocationManager)ctx.getSystemService( Context.LOCATION_SERVICE );
-    Location loc = lm.getLastKnownLocation( LocationManager.NETWORK_PROVIDER ); 
-    if ( loc == null ) {
-      lm.requestSingleUpdate( LocationManager.NETWORK_PROVIDER,
-        new LocationListener() {
-          public void onLocationChanged( Location loc ) {
-            float x = (float)loc.getLongitude();
-            float y = (float)loc.getLatitude();
-            setHicsum( ctx, x, y );
-          }
-          public void onProviderDisabled(String provider) {}
-          public void onProviderEnabled(String provider)  {}
-          public void onStatusChanged(String provider, int status, Bundle extras) {}
-        },
-        Looper.getMainLooper()
-      );
-      // TDLog.v("Location null");
-      return false;
-    } 
-    pt.x = (float)loc.getLongitude();
-    pt.y = (float)loc.getLatitude();
-    setHicsum( ctx, pt.x, pt.y );
-    return true;
+    runOnMainThread( new Runnable() { public void run() { TDToast.make( msg ); } } );
+  }
+
+  public static void toast( final int res_id )
+  {
+    runOnMainThread( new Runnable() { public void run() { TDToast.make( res_id ); } } );
+  }
+
+  public static void toastBad( final String msg )
+  {
+    runOnMainThread( new Runnable() { public void run() { TDToast.makeBad( msg ); } } );
+  }
+
+  public static void toastBad( final int res_id )
+  {
+    runOnMainThread( new Runnable() { public void run() { TDToast.makeBad( res_id ); } } );
+  }
+
+  public static void toastWarn( final String msg )
+  {
+    runOnMainThread( new Runnable() { public void run() { TDToast.makeWarn( msg ); } } );
+  }
+
+  public static void toastWarn( final int res_id )
+  {
+    runOnMainThread( new Runnable() { public void run() { TDToast.makeWarn( res_id ); } } );
   }
 
 

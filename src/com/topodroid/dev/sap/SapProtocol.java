@@ -105,12 +105,12 @@ public class SapProtocol extends TopoDroidProtocol
         if ( (buffer[2] & 0x80) == 0x80 ) buffer[0] &= 0xbf; // clear 0x40
       }
       return handlePacket( buffer );
-    } else if ( Device.isSap6( mDeviceType ) ) { // FIXME_SAP6
-      {
-        StringBuilder sb = new StringBuilder();
-        for ( int k=0; k<bytes.length; ++k ) sb.append( String.format(" %02x", bytes[k] ) );
-        TDLog.v( "SAP6 proto: read " + bytes.length + " bytes:" + sb.toString() );
-      }
+    } else if ( Device.isSap6( mDeviceType ) || Device.isJedeye( mDeviceType ) ) { // FIXME_SAP6 // JedEye reuses SAP6 wire format
+      // {
+      //   StringBuilder sb = new StringBuilder();
+      //   for ( int k=0; k<bytes.length; ++k ) sb.append( String.format(" %02x", bytes[k] ) );
+      //   TDLog.v( "SAP6 proto: read " + bytes.length + " bytes:" + sb.toString() );
+      // }
       if ( bytes.length != 17 ) return DataType.PACKET_NONE;
 
       if ( bytes[0] == SAP6byte0 ) return DataType.PACKET_NONE; // 2024-10-01 discard if equal to previous packet
@@ -119,10 +119,16 @@ public class SapProtocol extends TopoDroidProtocol
       byte[] buffer = new byte[16];
       System.arraycopy( bytes, 1, buffer, 0, 16 );
 
-      // ACKNOWLEDGMENT
-      byte[] ack = new byte[1];
-      ack[0] = (byte)( bytes[0] + 0x55 ); // SapConst.SAP_ACK
-      addToWriteBuffer( ack );
+      // ACKNOWLEDGMENT (SAP6 only). JedEye reuses the SAP6 shot frame but does
+      // NOT use the ACK handshake (SapComm.changedChrt only sends the ACK when
+      // the read UUID is the SAP6 one). Buffering an ACK that is never popped
+      // would leak into mWriteBuffer and later get flushed at the wrong time by
+      // writeAgainChrt(), stalling the remote-command queue.
+      if ( Device.isSap6( mDeviceType ) ) {
+        byte[] ack = new byte[1];
+        ack[0] = (byte)( bytes[0] + 0x55 ); // SapConst.SAP_ACK
+        addToWriteBuffer( ack );
+      }
 
       // DATA
       ByteBuffer byte_buffer = ByteBuffer.wrap( buffer ).order(ByteOrder.LITTLE_ENDIAN);
@@ -131,7 +137,7 @@ public class SapProtocol extends TopoDroidProtocol
       mClino    = float_buffer.get(1);
       mRoll     = float_buffer.get(2);
       mDistance = float_buffer.get(3); // meters
-      TDLog.v( "SAP6 proto data: " + String.format(Locale.US, "%2f %2f %2f", mDistance, mBearing, mClino ) );
+      // TDLog.v( "SAP6 proto data: " + String.format(Locale.US, "%2f %2f %2f", mDistance, mBearing, mClino ) );
       return DataType.PACKET_DATA;
     }
     return DataType.PACKET_NONE;

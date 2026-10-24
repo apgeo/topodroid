@@ -51,6 +51,7 @@ import android.widget.ListView;
 import android.widget.ArrayAdapter;
 import android.widget.AdapterView;
 import android.widget.AdapterView.OnItemClickListener;
+import android.widget.TextView;
 
 // import java.io.File; // TDR FILE
 import java.util.ArrayList;
@@ -102,7 +103,6 @@ public class PlotReloadWindow extends ItemDrawer
 
   // long getSID() { return TDInstance.sid; }
   // String getSurvey() { return TDInstance.survey; }
-  // private static BezierInterpolator mBezierInterpolator = new BezierInterpolator();
   private DrawingSurface  mReloadSurface;
 
   private boolean mZoomBtnsCtrlOn = false;
@@ -275,7 +275,7 @@ public class PlotReloadWindow extends ItemDrawer
     // int width = dm widthPixels;
     int width = getResources().getDisplayMetrics().widthPixels;
 
-    setContentView(R.layout.overview_activity);
+    setContentView( R.layout.overview_activity );
     mApp = (TopoDroidApp)getApplication();
     mActivity = this;
     Resources res = getResources();
@@ -312,6 +312,7 @@ public class PlotReloadWindow extends ItemDrawer
     mLandscape    = extras.getBoolean( TDTag.TOPODROID_PLOT_LANDSCAPE );
     String filename = extras.getString( TDTag.TOPODROID_PLOT_FILENAME ); // survey-1p without ".tdr"
     populateBackups( filename );
+    
     // // mDrawingUtil = mLandscape ? (new DrawingUtilLandscape()) : (new DrawingUtilPortrait());
     // mDrawingUtil = new DrawingUtilPortrait();
 
@@ -369,6 +370,10 @@ public class PlotReloadWindow extends ItemDrawer
     // mZoom     = info.zoom;
     mReloadSurface.setDrawing( true );
     switchZoomCtrl( TDSetting.mZoomCtrl );
+    if ( mBackups.size() == 0 ) {
+      TDToast.make( R.string.plot_no_backups );
+      onBackPressed();
+    }
   }
 
   private void doPause()
@@ -381,22 +386,28 @@ public class PlotReloadWindow extends ItemDrawer
 
   private void doStart()
   {
-    // TDLog.Log( TDLog.LOG_PLOT, "do Start " + mName1 + " " + mName2 );
     // mBlockList = mData.selectAllLegShots( mSid, TDStatus.NORMAL );
     mPos = 0;
-    loadFile( ); 
+    if ( ! loadFile( ) ) {
+      TDLog.e( "Plot recover do Start at zero failure" );
+      finish();
+    }
   }
 
   // boolean mAllSymbols = true;
 
-  private void loadFile( )
+  private boolean loadFile( )
   {
-    if ( mPos < 0 || mPos >= mBackups.size() ) return;
+    if ( mPos < 0 || mPos >= mBackups.size() ) return false;
     PlotBackup plot = mBackups.get( mPos );
     mReloadSurface.resetManager( DrawingSurface.DRAWING_OVERVIEW, null, false ); // is_extended = false
     setTitle( plot.desc );
-    // TDLog.v("Reload file pos " + mPos + " " + plot.tdr );
-    mReloadSurface.addLoadDataStream( plot.tdr, 0, 0, plot.filename ); // save plot name in paths
+    boolean ret = mReloadSurface.addLoadDataStream( plot.tdr, 0, 0, plot.filename ); // save plot name in paths
+    if ( ! ret ) {
+      TDLog.e("Reload file pos " + mPos + " " + plot.tdr );
+      // TDToast.makeBad( R.string.tdr_load_fail );
+    }
+    return ret;
   } 
 
   private float mSave0X, mSave0Y;
@@ -533,7 +544,6 @@ public class PlotReloadWindow extends ItemDrawer
    */
   public boolean onTouch( View view, MotionEvent rawEvent )
   {
-    float d0 = TDSetting.mCloseCutoff + TDSetting.mSelectness / mZoom;
     checkZoomBtnsCtrl();
 
     MotionEventWrap event = MotionEventWrap.wrap(rawEvent);
@@ -664,14 +674,15 @@ public class PlotReloadWindow extends ItemDrawer
     }
   }
 
+  @Override
+  public boolean onKeyUp( int code, KeyEvent event ) { return backKeyUp( code, event ); }
 
   @Override
   public boolean onKeyDown( int code, KeyEvent event )
   {
     switch ( code ) {
       case KeyEvent.KEYCODE_BACK: // HARDWARE BACK (4)
-        onBackPressed();
-        return true;
+        return backKeyDown( code, event );
       case KeyEvent.KEYCODE_MENU:   // HARDWARE MENU (82)
         UserManualActivity.showHelpPage( mActivity, getResources().getString( HELP_PAGE ));
         return true;
@@ -757,5 +768,21 @@ public class PlotReloadWindow extends ItemDrawer
     TDLocale.resetTheLocale();
     mReloadSurface.setTransform( this, mOffset.x, mOffset.y, mZoom, mLandscape );
   }
+
+
+  // ----------------------------------------------------------------
+  // TITLE BAR
+
+  @Override
+  public void setTitle( CharSequence t )
+  {
+    ((TextView)findViewById( R.id.title )).setText( t );
+  }
+
+  // @Override
+  // public void setTitleColor( int color )
+  // {
+  //   ((TextView)findViewById( R.id.title )).setTextColor( color );
+  // }
 
 }

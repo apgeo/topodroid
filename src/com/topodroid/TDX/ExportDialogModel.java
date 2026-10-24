@@ -88,9 +88,9 @@ public class ExportDialogModel extends MyDialog
 
     mBtnOk   = (Button) findViewById(R.id.button_ok );
     mBtnOk.setOnClickListener( this );
-    // mBtnBack = (Button) findViewById(R.id.button_back );
+    // mBtnBack = (Button) findViewById(R.id.button_cancel );
     // mBtnBack.setOnClickListener( this );
-    ( (Button) findViewById(R.id.button_back ) ).setOnClickListener( this );
+    ( (Button) findViewById(R.id.button_cancel ) ).setOnClickListener( this );
 
     mSelectedPos = 0;
     mSelected = mTypes[ mSelectedPos ];
@@ -132,7 +132,7 @@ public class ExportDialogModel extends MyDialog
     Button b = (Button)v;
     if ( b == mBtnOk && mSelected != null ) {
       // setOptions(); // not necessary
-      TDSetting.mExportModelShare = ((CheckBox) findViewById( R.id.export_share )).isChecked( );
+      boolean shared /* TDSetting.mExportModelShare */ = ((CheckBox) findViewById( R.id.export_share )).isChecked( );
       
       // REMIND public ExportData( String name, boolean splays, boolean walls, boolean surface, boolean station, boolean overwrite )
       ExportData export = new ExportData( mParser.getName(), 
@@ -140,7 +140,7 @@ public class ExportDialogModel extends MyDialog
         ((CheckBox) findViewById( R.id.model_walls )).isChecked( ),
         ((CheckBox) findViewById( R.id.model_surface )).isChecked( ),
         ((CheckBox) findViewById( R.id.model_stations )).isChecked( ),
-        true ); // overwrite
+        true, shared ); // overwrite
       // TDLog.v("TOPOGL selected " + mSelectedPos );
       switch ( mSelectedPos ) {
         case 0: export.mType = ModelType.GLTF; break;
@@ -196,7 +196,7 @@ public class ExportDialogModel extends MyDialog
    */
   private void initOptions()
   {
-    ((CheckBox) findViewById( R.id.export_share )).setChecked( TDSetting.mExportModelShare );
+    ((CheckBox) findViewById( R.id.export_share )).setChecked( false ); // ( TDSetting.mExportModelShare );
 
     ((CheckBox) findViewById( R.id.model_stations )).setChecked( true );
     ((CheckBox) findViewById( R.id.model_splays )).setChecked( true );
@@ -209,6 +209,12 @@ public class ExportDialogModel extends MyDialog
       ((CheckBox) findViewById( R.id.model_surface )).setVisibility( View.GONE );
     }
   }
+
+  // @Override
+  // public void onBackPressed()
+  // {
+  //   dismiss();
+  // }
 }
 
 

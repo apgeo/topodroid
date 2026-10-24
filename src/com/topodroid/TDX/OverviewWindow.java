@@ -16,7 +16,6 @@ import com.topodroid.util.TDMath;
 import com.topodroid.util.TDTag;
 import com.topodroid.util.TDsafUri;
 // import com.topodroid.util.TDRequest;
-import com.topodroid.util.TDStatus;
 import com.topodroid.util.TDColor;
 import com.topodroid.util.TDLocale;
 import com.topodroid.util.TDUtil;
@@ -34,6 +33,7 @@ import com.topodroid.help.UserManualActivity;
 import com.topodroid.prefs.TDSetting;
 import com.topodroid.prefs.TDPrefCat;
 import com.topodroid.types.PlotType;
+import com.topodroid.types.TDStatus;
 
 import android.content.Intent;
 import android.content.res.Resources;
@@ -64,6 +64,7 @@ import android.widget.ListView;
 import android.widget.ArrayAdapter;
 import android.widget.AdapterView;
 import android.widget.AdapterView.OnItemClickListener;
+import android.widget.TextView;
 
 // import android.graphics.RectF;
 // import android.print.PrintAttributes;
@@ -145,7 +146,7 @@ public class OverviewWindow extends ItemDrawer
   private float mUnitRuler = 1;
 
   private TopoDroidApp mApp;
-  private DataHelper mData;
+  private DataHelper mApp_mData;
   // private DrawingUtil mDrawingUtil;
 
   // long getSID() { return TDInstance.sid; }
@@ -162,6 +163,7 @@ public class OverviewWindow extends ItemDrawer
   private boolean mZoomBtnsCtrlOn = false;
   private ZoomButtonsController mZoomBtnsCtrl = null;
   private View mZoomView;
+
     // ZoomControls mZoomCtrl;
     // ZoomButton mZoomOut;
     // ZoomButton mZoomIn;
@@ -291,12 +293,6 @@ public class OverviewWindow extends ItemDrawer
 
     // --------------------------------------------------------------------------------------
 
-    // @Override // overridden method is empty
-    // public void setTheTitle()
-    // {
-    //   // setTitle( res.getString( R.string.title_move ) );
-    // }
-
   private void computeReferences( int type,
                                   // float xoff, float yoff,
                                   float zoom )
@@ -307,7 +303,7 @@ public class OverviewWindow extends ItemDrawer
     // mOverviewSurface.setManager( DrawingSurface.DRAWING_OVERVIEW, type ); 
     mOverviewSurface.newReferences( DrawingSurface.DRAWING_OVERVIEW, type ); 
    
-    float decl = ( type == PlotType.PLOT_PLAN )? TopoDroidApp.mData.getSurveyDeclination(mSid) : 0;
+    float decl = ( type == PlotType.PLOT_PLAN )? mApp_mData.getSurveyDeclination(mSid) : 0;
     mOverviewSurface.addScaleRef( DrawingSurface.DRAWING_OVERVIEW, type, decl );
 
     // float xoff = 0; float yoff = 0;
@@ -505,9 +501,7 @@ public class OverviewWindow extends ItemDrawer
       mButtonView1 = new MyHorizontalButtonView( mButton1 );
       mListView.setAdapter( mButtonView1.mAdapter );
 
-      setTheTitle();
-
-      mData         = TopoDroidApp.mData; 
+      mApp_mData    = TopoDroidApp.mData; 
       Bundle extras = getIntent().getExtras();
       if ( extras == null ) { finish(); return; } // extra can be null [ Galaxy S7, Galaxy A30s ] 
       mSid          = extras.getLong( TDTag.TOPODROID_SURVEY_ID );
@@ -532,7 +526,16 @@ public class OverviewWindow extends ItemDrawer
       mOffset.x   += extras.getFloat( TDTag.TOPODROID_PLOT_XOFF );
       mOffset.y   += extras.getFloat( TDTag.TOPODROID_PLOT_YOFF );
       mOverviewSurface.setTransform( this, mOffset.x, mOffset.y, mZoom, mLandscape );
+
+      // setTitleColor( TDColor.TITLE_NORMAL );
+      setTheTitle();
     }
+
+  @Override
+  public void setTheTitle()
+  {
+    setTitle( getResources().getString( ( mType == PlotType.PLOT_PLAN )? R.string.title_plan : R.string.title_profile ) );
+  }
 
   /** react to the activity "resume"
    */
@@ -579,7 +582,7 @@ public class OverviewWindow extends ItemDrawer
    */
   private void doResume()
   {
-    // PlotInfo info = mApp.mData.getPlotInfo( mSid, mName );
+    // PlotInfo info = mApp_mData.getPlotInfo( mSid, mName );
     // mOffset.x = info.xoffset;
     // mOffset.y = info.yoffset;
     // mZoom     = info.zoom;
@@ -599,14 +602,14 @@ public class OverviewWindow extends ItemDrawer
    */
   private void doStart()
   {
-    if ( mData == null ) {
+    if ( mApp_mData == null ) {
       TDLog.e("OverviewWindow start with null DB");
       finish();
       return;
     }
     // TDLog.Log( TDLog.LOG_PLOT, "do Start " + mName1 + " " + mName2 );
-    // mBlockList = mData.selectAllLegShots( mSid, TDStatus.NORMAL );
-    mBlockList = mData.selectAllShots( mSid, TDStatus.NORMAL );
+    // mBlockList = mApp_mData.selectAllLegShots( mSid, TDStatus.NORMAL );
+    mBlockList = mApp_mData.selectAllShots( mSid, TDStatus.NORMAL );
     if ( TDUtil.isEmpty(mBlockList) ) {
       TDToast.makeBad( R.string.few_data );
       finish();
@@ -621,8 +624,8 @@ public class OverviewWindow extends ItemDrawer
 
   private void loadFiles( long type )
   {
-    // List< PlotInfo > plots = mApp.mData.selectAllPlotsWithType( mSid, TDStatus.NORMAL, type, landscape );
-    List< PlotInfo > plots = TopoDroidApp.mData.selectAllPlotsWithType( mSid, TDStatus.NORMAL, type );
+    // List< PlotInfo > plots = mApp_mData.selectAllPlotsWithType( mSid, TDStatus.NORMAL, type, landscape );
+    List< PlotInfo > plots = mApp_mData.selectAllPlotsWithType( mSid, TDStatus.NORMAL, type );
 
     // TDLog.v( "Overview plots " + plots.size() );
 
@@ -650,7 +653,7 @@ public class OverviewWindow extends ItemDrawer
         // mPlot1 = plot;
         // mPid = plot.id;
         // NOTE Overview only for plan or extended plots
-        // float decl = mData.getSurveyDeclination( mSid );
+        // float decl = mApp_mData.getSurveyDeclination( mSid );
         mNum = new TDNum( mBlockList, start, 0.0f, null ); // null formatClosure
         mStartStation = mNum.getStation( start );
         // computeReferences( (int)type, mOffset.x, mOffset.y, mZoom );
@@ -676,7 +679,16 @@ public class OverviewWindow extends ItemDrawer
       // TDLog.v( "load tdr file " + fullName );
 
       String tdr = TDPath.getTdrFileWithExt( fullName );
-      mOverviewSurface.addLoadDataStream( tdr, xdelta, ydelta, /* null, */ fullName ); // save plot fullname in paths
+      if ( ! mOverviewSurface.addLoadDataStream( tdr, xdelta, ydelta, /* null, */ fullName ) ) { // save plot fullname in paths
+        TDLog.e("Overview load failure " + fullName );
+        // TDToast.makeBad( R.string.tdr_load_fail );
+      } else {
+        long xsection_type = ( type == PlotType.PLOT_PLAN )? PlotType.PLOT_X_SECTION : PlotType.PLOT_XH_SECTION;
+        List< PlotInfo > xsection = mApp_mData.selectAllPlotSectionsWithType( TDInstance.sid, 0, xsection_type, plot.name );
+        mOverviewSurface.setStationXSections( xsection, null, type );
+        mOverviewSurface.linkAllSections( plot.name, null );
+        mOverviewSurface.setAllXSectionOutlines( 3 );
+      }
     }
 
     // if ( ! mAllSymbols ) {
@@ -694,9 +706,10 @@ public class OverviewWindow extends ItemDrawer
   /** export drawing 
    // * @param uri    URI of the export file
    * @param ext    export type (ie, extension)
+   * @param shared whether to share export
    * @note called only by export menu
    */
-  private void saveWithExt( /* Uri uri, */ final String ext ) // FIXME 20251206
+  private void saveWithExt( /* Uri uri, */ final String ext, boolean shared ) // FIXME 20251206
   {
     TDNum num = mNum;
     final String fullname = TDInstance.survey + ( (mType == PlotType.PLOT_PLAN )? "-p" : "-s" );
@@ -710,7 +723,7 @@ public class OverviewWindow extends ItemDrawer
     // TDLog.v("EXPORT " + TDPath.getOutFile( filename ) );
 
     if ( "pdf".equals( ext ) ) {
-      savePdf( uri );
+      savePdf( uri, shared );
     } else {
       if ( ext.equals("th2") ) {
         Handler th2Handler = new Handler() {
@@ -728,16 +741,16 @@ public class OverviewWindow extends ItemDrawer
         // oblique = 0
         // save = OVERVIEW
         // rotate  = 0
-        (new SavePlotFileTask( mApp, this, uri, null, th2Handler, mNum, manager, null, fullname, mType, 0, 0, PlotSave.OVERVIEW, 0, false )).execute(); // TH2EDIT false
+        (new SavePlotFileTask( mApp, this, uri, null, th2Handler, mNum, manager, null, fullname, mType, 0, 0, PlotSave.OVERVIEW, 0, false, shared )).execute(); // TH2EDIT false
       } else {
         GeoReference station = null;
         if ( mType == PlotType.PLOT_PLAN && ext.equals("shz") ) {
          String origin = mNum.getOriginStation();
-         station = TDExporter.getGeolocalizedStation( mSid, mData, 1.0f, true, origin, true );
+         station = TDExporter.getGeolocalizedStation( mSid, mApp_mData, 1.0f, true, origin, true );
         }
-        SurveyInfo info = mData.selectSurveyInfo( mSid );
+        SurveyInfo info = mApp_mData.selectSurveyInfo( mSid );
         // null PlotInfo, null FixedInfo, true toast
-        (new ExportPlotToFile( mApp, this, uri, info, null, null, mNum, manager, mType, fullname, ext, true, station )).execute();
+        (new ExportPlotToFile( mApp, this, uri, info, null, null, mNum, manager, mType, fullname, ext, true, station, shared )).execute();
       }
     }
   }
@@ -751,9 +764,11 @@ public class OverviewWindow extends ItemDrawer
    * @param prefix        station name prefix (not used)
    * @param first         not used
    * @param second        whether to export the second view (unused)
+   * @param unused
+   * @param shared        whether to share export
    * @note called by the ExportPlotDialog
    */
-  public void doExport( String export_type, String filename, String prefix, long first, boolean second ) // EXPORT
+  public void doExport( String export_type, String filename, String prefix, long first, boolean second, List<String> unused, boolean shared ) // EXPORT
   {
     if ( export_type == null ) return;
     mExportIndex = TDConst.plotExportIndex( export_type );
@@ -773,7 +788,7 @@ public class OverviewWindow extends ItemDrawer
     // intent.putExtra( Intent.EXTRA_TITLE, filename );
     // startActivityForResult( Intent.createChooser(intent, getResources().getString( R.string.export_overview_title ) ), TDRequest.REQUEST_GET_EXPORT );
 
-    saveWithExt( mExportExt );
+    saveWithExt( mExportExt, shared );
   }
 
   // /** react to a called activity result ---- APP_OUT_DIR
@@ -826,12 +841,12 @@ public class OverviewWindow extends ItemDrawer
   /** export drawing as PDF
    * @param uri   export URI
    */
-  private void savePdf( Uri uri ) 
+  private void savePdf( Uri uri, boolean shared ) 
   {
     String fullname = TDInstance.survey + ( (mType == PlotType.PLOT_PLAN )? "-p" : "-s" );
     if ( fullname != null ) { // always true
       DrawingCommandManager manager = mOverviewSurface.getManager( DrawingSurface.DRAWING_OVERVIEW );
-      doSavePdf( uri, manager, fullname );
+      doSavePdf( uri, manager, fullname, shared );
     } else {
       TDLog.e("ERROR PDF fullname is null");
     }
@@ -843,7 +858,7 @@ public class OverviewWindow extends ItemDrawer
    * @param fullname export "name" - used only in the toast
    * TODO with background task
    */
-  private void doSavePdf( Uri uri, DrawingCommandManager manager, final String fullname )
+  private void doSavePdf( Uri uri, DrawingCommandManager manager, final String fullname, boolean shared )
   {
     if ( manager == null ) {
       TDToast.makeBad( R.string.null_bitmap );
@@ -882,11 +897,12 @@ public class OverviewWindow extends ItemDrawer
       pdf.close();
       /* if ( fos != null ) */ fos.close(); // test always true
       TDToast.make( String.format( getResources().getString(R.string.saved_file_1), fullname ) ); // PDF
-      if ( TDSetting.mExportPlotShare ) {
+      if ( shared /* TDSetting.mExportPlotShare */ ) {
         String filename = fullname + ".pdf";
         // TDLog.v("sharing PDF filename " + filename );
         String mimetype = TDConst.getMimeFromExtension("pdf");
         mApp.shareFile( filename, mimetype, 2 ); // 2 DrawingActivity FIXME 20251206
+        // TDSetting.mExportPlotShare = false; // reset the share flag
       }
     } catch ( IOException e ) {
       TDLog.e("Failed PDF export " + e.getMessage() );
@@ -901,7 +917,7 @@ public class OverviewWindow extends ItemDrawer
   //   plot.xoffset = mOffset.x;
   //   plot.yoffset = mOffset.y;
   //   plot.zoom    = mZoom;
-  //   mData.updatePlot( pid, mSid, mOffset.x, mOffset.y, mZoom );
+  //   mApp_mData.updatePlot( pid, mSid, mOffset.x, mOffset.y, mZoom );
   // }
 
   // private void resetReference( PlotInfo plot )
@@ -1062,7 +1078,7 @@ public class OverviewWindow extends ItemDrawer
    */
   public boolean onTouch( View view, MotionEvent rawEvent )
   {
-    float d0 = TDSetting.mCloseCutoff + TDSetting.mSelectness / mZoom;
+    float d0 = TDSetting.mCloseCutoff + mTouchSlop / mZoom; // TDSetting.mSelectness / mZoom;
     checkZoomBtnsCtrl();
 
     MotionEventWrap event = MotionEventWrap.wrap(rawEvent);
@@ -1191,7 +1207,8 @@ public class OverviewWindow extends ItemDrawer
           DrawingMeasureEndPath path = new DrawingMeasureEndPath( mStartX, mStartY, x, y, 5 * TDSetting.mDotRadius * mOverviewSurface.getScale() * mZoom );
           mOverviewSurface.setSecondReference( path );
         }
-        mActivity.setTitle( String.format( format, bb, mDDtotal, bx, by, ba ) );
+        // mActivity.
+        setTitle( String.format( format, bb, mDDtotal, bx, by, ba ) );
       }
     // ---------------------------------------- MOVE
 
@@ -1291,6 +1308,7 @@ public class OverviewWindow extends ItemDrawer
         TDandroid.setButtonBackground( mButton1[IC_SELECT], mBMselect );
         mOverviewSurface.setFirstReference( null );
         mOverviewSurface.setSecondReference( null );
+        setTheTitle();
       } else if ( mOnMeasure == MEASURE_START ) {
         TDandroid.setButtonBackground( mButton1[IC_SELECT], mBMselectOn );
         mDDtotal = 0;
@@ -1372,7 +1390,8 @@ public class OverviewWindow extends ItemDrawer
       getResources().getString( R.string.format_measure_plan ) :
       getResources().getString( R.string.format_measure_profile );
 
-    mActivity.setTitle( String.format( format, bb, mDDtotal, bx, by, ba ) );
+    // mActivity.
+    setTitle( String.format( format, bb, mDDtotal, bx, by, ba ) );
   }
 
   private void toggleIsContinue( )
@@ -1381,14 +1400,26 @@ public class OverviewWindow extends ItemDrawer
     TDandroid.setButtonBackground( mButton1[IC_CONTINUE], (mIsContinue? mBMcontinueOn : mBMcontinueNo) );
   }
 
+  // @Override public void onBackPressed() { super.onBackPressed(); }
+
+  @Override protected void onDestroy()
+  {
+    super.onDestroy(); // NECESSARY ? isn't enough that of ItemDrawer ?
+  }
+
+  @Override public boolean onKeyUp( int code, KeyEvent event )
+  {
+    return backKeyUp( code, event );
+  }
 
   @Override
   public boolean onKeyDown( int code, KeyEvent event )
   {
     switch ( code ) {
       case KeyEvent.KEYCODE_BACK: // HARDWARE BACK (4)
-        super.onBackPressed();
-        return true;
+      //   super.onBackPressed(); // FIXME issue 167
+      //   return true;
+        return backKeyDown( code, event );
       case KeyEvent.KEYCODE_MENU:   // HARDWARE MENU (82)
         UserManualActivity.showHelpPage( mActivity, getResources().getString( HELP_PAGE ));
         return true;
@@ -1426,7 +1457,7 @@ public class OverviewWindow extends ItemDrawer
     closeMenu();
     int p = 0;
     if ( p++ == pos ) { // CLOSE
-      super.onBackPressed();
+      super.onBackPressed(); // FIXME issue 167
     } else if ( TDLevel.overExpert && p++ == pos ) { // EXPORT THERION
       String fullname = TDInstance.survey + ( (mType == PlotType.PLOT_PLAN )? "-p" : "-s" );
       new ExportDialogPlot( mActivity, this, TDConst.mOverviewExportTypes, R.string.title_plot_save, fullname, null ).show();
@@ -1466,4 +1497,19 @@ public class OverviewWindow extends ItemDrawer
     mOverviewSurface.setTransform( this, mOffset.x, mOffset.y, mZoom, mLandscape );
   }
 
+  // ----------------------------------------------------------------
+  // TITLE BAR
+
+  @Override
+  public void setTitle( CharSequence t )
+  {
+    TDLog.v("OVERVIEW set title " + t );
+    ((TextView)findViewById( R.id.title )).setText( t );
+  }
+
+  // @Override
+  // public void setTitleColor( int color )
+  // {
+  //   ((TextView)findViewById( R.id.title )).setTextColor( color );
+  // }
 }

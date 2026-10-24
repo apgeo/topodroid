@@ -56,7 +56,8 @@ public class MyFileProvider extends ContentProvider
 
   private static final String META_DATA_FILE_PROVIDER_PATHS = "android.support.FILE_PROVIDER_PATHS";
 
-  private static final String FILEPROVIDER_AUTHORITY = "com.topodroid.fileprovider";
+  // private static final String FILEPROVIDER_AUTHORITY = "com.topodroid.TDX.fileprovider"; // TDSKETCH
+  private static final String FILEPROVIDER_AUTHORITY_SUFFIX = ".fileprovider";
 
   private static final File DEVICE_ROOT = new File("/");
 
@@ -107,7 +108,8 @@ public class MyFileProvider extends ContentProvider
    */
   static public Uri fileToUri( Context context, File file )
   {
-    return getUriForFile( context, FILEPROVIDER_AUTHORITY, file );
+    // return getUriForFile( context, FILEPROVIDER_AUTHORITY, file ); // TDSKETC
+    return getUriForFile( context, context.getPackageName() + FILEPROVIDER_AUTHORITY_SUFFIX, file ); // => com.topodroid.TDX.fileprovider
   } 
 
   /** @return content URI for a given file. 
@@ -282,7 +284,7 @@ public class MyFileProvider extends ContentProvider
         final String tag  = in.getName();
         final String name = in.getAttributeValue( null, ATTR_NAME );
         if ( TextUtils.isEmpty( name ) ) {
-          TDLog.e("File Provider EMPTY name for tag " + tag );
+          TDLog.e("File Provider EMPTY name for tag <" + tag + ">" );
           continue;
         }
         File target = null;
@@ -308,7 +310,7 @@ public class MyFileProvider extends ContentProvider
           TDLog.v("File Provider Path Strategy: TODO tag \"paths\" - no root added"); 
           // target = Environment.getExternalStorageDirectory(); 
         } else {
-          TDLog.e("File Provider Path Strategy: unsupported tag " + tag );
+          TDLog.e("File Provider Path Strategy: unsupported tag <" + tag + ">" );
         }
         if ( target != null ) {
           String path = in.getAttributeValue( null, ATTR_PATH );

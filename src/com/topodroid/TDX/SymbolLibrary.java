@@ -142,6 +142,7 @@ public class SymbolLibrary
 
   protected Symbol get( String name ) 
   {
+    if ( name == null || name.length() == 0 ) return null;
     return ( mRoot == null )? null : mRoot.get( Symbol.deprefix_u(name) );
   }
 
@@ -149,6 +150,7 @@ public class SymbolLibrary
 
   int getSymbolIndex( Symbol symbol )
   {
+    if ( symbol == null ) return -1;
     int nr = mSymbols.size();
     for ( int k=0; k<nr; ++k ) {
       if ( symbol == mSymbols.get(k) ) return k;
@@ -161,9 +163,11 @@ public class SymbolLibrary
    */
   int getSymbolIndexByThName( String name )
   {
-    String th_name = Symbol.deprefix_u( name );
-    int nr = mSymbols.size();
-    for ( int k=0; k<nr; ++k ) if ( mSymbols.get(k).hasThName( th_name) ) return k;
+    if ( name != null && name.length() > 0 ) {
+      String th_name = Symbol.deprefix_u( name );
+      int nr = mSymbols.size();
+      for ( int k=0; k<nr; ++k ) if ( mSymbols.get(k).hasThName( th_name) ) return k;
+    }
     return -1;
   }
 
@@ -173,11 +177,15 @@ public class SymbolLibrary
    */
   int getSymbolIndexByThNameOrGroup( String name, String group )
   {
-    String th_name = Symbol.deprefix_u( name );
     int nr = mSymbols.size();
-    // TDLog.v("ThName <" + th_name + "> group <" + ( (group == null)? "null" : group ) + ">" );
-    for ( int k=0; k<nr; ++k ) if ( mSymbols.get(k).hasThName( th_name) ) return k;
-    for ( int k=0; k<nr; ++k ) if ( mSymbols.get(k).hasGroup( group) ) return k;
+    if ( name != null && name.length() > 0 ) {
+      String th_name = Symbol.deprefix_u( name );
+      // TDLog.v("ThName <" + th_name + "> group <" + ( (group == null)? "null" : group ) + ">" );
+      for ( int k=0; k<nr; ++k ) if ( mSymbols.get(k).hasThName( th_name) ) return k;
+    }
+    if ( group != null && group.length() > 0 ) {
+      for ( int k=0; k<nr; ++k ) if ( mSymbols.get(k).hasGroup( group) ) return k;
+    }
     return -1;
   }
 
@@ -234,10 +242,10 @@ public class SymbolLibrary
    */
   Paint getSymbolPaint( int k )   { return ( k < 0 || k >= mSymbols.size() )? BrushManager.errorPaint : mSymbols.get(k).getPaint(); }
 
-  /** #return the path of the k-th symbol 
-   * @param k  symbol index
-   */
-  Path  getSymbolPath( int k )    { return ( k < 0 || k >= mSymbols.size() )? null : mSymbols.get(k).getPath(); }
+  // /** #return the path of the k-th symbol - UNUSED
+  //  * @param k  symbol index
+  //  */
+  // Path  getSymbolPath( int k )    { return ( k < 0 || k >= mSymbols.size() )? null : mSymbols.get(k).getSymbolPath(); }
 
   /** #return true if the k-th symbol is orientable
    * @param k  symbol index
@@ -290,7 +298,8 @@ public class SymbolLibrary
     return ( a != null ) && a.isEnabled();
   }
 
-  void resetOrientations() { for ( Symbol s : mSymbols ) s.setAngle(0); }
+  // FIXME_ORIENTATION
+  // void resetOrientations() { for ( Symbol s : mSymbols ) s.setAngle(0); }
   
   // ========================================================================
 
@@ -410,11 +419,12 @@ public class SymbolLibrary
    */
   void setRecentSymbols( Symbol[] recent )
   {
+    for ( int k = 0; k < recent.length; ++k ) recent[k] = null;
     int k = 0;
     for ( Symbol symbol : mSymbols ) {
       if ( symbol.isEnabled() ) {
         recent[k++] = symbol;
-        if ( k >= ItemDrawer.NR_RECENT ) break;
+        if ( k >= ItemDrawer.NR_RECENT ) break; // do not overfill recent[]
       }
     }
   }
@@ -441,7 +451,7 @@ public class SymbolLibrary
       // dos.writeInt( str_len );
       dos.writeUTF( sb.toString() );
     } catch ( IOException e ) {
-      TDLog.e( e.getMessage() );
+      TDLog.e( "Symbol lib " + e.getMessage() );
     }
   }
 

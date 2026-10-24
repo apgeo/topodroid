@@ -43,7 +43,6 @@ import android.view.View;
 // import android.widget.GridView;
 // import android.view.View.OnKeyListener;
 // import android.view.KeyEvent;
-// import android.inputmethodservice.KeyboardView;
 
 import android.text.method.KeyListener; 
 
@@ -72,6 +71,7 @@ class FixedDialog extends MyDialog
   private Button   mButtonView;
   // private Button   mButtonWmm;
   private Button   mButtonSave;
+  private Button   mButtonCancel;
 
   private Button   mButtonClearConvert;
   private Button   mButtonConvert;
@@ -83,8 +83,6 @@ class FixedDialog extends MyDialog
   private boolean editable;
   private boolean editable_h; // editable altitude
   private int mUnitLocation;
-
-  // private Button   mButtonCancel;
 
   private final WorldMagneticModel mWMM;
 
@@ -195,7 +193,7 @@ class FixedDialog extends MyDialog
     mButtonSave = (Button) findViewById( R.id.fix_save );
     mButtonDrop    = (Button) findViewById(R.id.fix_drop );
     // mButtonOK      = (Button) findViewById(R.id.fix_ok );
-    // mButtonCancel  = (Button) findViewById(R.id.fix_cancel );
+    mButtonCancel  = (Button) findViewById(R.id.button_cancel );
     // TDLog.v("FIXED info " + mFxd.lng + " " + mFxd.lat );
     int flag = MyKeyboard.FLAG_POINT_DEGREE;
     mUnitLocation = TDSetting.mUnitLocation;
@@ -204,7 +202,6 @@ class FixedDialog extends MyDialog
     // mTVh_ell.setText( String.format( Locale.US, "%.0f", mFxd.h_ell ) );
     mTVh_geo.setText( String.format( Locale.US, "%.0f", mFxd.h_geo ) );
 
-    // mKeyboard = new MyKeyboard( mContext, (KeyboardView)findViewById( R.id.keyboardview ), R.xml.my_keyboard, -1 );
     mKeyboard = MyKeyboard.getMyKeyboard( mContext, findViewById( R.id.keyboardview ), R.xml.my_keyboard, -1 );
 
     if ( TDSetting.mKeyboard ) {
@@ -245,7 +242,7 @@ class FixedDialog extends MyDialog
     mButtonSave.setOnClickListener( this );
     mButtonClearConvert.setOnClickListener( this );
     mButtonConvert.setOnClickListener( this );
-    // mButtonCancel.setOnClickListener( this );
+    mButtonCancel.setOnClickListener( this );
 
     showConvertedCoords( );
   }
@@ -299,7 +296,7 @@ class FixedDialog extends MyDialog
       String comment = TDUtil.getTextOrEmpty( mETcomment );
       if ( mButtonDecl.isChecked() && mTVdecl.getText() != null ) {
         String decl_str = mTVdecl.getText().toString();
-        if ( TDString.isNullOrEmpty( decl_str ) ) {
+        if ( ! TDString.isNullOrEmpty( decl_str ) ) {
           decl_str = TDString.commaToPoint( decl_str );
           try {
             mParent.setDeclination( Float.parseFloat( decl_str ) );
@@ -346,6 +343,7 @@ class FixedDialog extends MyDialog
     dismiss();
   }
 
+  @SuppressWarnings("deprecated")
   @Override
   public void onBackPressed()
   {

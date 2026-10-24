@@ -14,8 +14,8 @@ package com.topodroid.TDX;
 import com.topodroid.util.TDLog;
 import com.topodroid.util.TDUtil;
 import com.topodroid.util.TDString;
-import com.topodroid.util.TDStatus;
 // import com.topodroid.util.TDColor;
+import com.topodroid.types.TDStatus;
 // import com.topodroid.ui.MyKeyboard;
 import com.topodroid.ui.MyDialog;
 import com.topodroid.ui.TDLayout;
@@ -39,13 +39,12 @@ import android.text.InputType;
 import android.content.Context;
 // import android.content.res.Resources;
 import android.content.DialogInterface;
-// import android.inputmethodservice.KeyboardView;
 
 import android.widget.TextView;
 import android.widget.EditText;
 import android.widget.Button;
 import android.widget.LinearLayout;
-import android.widget.CheckBox;;
+import android.widget.CheckBox;
 
 import android.view.View;
 // import android.graphics.drawable.BitmapDrawable;
@@ -198,7 +197,9 @@ class ScanShotEditDialog extends MyDialog
     else if ( mRBxsection.isChecked() ) { splay_class = BlockType.XSCAN; }
     
     // TDLog.v(" FROM " + shot_from + " " + mBlk.mFrom + " Block type " + splay_class + " " + mBlk.mBlockType );
-    if ( ! shot_from.equals( mBlk.mFrom ) || splay_class != mBlk.getBlockType() ) mParent.updateScanSet( mBlk, shot_from, mPos, splay_class );
+    if ( ! shot_from.equals( mBlk.mFrom ) || splay_class != mBlk.getBlockType() ) {
+      mParent.updateScanSet( mBlk, shot_from, mPos, splay_class ); // FIXME mPos is not used
+    }
     return true;
   }
 
@@ -251,16 +252,18 @@ class ScanShotEditDialog extends MyDialog
     } else if ( b == mButtonDelete ) {
       mParent.deleteScanShot( mBlk );
     } 
+    // onBackPressed(); // issue 167
     dismiss();
-    // onBackPressed();
   }
 
+  // @SuppressWarnings("deprecated")
   // @Override
   // public void onBackPressed()
   // {
   //   // if ( CutNPaste.dismissPopup() ) return;
   //   // if ( MyKeyboard.close( mKeyboard ) ) return;
-  //   super.onBackPressed();
+  //   // super.onBackPressed(); // issue 167
+  //   dismiss();
   // }
 
 }

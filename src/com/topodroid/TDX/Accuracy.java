@@ -24,7 +24,7 @@ import java.util.Locale;
 
 class Accuracy
 {
-  final static float THRS  = 100.0f; // acc/mag threshold
+  final static float THRS  = 10.0f; // acc/mag threshold
   private final static float BND_1 = 10.0f; // small acc/mag values cutoff function
   private final static float BND_2 =  8.5f;
 
@@ -60,7 +60,7 @@ class Accuracy
   boolean isBlockAMDBad( DBlock blk )
   {
     if ( blk.mAcceleration < THRS || blk.mMagnetic < THRS ) {
-      TDLog.e("Accu block below threshold " + blk.mAcceleration + " " + blk.mMagnetic );
+      // TDLog.e("Accu block below threshold " + blk.mAcceleration + " " + blk.mMagnetic );
       return false; // block without G,M,Dip
     }
     // return deltaMag( blk.mMagnetic )     > TDSetting.mMagneticThr

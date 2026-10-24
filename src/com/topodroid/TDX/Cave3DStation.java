@@ -13,6 +13,7 @@ package com.topodroid.TDX;
 
 import com.topodroid.util.TDLog;
 // import com.topodroid.TDX.DPoint2D;
+import com.topodroid.math.Vector3D;
 
 import java.io.DataOutputStream;
 import java.io.DataInputStream;
@@ -269,12 +270,13 @@ public class Cave3DStation extends Vector3D
     }
   }
 
-  /** add a discriminating number to the station name
+  /** add a discriminating number to the station name - used for loop-closing stations
    * @param number   discriminating number
+   * @note the discriminating number is separated from the station name by a FORM-FEED
    */
   public void addToName( int number )
   {
-    short_name = short_name + "-" + number;
+    short_name = short_name + "\f" + number;
     full_name  = short_name + "@" + survey_name;
   }
 

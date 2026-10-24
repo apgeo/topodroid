@@ -14,10 +14,13 @@ package com.topodroid.TDX;
 import com.topodroid.util.TDLog;
 import com.topodroid.util.TDFile;
 import com.topodroid.util.TDLocale;
+import com.topodroid.util.TDAnalytics;
+import com.topodroid.util.TDColor;
 // import com.topodroid.util.TDString;
 // import com.topodroid.util.TDVersion;
 // import com.topodroid.util.TDVersion;
 import com.topodroid.util.TDsafUri;
+import com.topodroid.math.Vector3D;
 
 // import com.topodroid.TDX.TDandroid;
 
@@ -40,8 +43,6 @@ import com.topodroid.c3in.ParserException;
 
 import com.topodroid.c3out.ExportData;
 import com.topodroid.c3out.ExportTask;
-
-import com.topodroid.c3walls.cw.CWConvexHull;
 
 import com.topodroid.dem.ParserDEM;
 import com.topodroid.dem.DEMasciiParser;
@@ -73,7 +74,7 @@ import java.util.List;
 // import java.util.Set;
 import java.util.Locale;
 
-// import android.os.Environment;
+import android.os.Environment;
 import android.os.Build; // FINERPRINT and MODEL
 import android.os.Bundle;
 import android.os.Handler;
@@ -117,6 +118,7 @@ import android.view.View.OnLongClickListener;
 import android.widget.Toast;
 import android.widget.Button;
 import android.widget.ListView;
+import android.widget.TextView;
 // import android.widget.CheckBox;
 // import android.widget.TextView;
 import android.widget.LinearLayout;
@@ -134,7 +136,7 @@ import android.net.Uri;
 
 // import android.opengl.GLSurfaceView;
 
-public class TopoGL extends Activity 
+public class TopoGL extends MyActivity 
                     implements OnClickListener
                     , OnLongClickListener
                     , OnItemClickListener
@@ -163,8 +165,9 @@ public class TopoGL extends Activity
   // public void sendMessage( final Message msg ) 
   // {
   //   final TopoGL app = this;
-  //   runOnUiThread( new Runnable() {
-  //     @Override public void run() {
+  //   // runOnUiThread(
+  //   TDandroid.runOnMainThread(
+  //     new Runnable() { @Override public void run() {
   //       // TDLog.v("TopoGL got message - type " + msg.what );
   //       if ( msg == null ) return;
   //       Bundle data = msg.getData();
@@ -239,6 +242,7 @@ public class TopoGL extends Activity
   private BitmapDrawable mBMfixOn;
   private BitmapDrawable mBMfixOff;
   private BitmapDrawable mBMclose;
+  private BitmapDrawable mBMinfo;
 
   static int mCheckPerms = -1;
 
@@ -257,7 +261,7 @@ public class TopoGL extends Activity
   String mDEMname = null;
   String mTextureName = null;
 
-  static boolean mSelectStation = true;
+  // static boolean mSelectStation = true; // STATION_TRUE
   static boolean mHasC3d = false;
   // static boolean mHasFractal = false; // FRACTAL
   // static boolean mHasTemperature = false; // TEMPERATURE
@@ -277,6 +281,7 @@ public class TopoGL extends Activity
   Button mMeasureStation;
   Button mFixStation;
   Button mCloseStation;
+  Button mInfoStation;
   boolean isMeasuring = false;
   boolean isFixed = false;
 
@@ -308,7 +313,14 @@ public class TopoGL extends Activity
   {
     // TDLog.v("handle extra " + mHasExtra );
     // if ( FeatureChecker.checkLocation( this ) ) mGPS = new GPS( this ); // WITH-GPS
-    if ( TDandroid.checkLocation( this ) ) mGPS = new GPS( this ); // WITH-GPS
+    if ( TDandroid.checkLocation( this ) ) {
+      mGPS = new GPS( this ); // WITH-GPS
+      if ( ! mGPS.canLocate() ) {
+        TDToast.make( R.string.location_enabled );
+      }
+    } else {
+      TDToast.make( R.string.location_no_permission );
+    }
 
     if ( mHasExtra ) {
       // if ( mVersionCheck >= 0 ) {
@@ -317,11 +329,11 @@ public class TopoGL extends Activity
           // Cave3DFile.setTopoDroidPaths( mSurveyBase ); // BLUETOOTH
 
           if ( mThconfigName != null ) { // used by TdManager
-            TDLog.v("TdManager input tdconfig " + mThconfigName );
+            // TDLog.v("TdManager input tdconfig " + mThconfigName );
             mFileDialog = false;
             doOpenFile( null, mThconfigName, true ); // asynch
           } else if ( mSurveyName != null ) {
-            TDLog.v("TopoDroid input survey " + mSurveyName + " mSurveyBase " + mSurveyBase);
+            // TDLog.v("TopoDroid input survey " + mSurveyName + " mSurveyBase " + mSurveyBase);
             if ( doOpenSurvey( mSurveyName, mSurveyBase ) ) {
               doSketches = true;
               mFileDialog = false;
@@ -353,16 +365,6 @@ public class TopoGL extends Activity
   }
 
   @Override
-  public void onDestroy( )
-  {
-    super.onDestroy();
-    ((TopoDroidApp)getApplication()).mTopoGL = null;
-    if ( doubleBackHandler != null ) {
-      doubleBackHandler.removeCallbacks( doubleBackRunnable );
-    }
-  }
-
-  @Override
   public void onCreate( Bundle savedInstanceState ) 
   {
     super.onCreate(savedInstanceState);
@@ -370,7 +372,7 @@ public class TopoGL extends Activity
     getWindow().getDecorView().setSystemUiVisibility( TDSetting.mUiVisibility );
 
     // TDLog.v("on create: Not Android 10 " + NOT_ANDROID_10 + " 11 " + NOT_ANDROID_11 );
-    TDLog.v("GL on create - texture root: " + mTextureRoot );
+    // TDLog.v("GL on create - texture root: " + mTextureRoot );
     checkPreferences();
 
     mHasC3d     &= TDLevel.overExpert;
@@ -401,9 +403,11 @@ public class TopoGL extends Activity
     mMeasureStation = (Button) findViewById( R.id.measure_station );
     mFixStation = (Button) findViewById( R.id.fix_station );
     mCloseStation = (Button) findViewById( R.id.close_station );
+    mInfoStation = (Button) findViewById( R.id.info_station );
     mMeasureStation.setOnClickListener( this );
     mFixStation.setOnClickListener( this );
     mCloseStation.setOnClickListener( this );
+    mInfoStation.setOnClickListener( this );
 
     mLayoutStation.setVisibility( View.GONE );
     // mLayoutStation.setOnLongClickListener( this ); // 20250113 replaced with "close" button
@@ -475,7 +479,7 @@ public class TopoGL extends Activity
   protected void onStart()
   {
     super.onStart();
-    TDLog.v("TopoGL on Start");
+    // TDLog.v("TopoGL on Start");
     if ( ! TDandroid.canManageExternalStorage( this ) ) {
       TDandroid.requestExternalStorage( this, this );
     }
@@ -520,7 +524,7 @@ public class TopoGL extends Activity
   protected void onResume()
   {
     super.onResume();
-    TDLog.v("TopoGL on Resume");
+    // TDLog.v("TopoGL on Resume");
     if ( rendererSet ) {
       // TDLog.v("TopoGL on resume");
       // glSurfaceView.setMinimumWidth( mLayout.getWidth() );
@@ -563,6 +567,18 @@ public class TopoGL extends Activity
     }
   };
 
+  @Override
+  protected void onDestroy( )
+  {
+    ((TopoDroidApp)getApplication()).mTopoGL = null;
+    if ( doubleBackHandler != null ) {
+      doubleBackHandler.removeCallbacks( doubleBackRunnable );
+    }
+    super.onDestroy();
+  }
+
+  // N.B. no onKeyDown onKeyUp
+
   /** react to a BACK key tap
    */
   @Override
@@ -574,11 +590,11 @@ public class TopoGL extends Activity
       return;
     }
     if ( TDSetting.mSingleBack ) {
-      super.onBackPressed();
+      super.onBackPressed(); // FIXME issue 167
     } else if ( doubleBack ) {
       if ( doubleBackToast != null ) doubleBackToast.cancel();
       doubleBackToast = null;
-      super.onBackPressed();
+      super.onBackPressed(); // FIXME issue 167
     } else {
       doubleBack = true;
       doubleBackToast = Toast.makeText( this, R.string.double_back, Toast.LENGTH_SHORT );
@@ -608,6 +624,7 @@ public class TopoGL extends Activity
     //   setTitle( str ); 
     // } else {
       setTitle( str ); 
+      // setTitleColor( TDColor.TITLE_NORMAL );
     // }
   }
 
@@ -691,6 +708,7 @@ public class TopoGL extends Activity
   boolean    onMenu = false;
 
   private static final int[] menus = {
+    R.string.menu_close,       // 0
     R.string.cmenu_open,       // 0
     R.string.menu_export,
     // R.string.cmenu_ble, // FIXME BLUETOOTH  MENU
@@ -711,6 +729,7 @@ public class TopoGL extends Activity
   };
 
   private static final int[] help_menus = {
+                          R.string.help_close,
                           R.string.help_open_3d,
                           R.string.help_export_3d,
                           R.string.help_info_3d,
@@ -764,13 +783,15 @@ public class TopoGL extends Activity
     closeMenu();
     // TDToast.make( item.toString() );
     int p = 0;
-    if ( p++ == pos ) { // OPEN
+    if ( p++ == pos ) { // CLOSE
+      super.onBackPressed(); // FIXME issue 167
+    } else if ( p++ == pos ) { // OPEN
       // (new DialogOpenFile( this, this )).show();
       selectImportFile();
     } else if ( p++ == pos ) { // EXPORT
       if ( mParser != null ) {
-        // (new DialogExport( this, this, mParser )).show(); // this calls selectExportFile( export );
-        if ( mParser.hasFixes() ) { // this calls selectExportFile( export );
+        // (new DialogExport( this, this, mParser )).show(); // this calls selectExportFile( export, shared );
+        if ( mParser.hasFixes() ) { // this calls selectExportFile( export, shared );
           (new ExportDialogModel( this, this, mParser, TDConst.mModelExportTypes, R.string.export_model_title)).show();
         } else {
           (new ExportDialogModel( this, this, mParser, TDConst.mModelExportTypesNoGeo, R.string.export_model_title)).show();
@@ -811,7 +832,7 @@ public class TopoGL extends Activity
       GlModel.resetModes();
       GlNames.resetStations();
       if ( mRenderer != null ) mRenderer.resetTopGeometry();
-      mSelectStation = true;
+      // mSelectStation = true; // STATION_TRUE
       resetButtons();
     } else if ( p++ == pos ) { // VIEWPOINT
       if ( mParser != null ) {
@@ -901,7 +922,7 @@ public class TopoGL extends Activity
   private static final int[] izons = {
     R.drawable.iz_light,
     R.drawable.iz_orthogonal,
-    R.drawable.iz_station_no_dot,
+    R.drawable.iz_station_no, // R.drawable.iz_station_no_dot,
     R.drawable.iz_splays_none,
     R.drawable.iz_wall_no,
     R.drawable.iz_surface_off,
@@ -963,16 +984,16 @@ public class TopoGL extends Activity
   BitmapDrawable mBMorthogonal;
   BitmapDrawable mBMsurface;
 
-  BitmapDrawable mBMstationNo;
+  BitmapDrawable mBMstationNo; // STATION_TRUE
   BitmapDrawable mBMstationPoint;
   BitmapDrawable mBMstationName;
   BitmapDrawable mBMstationLeg;
   // BitmapDrawable mBMstation;
-  BitmapDrawable mBMstationNoDot;
-  BitmapDrawable mBMstationPointDot;
-  BitmapDrawable mBMstationNameDot;
-  BitmapDrawable mBMstationLegDot;
-  // BitmapDrawable mBMstationDot;
+  // BitmapDrawable mBMstationNoDot; // STATION_TRUE
+  // BitmapDrawable mBMstationPointDot;
+  // BitmapDrawable mBMstationNameDot;
+  // BitmapDrawable mBMstationLegDot;
+  // // BitmapDrawable mBMstationDot;
 
   BitmapDrawable mBMsplaysNo;
   BitmapDrawable mBMsplaysLine;
@@ -1014,7 +1035,7 @@ public class TopoGL extends Activity
 
       // mButton1[ 0 ].setOnLongClickListener( this );
       mButton1[ 1 ].setOnLongClickListener( this ); // projection params
-      mButton1[ 2 ].setOnLongClickListener( this ); // stations
+      // mButton1[ 2 ].setOnLongClickListener( this ); // stations
       mButton1[ 3 ].setOnLongClickListener( this ); // splays: new manual leg
       mButton1[ 6 ].setOnLongClickListener( this ); // surveys
       mButton1[ 7 ].setOnLongClickListener( this ); // frame: leg-visibility
@@ -1027,13 +1048,13 @@ public class TopoGL extends Activity
       mBMorthogonal  = MyButton.getButtonBackground( this, size, R.drawable.iz_orthogonal);
       mBMperspective = MyButton.getButtonBackground( this, size, R.drawable.iz_perspective);
 
-      mBMstationNoDot   = MyButton.getButtonBackground( this, size, R.drawable.iz_station_no_dot );
-      mBMstationPointDot= MyButton.getButtonBackground( this, size, R.drawable.iz_station_point_dot );
-      mBMstationNameDot = MyButton.getButtonBackground( this, size, R.drawable.iz_station_name_dot );
-      mBMstationLegDot  = MyButton.getButtonBackground( this, size, R.drawable.iz_station_leg_dot );
-      // mBMstationDot     = MyButton.getButtonBackground( this, size, R.drawable.iz_station_dot );
+      // mBMstationNoDot   = MyButton.getButtonBackground( this, size, R.drawable.iz_station_no_dot ); // STATION_TRUE
+      // mBMstationPointDot= MyButton.getButtonBackground( this, size, R.drawable.iz_station_point_dot );
+      // mBMstationNameDot = MyButton.getButtonBackground( this, size, R.drawable.iz_station_name_dot );
+      // mBMstationLegDot  = MyButton.getButtonBackground( this, size, R.drawable.iz_station_leg_dot );
+      // // mBMstationDot     = MyButton.getButtonBackground( this, size, R.drawable.iz_station_dot );
 
-      mBMstationNo   = MyButton.getButtonBackground( this, size, R.drawable.iz_station_no );
+      mBMstationNo   = MyButton.getButtonBackground( this, size, R.drawable.iz_station_no ); // STATION_TRUE
       mBMstationPoint= MyButton.getButtonBackground( this, size, R.drawable.iz_station_point );
       mBMstationName = MyButton.getButtonBackground( this, size, R.drawable.iz_station_name );
       mBMstationLeg  = MyButton.getButtonBackground( this, size, R.drawable.iz_station_leg );
@@ -1087,6 +1108,7 @@ public class TopoGL extends Activity
       mBMfixOn      = MyButton.getButtonBackground( this, size, R.drawable.iz_station_on );
       mBMfixOff     = MyButton.getButtonBackground( this, size, R.drawable.iz_station_off );
       mBMclose      = MyButton.getButtonBackground( this, size, R.drawable.iz_clear_green );
+      mBMinfo       = MyButton.getButtonBackground( this, size, R.drawable.iz_info_green );
     }
     return size;
   }
@@ -1108,7 +1130,7 @@ public class TopoGL extends Activity
     //   return true;
     // }
     // if ( v.getId() == R.id.layout_station ) { // 20250113 replaced with "close" button
-    //   closeCurrentStation();
+    //   closeCurrentStation( false );
     //   return true;
     // }
 
@@ -1116,11 +1138,11 @@ public class TopoGL extends Activity
     if ( b == mButton1[ BTN_PROJECT ] ) {
       if ( GlRenderer.projectionMode != GlRenderer.PROJ_PERSPECTIVE ) return false;
       new DialogProjection( this, mRenderer ).show();
-    } else if ( b == mButton1[ BTN_STATION ] ) {
-      mSelectStation = ! mSelectStation;
-      // TDLog.v("TopoGL on long click " + mSelectStation );
-      setButtonStation();
-      closeCurrentStation();
+    // } else if ( b == mButton1[ BTN_STATION ] ) { // STATION_TRUE
+    //   mSelectStation = ! mSelectStation;
+    //   // TDLog.v("TopoGL on long click " + mSelectStation );
+    //   setButtonStation();
+    //   closeCurrentStation( false );
     } else if ( b == mButton1[ BTN_SPLAYS ] ) {
       // if ( BLUETOOTH && mWithBluetooth ) {
       //   new DialogManualLeg( this, this ).show();
@@ -1161,26 +1183,26 @@ public class TopoGL extends Activity
    */
   private void setButtonStation()
   {
-    TDLog.v("GL set button station - select " + mSelectStation + " station " + GlNames.getStationMode() );
-    if ( mSelectStation ) {
-      switch ( GlNames.getStationMode() ) {
-        case GlNames.STATION_NONE:
-          mButton1[ BTN_STATION ].setBackgroundDrawable( mBMstationNoDot );
-          break;
-        case GlNames.STATION_POINT:
-          mButton1[ BTN_STATION ].setBackgroundDrawable( mBMstationPointDot );
-          break;
-        case GlNames.STATION_NAME:
-          mButton1[ BTN_STATION ].setBackgroundDrawable( mBMstationNameDot );
-          break;
-        case GlNames.STATION_LEG:
-          mButton1[ BTN_STATION ].setBackgroundDrawable( mBMstationLegDot );
-          break;
-        // case GlNames.STATION_ALL:
-        //   mButton1[ BTN_STATION ].setBackgroundDrawable( mBMstationDot );
-        //   break;
-      }
-    } else {
+    // TDLog.v("GL set button station - select " + mSelectStation + " station " + GlNames.getStationMode() );
+    // if ( mSelectStation ) { // STATION_TRUE
+    //   switch ( GlNames.getStationMode() ) {
+    //     case GlNames.STATION_NONE:
+    //       mButton1[ BTN_STATION ].setBackgroundDrawable( mBMstationNoDot );
+    //       break;
+    //     case GlNames.STATION_POINT:
+    //       mButton1[ BTN_STATION ].setBackgroundDrawable( mBMstationPointDot );
+    //       break;
+    //     case GlNames.STATION_NAME:
+    //       mButton1[ BTN_STATION ].setBackgroundDrawable( mBMstationNameDot );
+    //       break;
+    //     case GlNames.STATION_LEG:
+    //       mButton1[ BTN_STATION ].setBackgroundDrawable( mBMstationLegDot );
+    //       break;
+    //     // case GlNames.STATION_ALL:
+    //     //   mButton1[ BTN_STATION ].setBackgroundDrawable( mBMstationDot );
+    //     //   break;
+    //   }
+    // } else {
       switch ( GlNames.getStationMode() ) {
         case GlNames.STATION_NONE:
           mButton1[ BTN_STATION ].setBackgroundDrawable( mBMstationNo );
@@ -1198,7 +1220,7 @@ public class TopoGL extends Activity
         //   mButton1[ BTN_STATION ].setBackgroundDrawable( mBMstation );
         //   break;
       }
-    }
+    // }
   }
 
   /** set the FRAME button, according to the frame-mode
@@ -1315,17 +1337,37 @@ public class TopoGL extends Activity
     mMeasureStation.setBackground( mBMmeasureOff );
     mFixStation.setBackground( mBMfixOff );
     mCloseStation.setBackground( mBMclose );
+    mInfoStation.setBackground( mBMinfo );
+  }
+
+  /** start the station dialog from the station bar
+   * @param fullname  station fullname
+   * @note called only from station-bar button (i)
+   */
+  private void startStationDialog( )
+  {
+    String fullname = MeasureComputer.getStationFullname();
+    if ( fullname != null ) {
+      // mLayoutStation.setVisibility( View.GONE );
+      // isMeasuring = false;
+      // isFixed = false;
+      // if ( mParser   != null ) mParser.clearStartStation();
+      openDialogStation( mParser, fullname, mRenderer.getDEM(), true );
+    }
   }
  
   /** hide the selected station
+   * @param caller_is_bar whether the call comes from the station-dialog on behalf of the station-bar
    */
-  void closeCurrentStation()
+  void closeCurrentStation( boolean caller_is_bar )
   {
-    mLayoutStation.setVisibility( View.GONE );
     isMeasuring = false;
     isFixed = false;
-    if ( mRenderer != null ) mRenderer.clearStationHighlight();
-    if ( mParser   != null ) mParser.clearStartStation();
+    if ( ! caller_is_bar ) {
+      mLayoutStation.setVisibility( View.GONE );
+      if ( mRenderer != null ) mRenderer.clearStationHighlight();
+      if ( mParser   != null ) mParser.clearStartStation();
+    }
     GlNames.setHLcolorG( 0.0f );
   }
 
@@ -1366,7 +1408,7 @@ public class TopoGL extends Activity
       return;
     } 
     // if ( id == R.id.current_station ) {
-    //   closeCurrentStation();
+    //   closeCurrentStation( false );
     //   return;
     // }
 
@@ -1408,7 +1450,7 @@ public class TopoGL extends Activity
     //   // TDLog.v("TopoGL BT button click ");
     //   if ( hasBluetoothName() ) doBluetoothClick();
 
-    } else if ( b0 == mMeasureStation ) {
+    } else if ( b0 == mMeasureStation ) { // STATION MEASURE
       if ( isMeasuring ) {
         mMeasureStation.setBackground( mBMmeasureOff );
         isMeasuring = false;
@@ -1416,7 +1458,7 @@ public class TopoGL extends Activity
         mMeasureStation.setBackground( mBMmeasureOn );
         isMeasuring = true;
       }
-    } else if ( b0 == mFixStation ) {
+    } else if ( b0 == mFixStation ) { // STATION FIX
       if ( centerAtCurrentStation() ) {
         mFixStation.setBackground( mBMfixOn );
         isFixed = true;
@@ -1424,8 +1466,10 @@ public class TopoGL extends Activity
         mFixStation.setBackground( mBMfixOff );
         isFixed = false;
       }
-    } else if ( b0 == mCloseStation ) {
-      closeCurrentStation();
+    } else if ( b0 == mCloseStation ) { // STATION CLOSE
+      closeCurrentStation( false );
+    } else if ( b0 == mInfoStation ) { // STATION INFO
+      startStationDialog();
     }
   }
 
@@ -1460,6 +1504,7 @@ public class TopoGL extends Activity
     } else {
       setTitle( "C A V E _ 3 D ");
     }
+    // setTitleColor( TDColor.TITLE_NORMAL );
   }
 
   /** open a TopoDroid survey
@@ -1500,11 +1545,11 @@ public class TopoGL extends Activity
     if ( uri == null ) {
       // String path = Cave3DFile.THCONFIG_PATH + "/" + pathname + ".tdconfig";
       String path = TDPath.getTdconfigDir() + "/" + pathname + ".tdconfig";
-      TDLog.v("TopoGL input stream from tdconfig " + pathname + " path " + path );
+      // TDLog.v("TopoGL input stream from tdconfig " + pathname + " path " + path );
       // synchronized( TDPath.mTdrLock ) // FIXME-THREAD_SAFE ?
       try {
         // final InputStream is = new FileInputStream( path );
-        TDLog.v("GL get input stream of path " + path );
+        // TDLog.v("GL get input stream of path " + path );
         InputStream is = TDFile.getTopoDroidFileInputStream( path );
         if ( is == null ) {
           TDToast.makeBad( R.string.no_file );
@@ -1521,7 +1566,7 @@ public class TopoGL extends Activity
           //     {
           //       if ( b ) {
           //         mFilename = path;
-          //         CWConvexHull.resetCounters();
+          //         com.topodroid.algo.cw.CWConvexHull.resetCounters();
           //         if ( mRenderer != null ) mRenderer.setParser( mParser, true );
           //       }
           //     }
@@ -1530,7 +1575,7 @@ public class TopoGL extends Activity
           // } else { // synchronous
           if ( initRendering2( is, path, mSurveyName ) ) {
             mFilename = path;
-            CWConvexHull.resetCounters();
+            com.topodroid.algo.cw.CWConvexHull.resetCounters();
             if ( mRenderer != null ) mRenderer.setParser( mParser, true );
           }
           // }
@@ -1542,17 +1587,28 @@ public class TopoGL extends Activity
         TDLog.e("io error: " + e.getMessage() );
       }
     } else {
+      String pathname_lc = pathname.toLowerCase( Locale.getDefault() );
+      if ( pathname_lc.endsWith( ".th" ) ) { TopoDroidApp.updateAnalytic( TDAnalytics.IMPORT_3D_TH ); }
+      else if ( pathname_lc.endsWith( "thconfig" ) ) { TopoDroidApp.updateAnalytic( TDAnalytics.IMPORT_3D_THCONFIG ); }
+      else if ( pathname_lc.endsWith( "tdconfig" ) ) { TopoDroidApp.updateAnalytic( TDAnalytics.IMPORT_3D_TDCONFIG ); }
+      else if ( pathname_lc.endsWith( ".lox" ) ) { TopoDroidApp.updateAnalytic( TDAnalytics.IMPORT_3D_LOX ); }
+      else if ( pathname_lc.endsWith( ".mak" ) ) { TopoDroidApp.updateAnalytic( TDAnalytics.IMPORT_3D_MAK ); }
+      else if ( pathname_lc.endsWith( ".dat" ) ) { TopoDroidApp.updateAnalytic( TDAnalytics.IMPORT_3D_DAT ); }
+      else if ( pathname_lc.endsWith( ".tro" ) ) { TopoDroidApp.updateAnalytic( TDAnalytics.IMPORT_3D_TRO ); }
+      else if ( pathname_lc.endsWith( ".trox" ) ) { TopoDroidApp.updateAnalytic( TDAnalytics.IMPORT_3D_TROX ); }
+      else if ( pathname_lc.endsWith( ".3d" ) ) { TopoDroidApp.updateAnalytic( TDAnalytics.IMPORT_3D_3D ); }
+      else { TopoDroidApp.updateAnalytic( TDAnalytics.IMPORT_3D ); }
       String path = pathname; // uri.getPath();
-      TDLog.v("TopoGL input stream from uri " + path );
+      // TDLog.v("TopoGL input stream from uri " + path );
       try { 
         final InputStream is = this.getContentResolver().openInputStream( uri );
         if ( initRendering2( is, path, mSurveyName ) ) {
           mFilename = path;
-          CWConvexHull.resetCounters();
+          com.topodroid.algo.cw.CWConvexHull.resetCounters();
           if ( mRenderer != null ) mRenderer.setParser( mParser, true );
         }
       } catch ( FileNotFoundException e ) {
-        TDLog.e( e.getMessage() );
+        TDLog.e( "TopoGL open file " + e.getMessage() );
       }
       return ( mFilename != null );
     }
@@ -1639,39 +1695,41 @@ public class TopoGL extends Activity
   /** open a DEM file
    * @param uri   file URI
    */
-  void openDEM( Uri uri )
+  private void openDEM( /* final Activity activity, */ Uri uri )
   {
+    TopoDroidApp.updateAnalytic( TDAnalytics.DEM );
     // InputStreamReader isr = null;
     // ParcelFileDescriptor pfd = TDsafUri.docReadFileDescriptor( uri );
     String pathname = uri.getPath();
-    String filename = uri.getLastPathSegment();
-    // TDLog.v("DEM Path " + pathname + " file " + filename );
+    String filename = TDsafUri.getDocumentName( uri ); // uri.getLastPathSegment();
+    TDLog.v("DEM Path " + pathname + " file " + filename );
     mDEMname = filename;
     (new AsyncTask< Uri, Void, Boolean>() {
       ParserDEM dem = null;
       public Boolean doInBackground( Uri ... uri ) 
       {
         ParcelFileDescriptor pfd = TDsafUri.docReadFileDescriptor( uri[0] );
+        if ( pfd == null ) return false;
         InputStreamReader isr = new InputStreamReader( TDsafUri.docFileInputStream( pfd ) );
         String pathname = uri[0].getPath();
         if ( pathname.toLowerCase( Locale.getDefault() ).endsWith( ".grid" ) ) {
-          dem = new DEMgridParser( isr, pathname, mDEMmaxsize );
+          dem = new DEMgridParser( isr, pathname /* , mDEMmaxsize */ );
         } else if ( pathname.toLowerCase( Locale.getDefault() ).endsWith( ".asc" ) || pathname.toLowerCase( Locale.getDefault() ).endsWith(".ascii") ) {
           Cave3DFix origin = mParser.getOrigin();
           // origin.log();
           double xunit = mParser.getWEradius(); // radius * PI/180
           double yunit = mParser.getSNradius(); // radius * PI/180
-          // TDLog.v("xunit " + xunit + " yunit " + yunit );
+          // TDLog.v("xunit " + xunit + " yunit " + yunit /* + " max size " + mDEMmaxsize */ );
           isr = new InputStreamReader( TDsafUri.docFileInputStream( pfd ) );
-          dem = new DEMasciiParser( isr, pathname, mDEMmaxsize, false, xunit, yunit ); // false: flip horz
+          dem = new DEMasciiParser( /* activity, */ isr, pathname, /* mDEMmaxsize, */ false, xunit, yunit ); // false: flip horz
         } else if ( pathname.toLowerCase( Locale.getDefault() ).endsWith( ".hgt" ) ) {
           // TODO support of HGT DEM file has not been debugged
-          // dem = new DEMhgtParser( null, pathname, mDEMmaxsize, mParser.getOrigin() );
+          // dem = new DEMhgtParser( null, pathname, /* mDEMmaxsize, */ mParser.getOrigin() );
         }
         if ( dem == null || ! dem.valid() ) return false;
         final double dd = mDEMbuffer;
         // mParser = survey data parser
-        // TDLog.v("BBox X " + mParser.emin + " " + mParser.emax + " Y " + mParser.nmin + " " + mParser.nmax + " Z " + mParser.zmin + " " + mParser.zmax );
+        // TDLog.v("BBox X " + mParser.emin + " " + mParser.emax + " Y " + mParser.nmin + " " + mParser.nmax + " Z " + mParser.zmin + " " + mParser.zmax + " DEM buffer " + dd );
         dem.readData( mParser.emin - dd, mParser.emax + dd, mParser.nmin - dd, mParser.nmax + dd );
         return dem.valid();
       }
@@ -1693,6 +1751,7 @@ public class TopoGL extends Activity
   // TEMPERATURE
   // void openTemperature( Uri uri )
   // {
+  //   TopoDroidApp.updateAnalytic( TDAnalytics.TEMP );
   //   if ( mRenderer == null ) return;
   //   String pathname = uri.getPath();
   //   try {
@@ -1730,24 +1789,29 @@ public class TopoGL extends Activity
    */
   void openTexture( Uri uri )
   {
+    TopoDroidApp.updateAnalytic( TDAnalytics.TEXTURE );
     if ( mRenderer == null ) return;
     final RectF  bounds = mRenderer.getSurfaceBounds();
     if ( bounds == null ) return;
 
     String pathname = uri.getPath();
-    String filename = uri.getLastPathSegment();
+    String filename = TDsafUri.getDocumentName( uri ); // uri.getLastPathSegment();
     // TDLog.v("Texture Path " + pathname + " file " + filename );
     // get the model tie-point (upper left corner), the width-height, and the pixel scale
     
-    TDLog.v("texture " + pathname + " bbox " + bounds.left + " " + bounds.bottom + "  " + bounds.right + " " + bounds.top );
+    // TDLog.v("texture " + pathname + " bbox " + bounds.left + " " + bounds.bottom + "  " + bounds.right + " " + bounds.top );
     ParcelFileDescriptor pfd = TDsafUri.docReadFileDescriptor( uri );
-    InputStreamReader isr = new InputStreamReader( TDsafUri.docFileInputStream( pfd ) );
-
-    mTextureName = filename;
-    if ( filename.toLowerCase( Locale.getDefault() ).endsWith( ".osm" ) ) {
-      loadTextureOSM( isr, pathname, bounds );
-    } else if ( filename.toLowerCase( Locale.getDefault() ).endsWith( ".tif" ) || filename.toLowerCase( Locale.getDefault() ).endsWith( ".tiff" )) {
-      loadTextureGeotiff( isr, pathname, bounds );
+    if ( pfd != null ) {
+      InputStreamReader isr = new InputStreamReader( TDsafUri.docFileInputStream( pfd ) );
+      mTextureName = filename;
+      if ( filename.toLowerCase( Locale.getDefault() ).endsWith( ".osm" ) ) {
+        loadTextureOSM( isr, pathname, bounds );
+      } else if ( filename.toLowerCase( Locale.getDefault() ).endsWith( ".tif" ) || filename.toLowerCase( Locale.getDefault() ).endsWith( ".tiff" )) {
+        loadTextureGeotiff( isr, pathname, bounds );
+      }
+    } else {
+      // TODO 
+      TDToast.makeBad( "failed I/O" );
     }
   }
 
@@ -1758,6 +1822,10 @@ public class TopoGL extends Activity
    */
   private void loadTextureGeotiff( final InputStreamReader isr, final String pathname, final RectF bounds )
   {
+    if ( ! TiffFactory.hasLib ) {
+      TDToast.make( R.string.no_native_lib );
+      return;
+    }
     TDToast.makeLong("TIFF " + pathname );
     String filepath = pathname.replaceFirst(".*:", mTextureRoot ); // new File( file ).getAbsolutePath();
     (new AsyncTask<String, Void, Integer>() {
@@ -1771,14 +1839,14 @@ public class TopoGL extends Activity
         try { 
           bitmap = (Bitmap)( TiffFactory.getBitmap( filepath, bounds.left, bounds.bottom, bounds.right, bounds.top ) );
         } catch ( java.lang.UnsatisfiedLinkError e ) {
-          TDLog.e( e.getMessage() );
+          TDLog.e( "TopoGL geotif " + e.getMessage() );
           return 1; 
         }
-        if ( bitmap != null ) {
-          TDLog.v("texture [2] " + filepath + " size " + bitmap.getWidth() + " " + bitmap.getHeight() );
-        } else {
-          TDLog.v("texture [3] " + filepath + " null bitmap ");
-        }
+        // if ( bitmap != null ) {
+        //   TDLog.v("texture [2] " + filepath + " size " + bitmap.getWidth() + " " + bitmap.getHeight() );
+        // } else {
+        //   TDLog.v("texture [3] " + filepath + " null bitmap ");
+        // }
 
         return (bitmap != null)? 0 : 2;
       }
@@ -1836,7 +1904,7 @@ public class TopoGL extends Activity
           try {
             isr.close();
           } catch ( IOException e ) {
-            TDLog.e( e.getMessage() );
+            TDLog.e( "TopoGL OSM " + e.getMessage() );
           }
         }
         if ( b ) {
@@ -1948,12 +2016,13 @@ public class TopoGL extends Activity
   public static float mDEMbuffer  = 200;
   public static int   mDEMmaxsize = 400;
   public static int   mDEMreduce  = DEM_SHRINK;
-  public static String mTextureRoot = "/sdcard/"; // Environment.getExternalStorageDirectory().getPath();
+  // public static String mTextureRoot = "/sdcard/"; 
+  public static String mTextureRoot = Environment.getExternalStorageDirectory().getPath() + "/";
   // static boolean mWallConvexHull = false;
   // static boolean mWallPowercrust = false;
   // static boolean mWallDelaunay   = false;
   // static boolean mWallHull       = false;
-  public static boolean mStationDialog  = false;
+  // public static boolean mStationDialog  = false;
   // static boolean mUseSplayVector = true; // ??? Hull with 3D splays or 2D splay projections
   public static boolean mMeasureToast   = false;
   // static boolean mWithBluetooth  = false; // FIXME BLUETOOTH  SETTING
@@ -2149,7 +2218,7 @@ public class TopoGL extends Activity
     } catch ( NumberFormatException e ) {
       mSelectionRadius = 50;
     }
-    mStationDialog = sp.getBoolean( CAVE3D_STATION_TOAST, false );
+    // mStationDialog = sp.getBoolean( CAVE3D_STATION_TOAST, false );
     GlModel.mStationPoints = sp.getBoolean( CAVE3D_STATION_POINTS, false );
     try {
       GlNames.setPointSize( Integer.parseInt( sp.getString( CAVE3D_STATION_POINT_SIZE, "8" ) ) );
@@ -2240,12 +2309,12 @@ public class TopoGL extends Activity
    */
   private boolean initRendering1( String survey, String base ) 
   {
-    TDLog.v("TopoGL init rendering " + survey + " base " + base );
+    // TDLog.v("TopoGL init rendering " + survey + " base " + base );
     doSketches = false;
     try {
       // FIXME null InputStream
       mParser = new ParserTh( this, null, survey, base ); // survey data directly from TopoDroid database
-      CWConvexHull.resetCounters();
+      com.topodroid.algo.cw.CWConvexHull.resetCounters();
       if ( mRenderer != null ) {
         mRenderer.clearModel();
         mRenderer.setParser( mParser, true );
@@ -2272,18 +2341,18 @@ public class TopoGL extends Activity
     doSketches = false;
     String ext  = TDPath.getExtension( filepath );
     String name = TDPath.getMainname( filepath );
-    TDLog.v("init rendering (2) file " + filepath + " survey " + surveyname + " name " + name + " ext " + ext );
+    // TDLog.v("init rendering (2) file " + filepath + " survey " + surveyname + " name " + name + " ext " + ext );
     try {
       mParser = null;
       if ( mRenderer != null ) mRenderer.clearModel();
       // resetAllPaths();
       if ( ext.equals( "tdconfig" ) ) { // isr not used  // FIXME may null pointer
-        TDLog.v("init rendering (2) TDCONGIF"); // TopoDroid TDM projects
+        // TDLog.v("init rendering (2) TDCONGIF"); // TopoDroid TDM projects
         InputStreamReader isr = ( is == null )? null : new InputStreamReader( is );
         mParser = new ParserTh( this, isr, filepath, ParserTh.TDCONFIG ); // tdconfig files are saved with therion syntax
         doSketches = true;
       } else if ( ext.equals( "thconfig" ) ) { // isr not used
-        TDLog.v("init rendering (2) THCONGIF");
+        // TDLog.v("init rendering (2) THCONGIF");
         InputStreamReader isr = ( is == null )? null : new InputStreamReader( is );
         mParser = new ParserTh( this, isr, filepath, ParserTh.THCONFIG ); 
       } else if ( ext.equals( "th" ) ) { // isr not used
@@ -2312,7 +2381,7 @@ public class TopoGL extends Activity
       } else {
         return false;
       }
-      // CWConvexHull.resetCounters();
+      // com.topodroid.algo.cw.CWConvexHull.resetCounters();
       // if ( mRenderer != null ) mRenderer.setParser( mParser, true );
       // TDLog.v("Station " + mParser.getStationNumber() + " shot " + mParser.getShotNumber() + " splay " + mParser.getSplayNumber() + " surveys " + mParser.getSurveyNumber() );
     } catch ( ParserException e ) {
@@ -2466,8 +2535,12 @@ public class TopoGL extends Activity
    */
   void setGPSstatus( boolean status )
   {
+    if ( mGPS == null ) {
+      TDLog.v("TopoGL GPS set status " + status + " GPS null" );
+      return;
+    }
+
     // TDLog.v("TopoGL GPS set status " + status );
-    if ( mGPS == null ) return;
     if ( status ) {
       mGPS.setGPSon();
       mGPS.setListener( this );
@@ -2481,6 +2554,7 @@ public class TopoGL extends Activity
    */  
   boolean getGPSstatus()
   {
+    // TDLog.v("Topo GL get GPS status: GPS " + ( (mGPS == null)? "null" : "islocating " + mGPS.mIsLocating ) );
     return mGPS != null && mGPS.mIsLocating;
   }
 
@@ -3045,18 +3119,20 @@ public class TopoGL extends Activity
    */
   void selectDEMFile( )
   {
+    // TDLog.v("Topo GL select DEM file");
     onDEMloading = true;
     // selectFile( REQUEST_DEM_FILE, Intent.ACTION_OPEN_DOCUMENT, null, R.string.select_dem_file, null ); 
-    selectFile( REQUEST_DEM_FILE, false, -1, R.string.select_dem_file, null ); 
+    selectFile( REQUEST_DEM_FILE, false, TDConst.NO_TYPE, R.string.select_dem_file, null ); 
   }
 
   /** request selection of a texture file
    */
   void selectTextureFile( )
   {
+    // TDLog.v("Topo GL select Texture file");
     onDEMloading = true;
     // selectFile( REQUEST_TEXTURE_FILE, Intent.ACTION_OPEN_DOCUMENT, null, R.string.select_texture_file, null ); 
-    selectFile( REQUEST_TEXTURE_FILE, false, -1, R.string.select_texture_file, null ); 
+    selectFile( REQUEST_TEXTURE_FILE, false, TDConst.NO_TYPE, R.string.select_texture_file, null ); 
   }
 
   /** request selection of an import file
@@ -3064,7 +3140,7 @@ public class TopoGL extends Activity
   void selectImportFile( )  
   {
     // selectFile( REQUEST_IMPORT_FILE,  Intent.ACTION_OPEN_DOCUMENT, null, R.string.select_survey_file,  null );
-    selectFile( REQUEST_IMPORT_FILE,  false, -1, R.string.select_survey_file,  null );
+    selectFile( REQUEST_IMPORT_FILE,  false, TDConst.NO_TYPE, R.string.select_survey_file,  null );
   }
 
   // /** request selection of an attribute (temperature) file
@@ -3098,14 +3174,14 @@ public class TopoGL extends Activity
   /** file selection
    * @param request   selection request type (code)
    * @param create    whether to create (or open) a file
-   * @param mime      index of file mime type 
+   * @param mime      index of file mime type (0: octet-stream)
    * @param res       dialog title resource
    * @param filename  suggested filename (optional)
    */
   // void selectFile( int request, String action, String mime, int res, String filename )
   void selectFile( int request, boolean create, int mime, int res, String filename )
   {
-    // TDLog.v("TopoGL select file");
+    // TDLog.v("TopoGL select file: create " + create + " name " + filename + " mime " + mime );
     // Intent intent = new Intent( action );
     // intent.setType( (mime == null)? "*/*" : mime );
     // intent.addCategory( Intent.CATEGORY_OPENABLE );
@@ -3124,12 +3200,16 @@ public class TopoGL extends Activity
    */
   public void onActivityResult( int request, int result, Intent intent ) 
   {
-    if ( result != Activity.RESULT_OK ) return;
+    if ( result != Activity.RESULT_OK ) {
+      if ( request == REQUEST_DEM_FILE || request == REQUEST_TEXTURE_FILE ) onDEMloading = false;
+      return;
+    }
     Uri uri = intent.getData();
     switch ( request ) {
       case REQUEST_DEM_FILE:
+        TDLog.v("requested DEM file");
         if ( uri != null ) {
-          openDEM( uri );
+          openDEM( /* this, */ uri );
         } else {
           onDEMloading = false;
         }
@@ -3201,7 +3281,7 @@ public class TopoGL extends Activity
         || pathname_lc.endsWith( ".tro" )
         || pathname_lc.endsWith( ".trox" )
         || pathname_lc.endsWith( ".3d" ) ) {
-        doOpenFile( uri, pathname, true );
+        if ( doOpenFile( uri, pathname, true ) ) break;
       } else {
         pathname = ( trial == 0 )? getPathFromUri( this, uri ) : null;
         if ( pathname == null ) {
@@ -3214,11 +3294,53 @@ public class TopoGL extends Activity
   void sketchLeg( Cave3DShot leg ) 
   {
     if ( leg == null ) return; // safety check
-    TDLog.v("TopoGL - sketch leg: " + leg.from + " " + leg.to );
+    // TDLog.v("TopoGL - sketch leg: " + leg.from + " " + leg.to );
     setSketchLeg( leg );
     Intent intent = new Intent( this, com.topodroid.TDX.SketchWindow.class );
     intent.putExtra( "TOPOGL_SKETCH_VERTICAL", true );
     startActivity( intent );
   }
 
+
+  // ----------------------------------------------------------------
+  // TITLE BAR
+
+  @Override
+  public void setTitle( CharSequence t )
+  {
+    ((TextView)findViewById( R.id.title )).setText( t );
+  }
+
+  // @Override
+  // public void setTitleColor( int color )
+  // {
+  //   ((TextView)findViewById( R.id.title )).setTextColor( color );
+  // }
+
+  // ------------------------------------------------------------------------
+  // STATION DIALOG
+
+  private static DialogStation mDialogStation = null;
+
+  /** open the station dialog
+   * @param parser    data parser
+   * @param fullname  station fullname
+   * @param dem       DEM
+   * @param caller_is_bar whether caller is station-bar
+   */
+  void openDialogStation( TglParser parser, String fullname, ParserDEM dem, boolean caller_is_bar )
+  {
+    if ( mDialogStation != null ) return;
+    mDialogStation = new DialogStation( this, this, parser, fullname, dem, caller_is_bar );
+    mDialogStation.show();
+  }
+
+  boolean closeDialogStation()
+  {
+    if ( mDialogStation == null ) return false;
+    // mDialogStation.onClick( null );
+    mDialogStation.onBackPressed();
+    mDialogStation = null;
+    return true;
+  }
 }

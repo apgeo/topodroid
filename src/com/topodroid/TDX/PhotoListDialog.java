@@ -13,8 +13,8 @@ package com.topodroid.TDX;
 
 // import com.topodroid.util.TDLog;
 import com.topodroid.util.TDFile;
-import com.topodroid.util.TDStatus;
 import com.topodroid.util.TDUtil;
+import com.topodroid.types.TDStatus;
 import com.topodroid.ui.MyDialog;
 // import com.topodroid.prefs.TDSetting;
 
@@ -166,7 +166,7 @@ public class PhotoListDialog extends MyDialog
 
     updateDisplay( );
 
-    ( (Button)findViewById( R.id.button_back )).setOnClickListener( new View.OnClickListener() {
+    ( (Button)findViewById( R.id.button_cancel )).setOnClickListener( new View.OnClickListener() {
       @Override public void onClick( View v ) 
       {
         dismiss();

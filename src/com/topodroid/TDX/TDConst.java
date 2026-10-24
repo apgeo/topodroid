@@ -81,7 +81,7 @@ public class TDConst
     if ( ext.equalsIgnoreCase("csv") ) return SURVEY_FORMAT_CSV;
     if ( ext.equalsIgnoreCase("dxf") ) return SURVEY_FORMAT_DXF;
     if ( ext.equalsIgnoreCase("csx") ) return SURVEY_FORMAT_CSX;
-    // if ( ext.equalsIgnoreCase("top") ) return SURVEY_FORMAT_TOP;
+    if ( ext.equalsIgnoreCase("top") ) return SURVEY_FORMAT_TOP;
     if ( ext.equalsIgnoreCase("srv") ) return SURVEY_FORMAT_SRV;
     if ( ext.equalsIgnoreCase("kml") ) return SURVEY_FORMAT_KML;
     // if ( ext.equalsIgnoreCase("plt") ) return SURVEY_FORMAT_PLT;
@@ -165,6 +165,8 @@ public class TDConst
   };
 
   public final static int TEXT_PLAIN = 38; // text/plain index 
+  public final static int FOLDER     = 0xffffff;
+  public final static int NO_TYPE    = -1;
 
   public static String getMimeFromFilename( String filename ) 
   {
@@ -197,13 +199,13 @@ public class TDConst
   public static final String[] mSurveyImportTypes = { 
     "ZIP", 
     "Compass",
-    "CaveSniper",
+    // "CaveSniper",
     "Survex",
     "Therion",
     "VisualTopo",
     // "VisualTopo-X",
     "Walls",
-    "PocketTopo",
+    // "PocketTopo",
     "TopoRobot",
     "CSV"
   };
@@ -211,13 +213,13 @@ public class TDConst
   private static final int[] mSurveyImportIndex = {
     SURVEY_FORMAT_ZIP,
     SURVEY_FORMAT_DAT,
-    SURVEY_FORMAT_SNP,
+    // SURVEY_FORMAT_SNP,
     SURVEY_FORMAT_SVX,
     SURVEY_FORMAT_TH,
     SURVEY_FORMAT_TRO,
     // SURVEY_FORMAT_TROX,
     SURVEY_FORMAT_SRV,
-    SURVEY_FORMAT_TOP,
+    // SURVEY_FORMAT_TOP,
     SURVEY_FORMAT_TRB,
     SURVEY_FORMAT_CSV
   };
@@ -293,6 +295,7 @@ public class TDConst
 
   // ======= DATA EXPORT  ======
 
+  // index in the array mSurveyExportEnable
   public final static int SURVEY_POS_ZIP       = 0;
   public final static int SURVEY_POS_COMPASS   =  1;
   public final static int SURVEY_POS_CSURVEY   =  2;

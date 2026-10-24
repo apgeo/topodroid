@@ -41,10 +41,21 @@ class MeasureComputer extends AsyncTask< Void, Void, Integer >
   TopoGL    mTopoGL;
   ParserDEM mDEM;
   TglMeasure mMeasure;  // result of the measure
-  String     mFullname; // station name
   Cave3DShot mLeg = null;
+  final boolean mLongPress;
+  static String mFullname = null; // station name
 
-  MeasureComputer( TopoGL topoGL, float x, float y, float[] MVPMatrix, TglParser parser, ParserDEM dem, GlModel model )
+  /** cstr
+   * @param topoGL    parent activity
+   * @param x         X position
+   * @param y         Y position
+   * @param MVPMatrix MVP matrix
+   * @param parser    parser with model data
+   * @param dem       D.E.M.
+   * @param model     3D model
+   * @param long_press whether this class was called after a long-press
+   */
+  MeasureComputer( TopoGL topoGL, float x, float y, float[] MVPMatrix, TglParser parser, ParserDEM dem, GlModel model, boolean long_press )
   {
     mX = x;
     mY = y;
@@ -53,7 +64,10 @@ class MeasureComputer extends AsyncTask< Void, Void, Integer >
     mModel     = model;
     mTopoGL    = topoGL;
     mDEM       = dem;
+    mLongPress = long_press;
   }
+
+  static String getStationFullname() { return mFullname; }
 
   @Override
   protected Integer doInBackground( Void ... v ) 
@@ -116,15 +130,15 @@ class MeasureComputer extends AsyncTask< Void, Void, Integer >
         mTopoGL.refresh();
         break;
       case MEASURE_SAME_STATION:
-        mTopoGL.closeCurrentStation();
+        mTopoGL.closeCurrentStation( false );
         break;
       // case MEASURE_NO_STATION:
       //   TDLog.w("path: null station" );
       //   // mModel.clearPath( );
       //   break;
       case MEASURE_NO_START:
-        if ( TopoGL.mStationDialog ) {
-          (new DialogStation( mTopoGL, mTopoGL, mParser, mFullname, mDEM )).show();
+        if ( mLongPress /* TopoGL.mStationDialog */ ) {
+          mTopoGL.openDialogStation( mParser, mFullname, mDEM, false );
         } else {
           Cave3DStation st = mParser.getStation( mFullname );
           if ( st != null ) {
@@ -134,12 +148,12 @@ class MeasureComputer extends AsyncTask< Void, Void, Integer >
               double zs = surface.computeZ( st.x, st.y );
               if ( zs > -1000 ) {
                 zs -= st.z;
-                mTopoGL.showCurrentStation( st.getShortName() + String.format(Locale.US, " [Depth %.1f]", zs), msg );
+                mTopoGL.showCurrentStation( st.getFullName() + String.format(Locale.US, " [Depth %.1f]", zs), msg );
               } else {
-                mTopoGL.showCurrentStation( st.getShortName(), msg );
+                mTopoGL.showCurrentStation( st.getFullName(), msg );
               }
             } else {
-              mTopoGL.showCurrentStation( st.getShortName(), msg );
+              mTopoGL.showCurrentStation( st.getFullName(), msg );
             }
             // TDToast.make( msg );
           }

@@ -16,14 +16,12 @@ import com.topodroid.util.TDMath;
 import com.topodroid.prefs.TDSetting;
 
 import com.topodroid.math.Point2D;
-import com.topodroid.math.BezierCurve;
-import com.topodroid.math.BezierInterpolator;
 
 import java.util.ArrayList;
 
 class DrawingPointLineFilter
 {
-  private static BezierInterpolator mBezierInterpolator = new BezierInterpolator();
+  private static com.topodroid.algo.bezier.BezierInterpolator mInterpolator = new com.topodroid.algo.bezier.BezierInterpolator();
 
   /** transform a line/area path - the applied transform depends on the line-path style
    * @param first    first line point
@@ -69,6 +67,26 @@ class DrawingPointLineFilter
       path.addPoint( lp.x, lp.y );
     }
     if ( last != null ) path.addPoint( last.x, last.y );
+    return true;
+  }
+
+  /** make a straight segment path // TDSKETCH
+   * @param first    first segment point
+   * @param last     last segment point
+   * @param path     path where the segment is placed
+   * @return true on success
+   */
+  static boolean straight( LinePoint first, LinePoint last, DrawingPointLinePath path )
+  {
+    if ( first == last || first.mNext == null ) return false;
+    if ( last == null ) {
+      last = first.mNext; 
+      while ( last.mNext != null ) last = last.mNext;
+    }
+    if ( first == last ) return false;
+    // if ( Math.abs( first.x - last.x ) < 1.e-5 && Math.abs( first.y - last.y ) < 1.e-5 ) return false;
+    path.addStartPoint( first.x, first.y );
+    path.addPoint( last.x, last.y );
     return true;
   }
 
@@ -123,12 +141,12 @@ class DrawingPointLineFilter
       pts.add( new Point2D( lp.x, lp.y ) );
     }
     if ( last != null ) pts.add( new Point2D( last.x, last.y ) );
-    mBezierInterpolator.fitCurve( pts, pts.size(), TDSetting.mLineAccuracy, TDSetting.mLineCorner );
-    ArrayList< BezierCurve > curves = mBezierInterpolator.getCurves();
+    mInterpolator.fitCurve( pts, pts.size(), TDSetting.mLineAccuracy, TDSetting.mLineCorner );
+    ArrayList< com.topodroid.algo.bezier.BezierCurve > curves = mInterpolator.getCurves();
     int k0 = curves.size();
     // TDLog.v( " Bezier " +  pts.size() + " -> " + k0 );
     if ( k0 < 1 ) return false; // 20240129 with <= short bezier made of just one piece are discarded
-    BezierCurve c = curves.get(0);
+    com.topodroid.algo.bezier.BezierCurve c = curves.get(0);
     Point2D p0 = c.getPoint(0);
     path.addStartPoint( p0.x, p0.y );
     for (int k=0; k<k0; ++k) {

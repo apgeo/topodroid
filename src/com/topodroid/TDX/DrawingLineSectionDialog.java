@@ -19,6 +19,7 @@ import com.topodroid.ui.TDLayout;
 import com.topodroid.ui.TDImage;
 import com.topodroid.prefs.TDSetting;
 import com.topodroid.types.PlotType;
+import com.topodroid.math.Vector3D;
 
 // import java.io.File; // JPEG FILE
 // import java.io.IOException;
@@ -59,6 +60,7 @@ class DrawingLineSectionDialog extends MyDialog
   private MyCheckBox mBtnDraw  = null;
   private MyCheckBox mBtnErase = null;
   private MyCheckBox mBtnSave  = null;
+  private MyCheckBox mBtnXPoint  = null;
 
   private Button   mBtnCancel;
   private EditText mETnick;
@@ -67,6 +69,7 @@ class DrawingLineSectionDialog extends MyDialog
   private boolean mExists;
   private boolean canTakePhoto; // whether the xsection can have a photo
   private float mTT;            // intersection abscissa - or 2 for multileg xsections
+  private String mSectionName;
 
   private TDImage mTdImage = null;
 
@@ -88,7 +91,7 @@ class DrawingLineSectionDialog extends MyDialog
                             DrawingWindow parent, // TopoDroidApp app, 
                             boolean h_section, boolean exists, String id,
                             DrawingLinePath line, String from, String to, float azimuth, float clino, float tt0,
-                            Vector3D center )
+                            Vector3D center, String section_name )
   {
     super( context, null, R.string.DrawingLineSectionDialog ); // null app
     mParent = parent;
@@ -103,6 +106,7 @@ class DrawingLineSectionDialog extends MyDialog
     mClino   = clino;
     mTT      = tt0; // if center is null mTT is retrieved from the database
     mCenter  = center;
+    mSectionName = section_name;
 
     // read section id from the line options
     mId = mLine.getOption( "-id" );
@@ -138,14 +142,11 @@ class DrawingLineSectionDialog extends MyDialog
     super.onCreate(savedInstanceState);
     // cannot use initLayout
     if ( mFrom != null && mTo != null ) {
-      initLayout( R.layout.drawing_line_section_dialog,
-        String.format( resString( R.string.title_draw_line ), mLine.getThName( ) ) + " " + mFrom + " " + mTo );
+      initLayout( R.layout.drawing_line_section_dialog, String.format( resString( R.string.title_draw_line ), mLine.getThName( ) ) + " " + mFrom + " " + mTo );
     } else if ( mFrom != null ) {
-      initLayout( R.layout.drawing_line_section_dialog, 
-        String.format( resString( R.string.title_draw_line ), mLine.getThName( ) ) + " " + mFrom );
+      initLayout( R.layout.drawing_line_section_dialog, String.format( resString( R.string.title_draw_line ), mLine.getThName( ) ) + " " + mFrom );
     } else {
-      initLayout( R.layout.drawing_line_section_dialog, 
-        String.format( resString( R.string.title_draw_line_no_stations ), mLine.getThName( ) ) );
+      initLayout( R.layout.drawing_line_section_dialog, String.format( resString( R.string.title_draw_line_no_stations ), mLine.getThName( ) ) );
     }
 
     mTVoptions = (TextView) findViewById( R.id.line_options );
@@ -220,6 +221,14 @@ class DrawingLineSectionDialog extends MyDialog
       TDLayout.setMargins( mBtnSave, 0, -10, 40, 10 );
       mBtnSave.setOnClickListener( this );
     }
+
+    if ( mSectionName != null ) {
+      mBtnXPoint = new MyCheckBox( mContext, size, R.drawable.iz_xpoint, R.drawable.iz_xpoint );
+      button_list.addView( mBtnXPoint );
+      TDLayout.setMargins( mBtnXPoint, 0, -10, 40, 10 );
+      mBtnXPoint.setOnClickListener( this );
+    }
+
     mBtnCancel = (Button) findViewById( R.id.button_cancel );
     mBtnCancel.setOnClickListener( this );
 
@@ -252,6 +261,8 @@ class DrawingLineSectionDialog extends MyDialog
       } else if ( cb == mBtnSave ) {
 	if ( mPlotInfo == null ) return;
         mParent.updatePlotNick( mPlotInfo, mNick );
+      } else if ( cb == mBtnXPoint ) {
+	    mParent.addLegSectionPoint( mLine, mSectionName );
       }
     }
     recycleImage();
@@ -266,6 +277,7 @@ class DrawingLineSectionDialog extends MyDialog
     mTdImage = null;
   }
 
+  @SuppressWarnings("deprecated")
   @Override
   public void onBackPressed()
   {    

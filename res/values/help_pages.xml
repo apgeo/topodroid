@@ -25,7 +25,7 @@
   <string name="CWDActivity" translatable="false">page_cwd.htm</string>
   <!-- string name="CBDdialog" translatable="false">page_cwd.htm</string -->
 
-  <string name="AIdialog" translatable="false">page_ai_dialog.htm</string>
+  <!-- string name="AIdialog" translatable="false">page_ai_dialog.htm</string -->
 
   <string name="AzimuthDialog" translatable="false">page_azimuth.htm</string>
   <string name="AudioDialog" translatable="false">page_audio.htm</string>
@@ -67,10 +67,10 @@
   <string name="DrawingPhotoDialog" translatable="false">page_photo_dialog.htm</string>
   <string name="DrawingPhotoEditDialog" translatable="false">page_photo_edit_dialog.htm</string>
   <string name="DrawingLineDialog" translatable="false">page_line_dialog.htm</string>
-  <string name="DrawingLineSectionDialog" translatable="false">manual11.htm</string>
+  <string name="DrawingLineSectionDialog" translatable="false">page_line_section_dialog.htm</string>
   <string name="DrawingModeDialog" translatable="false">page_drawing_refs.htm</string>
   <string name="DrawingPointDialog" translatable="false">page_drawing_point.htm</string>
-  <string name="DrawingPointSectionDialog" translatable="false">page_section_point.htm</string>
+  <!-- string name="DrawingPointSectionDialog" translatable="false">page_section_point.htm</string -->
   <string name="DrawingProfileFlipDialog" translatable="false">page_shift.htm</string>
   <string name="DrawingShotDialog" translatable="false">page_drawing_shot.htm</string>
   <string name="DrawingStationDialog" translatable="false">page_sketch_station.htm</string>
@@ -125,11 +125,13 @@
   <string name="SurveyRenameDialog" translatable="false">page_survey_rename.htm</string>
   <string name="SurveySplitOrMoveDialog" translatable="false">page_survey_split_move.htm</string>
   <string name="SurveyStatDialog" translatable="false">page_stat1.htm</string>
+  <string name="SurveysDialog" translatable="false">page_surveys.htm</string>
   <string name="SymbolEnableDialog" translatable="false">page_tools.htm</string>
-  <string name="SymbolReload" translatable="false">page_symbol_reload.htm</string>
+  <string name="SymbolReloadDialog" translatable="false">page_symbol_reload.htm</string>
   <!-- string name="TopoDroidAlertDialog"></string -->
   <string name="TopoDroidPerms" translatable="false">page_perms.htm</string>
   <string name="UndeleteDialog" translatable="false">page_undelete.htm</string>
+  <string name="ShotPasteDialog" translatable="false">page_shot_paste.htm</string>
   <string name="TDPrefSearchDialog" translatable="false">page_pref_search.htm</string>
 
   <string name="SetupTextSizeDialog" translatable="false">page_setup.htm</string>
@@ -145,6 +147,7 @@
   <string name="TdmEquatesDialog" translatable="false">page_tdm_equates.htm</string>
   <string name="TdmSourcesDialog" translatable="false">page_tdm_sources.htm</string>
   <string name="TdmInfoDialog" translatable="false">page_tdm_info.htm</string>
+  <string name="TdmSurveysDialog" translatable="false">page_tdm_surveys.htm</string>
   <!-- string name="TdmViewEquatesDialog" translatable="false">page_view_equates.htm</string -->
   <string name="ExportDialogTdm" translatable="false">page_tdm_export.htm</string>
 

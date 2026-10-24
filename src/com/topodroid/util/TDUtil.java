@@ -218,6 +218,14 @@ public class TDUtil
     return sdf.format( new Date() );
   }
 
+  /** @return the current date-time - path format "yyyy-mm-dd_hh-mm"
+   */
+  public static String currentDateTimePath()
+  {
+    SimpleDateFormat sdf = new SimpleDateFormat( "yyyy-MM-dd_HH-mm-ss", Locale.US );
+    return sdf.format( new Date() );
+  }
+
   /** @return the current date-time - Bric4 format "yyyy mm dd hh mm ss"
    */
   public static String currentDateTimeBric()
@@ -250,6 +258,54 @@ public class TDUtil
     SimpleDateFormat sdf = new SimpleDateFormat( format, Locale.US );
     return sdf.format( new Date() );
   }
+
+  // /** @return the difference in days between two dates
+  //  * @param from start date (yyyy.mm.dd)
+  //  * @param to   end date
+  //  */
+  // public static int dayDifference( String from, String to )
+  // {
+  //   int yt = Integer.parseInt( to.substring(0,4) );
+  //   int mt = Integer.parseInt( to.substring(5,7) );
+  //   int dt = Integer.parseInt( to.substring(8,10) );
+  //   int yf = Integer.parseInt( from.substring(0,4) );
+  //   int mf = Integer.parseInt( from.substring(5,7) );
+  //   int df = Integer.parseInt( from.substring(8,10) );
+  //   int ret = 365 * ( yt - yf );
+  //   ret += dt;
+  //   switch ( mt ) {
+  //     case 12: ret += 30;
+  //     case 11: ret += 31;
+  //     case 10: ret += 30;
+  //     case  9: ret += 31;
+  //     case  8: ret += 31;
+  //     case  7: ret += 30;
+  //     case  6: ret += 31;
+  //     case  5: ret += 30;
+  //     case  4: ret += 31;
+  //     case  3: ret += ( (yt%4) == 0 )? 29 : 28;
+  //     case  2: ret += 31;
+  //     default: break;
+  //   }
+  //   ret += df;
+  //   switch ( mf ) {
+  //     case  1: ret -= 31;
+  //     case  2: ret -= ( (yf%4) == 0 )? 29 : 28;
+  //     case  3: ret -= 31;
+  //     case  4: ret -= 30;
+  //     case  5: ret -= 31;
+  //     case  6: ret -= 30;
+  //     case  7: ret -= 31;
+  //     case  8: ret -= 31;
+  //     case  9: ret -= 30;
+  //     case 10: ret -= 31;
+  //     case 11: ret -= 30;
+  //     case 12: ret -= 31;
+  //     default: break;
+  //   }
+  //   return ret;
+  // }
+  
 
   /** parse a day 2-char string
    * @param str    day string
@@ -335,10 +391,10 @@ public class TDUtil
     return 1970;
   }
 
-  /** @return the month from a topodroid date string
+  /** @return the 1-based month from a topodroid date string
    * @param date   topodroid date string (yyyy.mm.dd)
    */
-  public static int dateParseMonth( String date )
+  public static int dateParseMonth1( String date )
   {
     int ret = 0;
     if ( date != null && date.length() >= 7 ) {
@@ -346,6 +402,16 @@ public class TDUtil
       char ch = date.charAt(6);
       if ( ch >= '0' && ch <= '9' ) ret += (ch - '0');
     }
+    return ret;
+  }
+
+  /** @return the 0-based month from a topodroid date string
+   * @param date   topodroid date string (yyyy.mm.dd)
+   * @note used only in calls to DatePickerDialog
+   */
+  public static int dateParseMonth( String date )
+  {  
+    int ret = dateParseMonth1( date );
     return (ret > 0)? ret-1 : 0;
   }
 
@@ -363,6 +429,40 @@ public class TDUtil
     }
     return Math.max(ret, 0);
   }
+
+  // /** @return the value of the decimal year
+  //  * @param date  string presentation YYYY.MM.DD of the date
+  //  */
+  // public static double toDecimalYear( String date )
+  // {
+  //   return toDecimalYear( dateParseYear( date ), dateParseMonth1( date ), dateParseDay( date ) );
+  // }
+
+  // /** @return the value of the decimal year
+  //  * @param yy  year
+  //  * @param mm  month
+  //  * @param dd  day
+  //  */
+  // public static double toDecimalYear( int yy, int mm, int dd )
+  // {
+  //   boolean leap = (yy % 4) == 0; // 2000 is leap year
+  //   int days = dd;
+  //   switch( mm ) {
+  //     case 12: days += 30;
+  //     case 11: days += 31;
+  //     case 10: days += 30;
+  //     case  9: days += 31;
+  //     case  8: days += 31;
+  //     case  7: days += 30;
+  //     case  6: days += 31;
+  //     case  5: days += 30;
+  //     case  4: days += 31;
+  //     case  3: days += leap ? 29 : 28;
+  //     case  2: days += 31;
+  //     default: break;
+  //   }
+  //   return yy + days / ( leap ? 366.0 : 365.0 );
+  // }
 
   /** @return the topodroid date string
    * @param y  year
@@ -485,7 +585,7 @@ public class TDUtil
     return age + "y"; // Long.toString(age) + "y";
   }
 
-  // SLOW ----------------------------------------------------
+  // THREAD ----------------------------------------------------
 
   /** sleep the thread
    * @param msec   sleep time [milliseconds]
@@ -495,7 +595,10 @@ public class TDUtil
     try {
       // TDLog.v("SLEEP slow " + msec );
       Thread.sleep( msec );
-    } catch ( InterruptedException e ) { return false; }
+    } catch ( InterruptedException e ) { 
+      Thread.currentThread().interrupt();
+      return false;
+    }
     return true;
   }
 
@@ -509,7 +612,8 @@ public class TDUtil
       // TDLog.v("SLEEP slow * " + msec );
       Thread.sleep( msec );
     } catch ( InterruptedException e ) {
-      TDLog.e( msg + " " + e.getMessage() );
+      if ( msg != null ) TDLog.e( msg + " " + e.getMessage() );
+      Thread.currentThread().interrupt();
       return false;
     }
     return true;
@@ -524,9 +628,29 @@ public class TDUtil
       // TDLog.v("SLEEP yield " + msec );
       Thread.yield();
       Thread.sleep( msec );
-    } catch ( InterruptedException e ) { return false; }
+    } catch ( InterruptedException e ) {
+      Thread.currentThread().interrupt();
+      return false;
+    }
     return true;
   }
+
+  public static void join( Thread thread )
+  {
+    if ( thread == null || thread == Thread.currentThread() ) return;
+    boolean interrupted = false;
+    while ( thread.isAlive() ) {
+      try {
+        thread.join();
+      } catch ( InterruptedException e ) {
+        interrupted = true;
+      }
+    }
+    if ( interrupted ) Thread.currentThread().interrupt();
+  }
+
+
+  // -------------------------------------------------------
 
   /** replace a xsection prefix in the scrap name and prepend the survey name
    * @param surveyname   name of the survey

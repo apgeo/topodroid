@@ -12,6 +12,7 @@
 package com.topodroid.TDX;
 
 import com.topodroid.util.TDMath;
+import com.topodroid.util.TDString;
 import com.topodroid.util.TDLog;
 import com.topodroid.prefs.TDSetting;
 import com.topodroid.types.PointScale;
@@ -35,6 +36,7 @@ public class DrawingLabelPath extends DrawingPointPath
 {
   private final static float PDF_SCALE = 0.4f;
   private float mTextSize;
+  private Path mCrossPath; // a cross when the text is empty
 
   /** cstr
    * @param text     label text
@@ -61,6 +63,11 @@ public class DrawingLabelPath extends DrawingPointPath
     // makeStraightPath( 0, 0, 20*mPointText.length(), 0, cx, cy );
     mTextSize = TDSetting.mLabelSize;
     doSetScale( mScale );
+    mCrossPath = new Path();
+    mCrossPath.moveTo( cx-1, cy );
+    mCrossPath.lineTo( cx+1, cy );
+    mCrossPath.moveTo( cx, cy+1 );
+    mCrossPath.lineTo( cx, cy-1 );
   }
 
   /** deserialize from an input stream
@@ -88,7 +95,7 @@ public class DrawingLabelPath extends DrawingPointPath
       scale = dis.readInt( );
       if ( version > 401090 ) level = dis.readInt();
       if ( version > 401160 ) scrap = dis.readInt();
-      text = dis.readUTF();
+      text = dis.readUTF().replace("\u0000",""); // drop NUL chars stored by versions before 6.5.23
       options = dis.readUTF();
 
       // TDLog.Log( TDLog.LOG_PLOT, "Label <" + text + " " + ccx + " " + ccy + " scale " + scale + " (" + options + ")" );
@@ -122,6 +129,15 @@ public class DrawingLabelPath extends DrawingPointPath
   //   }
   // }
 
+  private void drawOnCanvas( Canvas canvas, Path path, Paint paint ) // HB PDF
+  {
+    if ( mPointText.length() == 0 ) {
+      canvas.drawPath( path, paint ); // HB PDF
+    } else {
+      canvas.drawTextOnPath( mPointText, path, 0f, 0f, paint ); // HB PDF
+    }
+  }
+
   /** draw the label on the screen
    * @param canvas   canvas
    * @param bbox     clipping rectangle
@@ -131,7 +147,11 @@ public class DrawingLabelPath extends DrawingPointPath
   {
     if ( intersects( bbox ) ) {
       // TDLog.Log( TDLog.LOG_PATH, "Drawing Label Path::draw " + mPointText );
-      canvas.drawTextOnPath( mPointText, mPath, 0f, 0f, mPaint );
+      if ( mPointText.length() == 0 ) {
+        drawOnCanvas( canvas, mCrossPath, mPaint ); // HB PDF
+      } else {
+        drawOnCanvas( canvas, mPath, mPaint ); // HB PDF
+      }
     }
   }
 
@@ -151,14 +171,18 @@ public class DrawingLabelPath extends DrawingPointPath
       // TDLog.Log( TDLog.LOG_PATH, "Drawing Label Path::draw[matrix] " + mPointText );
       if ( TDSetting.mScalableLabel ) mTextSize = TDSetting.mLabelSize * 0.1f / scale;
       setTextSize( );
-      mTransformedPath = new Path( mPath );
+      if ( mPointText.length() == 0 ) { 
+        mTransformedPath = new Path( mCrossPath );
+      } else {
+        mTransformedPath = new Path( mPath );
+      }
       if ( mLandscape ) {
         Matrix rot = new Matrix();
 	rot.postRotate( 90, cx, cy );
         mTransformedPath.transform( rot );
       }
       mTransformedPath.transform( matrix );
-      canvas.drawTextOnPath( mPointText, mTransformedPath, 0f, 0f, mPaint );
+      drawOnCanvas( canvas, mTransformedPath, mPaint ); // HB PDF
     }
   }
 
@@ -178,7 +202,11 @@ public class DrawingLabelPath extends DrawingPointPath
     if ( intersects( bbox ) ) {
       // TDLog.Log( TDLog.LOG_PATH, "Drawing Label Path::draw[matrix] " + mPointText );
       setTextSize();
-      mTransformedPath = new Path( mPath );
+      if ( mPointText.length() == 0 ) { 
+        mTransformedPath = new Path( mCrossPath );
+      } else {
+        mTransformedPath = new Path( mPath );
+      }
       if ( mLandscape ) {
         Matrix rot = new Matrix();
         rot.postRotate( 90, cx, cy );
@@ -187,7 +215,7 @@ public class DrawingLabelPath extends DrawingPointPath
       mTransformedPath.transform( matrix );
       Paint paint = xorPaint( mPaint, xor_color );
       paint.setTextSize( PDF_SCALE * paint.getTextSize() );
-      canvas.drawTextOnPath( mPointText, mTransformedPath, 0f, 0f, paint );
+      drawOnCanvas( canvas, mTransformedPath, paint ); // HB PDF
     }
   }
 
@@ -271,7 +299,7 @@ public class DrawingLabelPath extends DrawingPointPath
   {
     StringWriter sw = new StringWriter();
     PrintWriter pw  = new PrintWriter(sw);
-    pw.format(Locale.US, "point %.2f %.2f label -text \"%s\"", cx*TDSetting.mToTherion, -cy*TDSetting.mToTherion, mPointText );
+    pw.format(Locale.US, "point %.2f %.2f label -text \"%s\" -align right", cx*TDSetting.mToTherion, -cy*TDSetting.mToTherion, TDString.escapeQuotes( mPointText ) );
     toTherionOrientation( pw );
     toTherionOptions( pw );
     pw.format("\n");
@@ -288,7 +316,7 @@ public class DrawingLabelPath extends DrawingPointPath
 //     pw.format("<item layer=\"6\" cave=\"%s\" branch=\"%s\" type=\"8\" category=\"81\" transparency=\"0.00\"",
 //       cave, branch );
 //     if ( bind != null ) pw.format( " bind=\"%s\"", bind );
-//     pw.format(" text=\"%s\" textrotatemode=\"1\" >\n", mPointText );
+//     pw.format(" text=\"%s\" textrotatemode=\"1\" >\n", TDString.escapeQuotes( mPointText ) );
 //     pw.format("  <pen type=\"10\" />\n");
 //     pw.format("  <brush type=\"7\" />\n");
 //     float x = DrawingUtil.sceneToWorldX( cx, cy ); // convert to world coords.
@@ -310,9 +338,10 @@ public class DrawingLabelPath extends DrawingPointPath
   { 
     // int size = mScale - PointScale.SCALE_XS;
     pw.format("<item type=\"point\" name=\"label\" cave=\"%s\" branch=\"%s\" text=\"%s\" ",
-      cave, branch, mPointText );
+      cave, branch, TDString.escapeQuotes( mPointText ) );
     if ( bind != null ) pw.format( " bind=\"%s\"", bind );
-    pw.format(Locale.US, "scale=\"%d\" orientation=\"%.2f\" options=\"%s\" >\n", mScale, mOrientation, ((mOptions==null)? "" : mOptions) );
+    String options = getExportOptions(); // TDSKETCH
+    pw.format(Locale.US, "scale=\"%d\" orientation=\"%.2f\" options=\"%s\" >\n", mScale, mOrientation, ((options==null)? "" : options) );
     float x = DrawingUtil.sceneToWorldX( cx, cy ); // convert to world coords.
     float y = DrawingUtil.sceneToWorldY( cx, cy );
     pw.format(Locale.US, " <points data=\"%.2f %.2f \" />\n", x, y );
@@ -345,6 +374,12 @@ public class DrawingLabelPath extends DrawingPointPath
     } catch ( IOException e ) {
       TDLog.e( "LABEL out error " + e.toString() );
     }
+  }
+
+  void addTextChar( char[] chs )
+  {
+    super.addTextChar( chs );
+    makeLabelPath();
   }
 
 }

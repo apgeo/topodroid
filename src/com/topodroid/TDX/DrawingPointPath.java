@@ -37,6 +37,7 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.util.Locale;
+import java.util.List;
 
 import android.util.Base64;
 
@@ -45,10 +46,13 @@ public class DrawingPointPath extends DrawingPath
   // float mXpos;        // scene coords
   // float mYpos;
   public int mPointType;      // symbol point type (index in symbol-point lib)
-  protected int mScale;       // symbol scale
   public double mOrientation; // orientation [degrees]
-  public String mPointText;   // point text value (if any)
+  protected String mPointText;   // point text value (if any)
   public IDrawingLink mLink;  // linked drawing item
+  private List<DrawingLinePath> mOutline = null; // xsection outline
+  private static boolean mDrawOutline = true;  // whether to draw xsection outline
+
+  static void setDrawOutline( boolean on_off ) { mDrawOutline = on_off; }
 
   // FIXME-COPYPATH
   // @Override
@@ -58,6 +62,8 @@ public class DrawingPointPath extends DrawingPath
   //   copyTo( ret );
   //   return ret;
   // }
+
+  void setOutline( List<DrawingLinePath> outline ) { mOutline = outline; }
 
   // FIXME SECTION_RENAME
   /** fix the scrap name in the option string replacing the survey-prefix
@@ -123,15 +129,14 @@ public class DrawingPointPath extends DrawingPath
     // TDLog.Log( TDLog.LOG_PATH, "Point " + type + " X " + x + " Y " + y );
     mPointType = type;
     setCenter( x, y );
-    // mScale   = PointScale.SCALE_NONE;
     mOrientation = 0.0;
     mOptions   = BrushManager.getPointDefaultOptions( mPointType );
     mPointText = null; // getTextFromOptions( options ); // this can also reset mOptions
     mLevel     = BrushManager.getPointLevel( mPointType );
 
-    if ( BrushManager.isPointOrientable( mPointType ) ) {
-      mOrientation = BrushManager.getPointOrientation( mPointType );
-    }
+    // if ( BrushManager.isPointOrientable( mPointType ) ) { // FIXME_ORIENTATION
+    //   mOrientation = BrushManager.getPointOrientation( mPointType );
+    // }
     setPathPaint( BrushManager.getPointPaint( mPointType ) );
     mScale = scale;
     resetPath( 1.0f );
@@ -153,15 +158,14 @@ public class DrawingPointPath extends DrawingPath
     // TDLog.Log( TDLog.LOG_PATH, "Point " + type + " X " + x + " Y " + y );
     mPointType = type;
     setCenter( x, y );
-    // mScale   = PointScale.SCALE_NONE;
     mOrientation = 0.0;
     mOptions   = options;
     mPointText = text; // getTextFromOptions( options ); // this can also reset mOptions
     mLevel     = BrushManager.getPointLevel( type );
 
-    if ( BrushManager.isPointOrientable( type ) ) {
-      mOrientation = BrushManager.getPointOrientation(type);
-    }
+    // if ( BrushManager.isPointOrientable( type ) ) { // FIXME_ORIENTATION
+    //   mOrientation = BrushManager.getPointOrientation(type);
+    // }
     setPathPaint( BrushManager.getPointPaint( mPointType ) );
     mScale = scale;
     resetPath( 1.0f );
@@ -259,6 +263,9 @@ public class DrawingPointPath extends DrawingPath
    */
   void setCenter( float x, float y )
   {
+    if ( mOutline != null ) {
+      for ( DrawingLinePath path : mOutline ) path.shiftBy( x - cx, y - cy );
+    }
     cx = x;
     cy = y;
     left   = x; 
@@ -286,6 +293,9 @@ public class DrawingPointPath extends DrawingPath
   @Override
   void shiftBy( float dx, float dy )
   {
+    if ( mOutline != null ) {
+      for ( DrawingLinePath path : mOutline ) path.shiftBy( dx, dy );
+    }
     cx += dx;
     cy += dy;
     mPath.offset( dx, dy );
@@ -319,8 +329,12 @@ public class DrawingPointPath extends DrawingPath
   void affineTransformBy( float[] mm, Matrix m )
   {
     float x = mm[0] * cx + mm[1] * cy + mm[2];
-         cy = mm[3] * cx + mm[4] * cy + mm[5];
-         cx = x;
+    float y = mm[3] * cx + mm[4] * cy + mm[5];
+    if ( mOutline != null ) {
+      for ( DrawingLinePath path : mOutline ) path.shiftBy( x-cx, y-cy );
+    }
+    cx = x;
+    cx = y;
     mPath.transform( m );
     left   = cx;   // simplified
     right  = cx+1;
@@ -441,6 +455,11 @@ public class DrawingPointPath extends DrawingPath
         link.transform( matrix );
         canvas.drawPath( link, BrushManager.fixedOrangePaint );
       }
+      if ( mOutline != null && mDrawOutline ) {
+        for ( DrawingLinePath path : mOutline ) {
+          path.draw( canvas, matrix, scale, bbox );
+        }
+      }
     }
   }
 
@@ -479,24 +498,13 @@ public class DrawingPointPath extends DrawingPath
         link.transform( matrix );
         canvas.drawPath( link, BrushManager.fixedOrangePaint );
       }
+      if ( mOutline != null && mDrawOutline ) {
+        for ( DrawingLinePath path : mOutline ) {
+          path.draw( canvas, matrix, scale, bbox, xor_color );
+        }
+      }
     }
   }
-
-  /** set the scale index
-   * @param scale   new scale index
-   */
-  void setScale( int scale )
-  {
-    if ( scale != mScale ) {
-      mScale = scale;
-      resetPath( 1.0f );
-    }
-  }
-
-  /** get the scale index
-   * @return the scale index
-   */
-  public int getScale() { return mScale; }
 
   /** get the scale value
    * @return the scale value
@@ -515,7 +523,8 @@ public class DrawingPointPath extends DrawingPath
   /** recreate the symbol path
    * @param f   post-scale factor
    */
-  private void resetPath( float f )
+  @Override
+  void resetPath( float f )
   {
     // TDLog.v( "Reset path " + mOrientation + " scale " + mScale );
     Matrix m = new Matrix();
@@ -539,7 +548,15 @@ public class DrawingPointPath extends DrawingPath
   //   setCenter( x, y );
   // }
 
-  // void setPointType( int t ) { mPointType = t; }
+  /** restore the point type
+   * @param t  point type
+   */
+  void setPointType( int t )
+  { 
+    mPointType = t;
+    resetPath( getScaleValue() );
+    setPathPaint( BrushManager.getPointPaint( mPointType ) );
+  }
 
   /** get the type of the point
    * @return the point type
@@ -563,7 +580,7 @@ public class DrawingPointPath extends DrawingPath
     resetPath( 1.0f );
   }
 
-  /** get the text of the point
+  /** get the text of the point - can be null
    * @return the point text
    */
   public String getPointText() { return mPointText; }
@@ -624,7 +641,7 @@ public class DrawingPointPath extends DrawingPath
   void toTCsurvey( PrintWriter pw, String survey, String cave, String branch, String bind )
   { 
     String name = getThName( );
-    pw.format("<item type=\"point\" name=\"%s\" cave=\"%s\" branch=\"%s\" text=\"%s\" ", name, cave, branch, ((mPointText == null)? "" : mPointText) );
+    pw.format("<item type=\"point\" name=\"%s\" cave=\"%s\" branch=\"%s\" text=\"%s\" ", name, cave, branch, ((mPointText == null)? "" : TDString.escapeQuotes( mPointText ) ) );
     if ( bind != null ) pw.format(" bind=\"%s\" ", bind );
     pw.format(Locale.US, "scale=\"%d\" orientation=\"%.2f\" options=\"%s\" >\n", mScale, mOrientation, ((mOptions   == null)? "" : mOptions) );
     float x = DrawingUtil.sceneToWorldX( cx, cy ); // convert to world coords.
@@ -646,7 +663,7 @@ public class DrawingPointPath extends DrawingPath
   void toTCsurvey( PrintWriter pw, String survey, String cave, String branch, String bind, String extra, PlotInfo section )
   { 
     String name = getThName( );
-    pw.format("<item type=\"point\" name=\"%s\" cave=\"%s\" branch=\"%s\" text=\"%s\" ", name, cave, branch, ((mPointText == null)? "" : mPointText) );
+    pw.format("<item type=\"point\" name=\"%s\" cave=\"%s\" branch=\"%s\" text=\"%s\" ", name, cave, branch, ((mPointText == null)? "" : TDString.escapeQuotes( mPointText ) ) );
     if ( bind != null ) pw.format("bind=\"%s\" ", bind );
     if ( extra != null ) pw.format("%s ", extra );
     pw.format(Locale.US, "scale=\"%d\" orientation=\"%.2f\" options=\"%s\" >\n", mScale, mOrientation, ((mOptions   == null)? "" : mOptions) );
@@ -667,7 +684,7 @@ public class DrawingPointPath extends DrawingPath
           pw.format("    <crosssectionfile>\n" );
           pw.format(" <attachment dataformat=\"0\" data=\"%s\" name=\"\" note=\"%s\" type=\"image/jpeg\" />\n", 
             Base64.encodeToString( buf, Base64.NO_WRAP ),
-            ((mPointText==null)?"":mPointText)
+            ((mPointText==null)?"": TDString.escapeQuotes( mPointText ) )
           );
           pw.format("    </crosssectionfile>\n" );
         }
@@ -731,7 +748,7 @@ public class DrawingPointPath extends DrawingPath
   {
     if ( mPointText != null && mPointText.length() > 0 ) {
       if ( BrushManager.pointHasText(mPointType) ) { // label, remark
-        pw.format(" -text \"%s\"", mPointText );
+        pw.format(" -text \"%s\"", TDString.escapeQuotes( mPointText ) );
       } else if ( BrushManager.pointHasValue(mPointType) ) { // passage-height
         pw.format(" -value %s", mPointText );
       }
@@ -837,6 +854,27 @@ public class DrawingPointPath extends DrawingPath
     String name  = getThName();
     TDVector vv = DrawingPath.getCave3D( cx, cy, V1, V2 );
     pw.format( Locale.US, "POINT %s %.1f %f %f %f\n", name, mOrientation, vv.x,  vv.y, -vv.z );
+  }
+
+  /** add a char to the text
+   * @param ch char
+   */
+  void addTextChar( char[] chs )
+  {
+    if ( mPointText == null ) {
+      mPointText = new String( chs ); 
+    } else {
+      mPointText = mPointText + (new String( chs ) );
+    }
+    // TDLog.v("point text <" + mPointText + ">" );
+  }
+
+  /** delete the last char from the text
+   */
+  void delTextChar()
+  {
+    if ( TDString.isNullOrEmpty( mPointText ) ) return;
+    mPointText = mPointText.substring(0, mPointText.length() - 1 );
   }
 
 }

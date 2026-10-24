@@ -13,10 +13,12 @@ package com.topodroid.num;
 
 import com.topodroid.util.TDMath;
 import com.topodroid.util.TDLog;
+import com.topodroid.util.TDAnalytics;
 import com.topodroid.math.TDVector;
 import com.topodroid.prefs.TDSetting;
 
 import com.topodroid.TDX.TDInstance;
+import com.topodroid.TDX.TopoDroidApp; // Analytics
 import com.topodroid.TDX.DBlock;
 import com.topodroid.TDX.StationPolicy;
 import com.topodroid.TDX.SurveyInfo;
@@ -71,12 +73,13 @@ public class TDNum
    * @param view     barriers list
    * @param hide     hiding list
    */
-  public void setBarrierAndHidden( String view, String hide )
+  public void setBarrierAndHidden( String view, String hide, boolean plan )
   {
     if ( mStations == null ) return;
-    clearBarrierAndHidden();
-    setStationsHide( hide );
-    setStationsBarr( view );
+    // TDLog.v("set barrier <" + view + "> and hidden <" + hide + "> plan " + plan );
+    clearBarrierAndHidden( plan );
+    setStationsHide( hide, plan );
+    setStationsBarr( view, plan );
   }
 
   // public void dump( )
@@ -486,91 +489,88 @@ public class TDNum
    * If B gets un-hidden the line 0--A--B gets shown as well as C---D
    * and these two pieces remain separated.
    */
-  public void setStationHidden( String name, int hide )
+  public void setStationHidden( String name, int hide, boolean plan )
   {
-    // TDLog.v( "Set Station Hidden: " + hide );
+    // TDLog.v( "Set station " + name + " hide: " + hide + " plan " + plan );
     NumStation st = getStation( name );
     if ( st == null ) return;
-    st.mBarrierAndHidden = ( st.mHidden == -1 && hide == 1 );
-    st.mHidden += hide;
-    // TDLog.v( "station " + st.name + " hide " + st.mHidden );
+    if ( plan ) {
+      st.mBarrierAndHidden1 = ( st.mHidden1 == -1 && hide == 1 );
+      st.mHidden1 += hide;
+    } else { // FIXME_HIDDEN2
+      st.mBarrierAndHidden2 = ( st.mHidden2 == -1 && hide == 1 );
+      st.mHidden2 += hide;
+    }
     hide *= 2;
-    // st = st.parent(); // 20230318 fixed
-    // while ( st != null ) {
-    //   st.mHidden += hide;
-    //   if ( st.mHidden < 0 ) st.mHidden = 0;
-    //   // TDLog.v( "station " + st.name + " hide " + st.mHidden );
-    //   st = st.parent();
-    // }
     if ( mStartStation.name.equals( name ) ) return;
     Stack<NumStation> stack = new Stack<NumStation>();
     stack.push( mStartStation );
-    // TDLog.v("push " + mStartStation.name );
     while ( ! stack.empty() ) {
       st = stack.pop();
-      // TDLog.v("pop " + st.name );
       if ( ! st.name.equals( name ) ) {
-        st.mHidden += hide;
+        if ( plan ) {
+          st.mHidden1 += hide;
+        } else {
+          st.mHidden2 += hide; // FIXME_HIDDEN2
+        }
         if ( st.sibling() != null ) {
           stack.push( st.sibling() );
-          // TDLog.v("push sibling " + st.sibling().name );
         }
         if ( st.child() != null ) {
           stack.push( st.child() );
-          // TDLog.v("push child " + st.child().name );
         }
       }
     }    
   }
 
-  private void clearBarrierAndHidden() { mStations.clearBarrierAndHidden(); }
+  private void clearBarrierAndHidden( boolean plan ) { mStations.clearBarrierAndHidden( plan ); }
 
   /** set the hidden stations
    * @param hide   string with the names of the hidden stations
    */
-  private void setStationsHide( String hide )
+  private void setStationsHide( String hide, boolean plan )
   {
     if ( hide == null ) return;
     String[] names = hide.split(" ");
     for ( int k=0; k<names.length; ++k ) {
-      if ( names[k].length() > 0 ) setStationHidden( names[k], 1 );
+      if ( names[k].length() > 0 ) setStationHidden( names[k], 1, plan );
     }
   }
 
   /** set a station either barrier or non-barrier
-   * @param name    station name
-   * @param barrier whether to barrier or not: +1 to barrier, -1 not to barrier
+   * @param name station name
+   * @param barr whether to barrier or not: +1 to barrier, -1 not to barrier
    */
-  public void setStationBarrier( String name, int barrier )
+  public void setStationBarrier( String name, int barr, boolean plan )
   {
-    // TDLog.v( "Set Station barrier: " + barrier );
+    // TDLog.v( "Set station " + name + " barrier: " + barr + " plan " + plan );
     NumStation st = getStation( name );
     if ( st == null ) return;
-    // TDLog.v( "station " + st.name + " barr " + st.mHidden );
-    st.mBarrierAndHidden = ( st.mHidden == 1 && barrier == 1 );
-    st.mHidden -= barrier;
+    if ( plan ) {
+      st.mBarrierAndHidden1 = ( st.mHidden1 == 1 && barr == 1 );
+      st.mHidden1 -= barr;
+    } else { // FIXME_HIDDEN2
+      st.mBarrierAndHidden2 = ( st.mHidden2 == 1 && barr == 1 );
+      st.mHidden2 -= barr;
+    }
     if ( mStartStation == st ) return;
-    barrier *= 2;
-    // stack.push( st ); // 20230318 fixed
-    // while ( ! stack.empty() ) {
-    //   st = stack.pop();
-    //   mStations.updateHidden( st, -barrier, stack );
-    // }
+    barr *= 2;
     if ( st.child() != null ) {
       Stack<NumStation> stack = new Stack<NumStation>();
       stack.push( st.child() );
       // TDLog.v("push " + st.name );
       while ( ! stack.empty() ) {
         st = stack.pop();
-        // TDLog.v("pop " + st.name );
-        st.mHidden -= barrier;
+        if ( plan ) {
+          st.mHidden1 -= barr;
+        } else {
+          st.mHidden2 -= barr; // FIXME_HIDDEN2
+        }
         if ( st.sibling() != null ) {
           stack.push( st.sibling() );
-          // TDLog.v("push sibling " + st.sibling().name );
         }
         if ( st.child() != null ) {
           stack.push( st.child() );
-          // TDLog.v("push child " + st.child().name );
         }
       }
     }
@@ -579,48 +579,51 @@ public class TDNum
   /** set the barrier stations
    * @param barr   string with the names of the barrier stations
    */
-  private void setStationsBarr( String barr )
+  private void setStationsBarr( String barr, boolean plan )
   {
     if ( barr == null ) return;
+    // TDLog.v("set stations barr: " + barr + " plan " + plan);
     String[] names = barr.split(" ");
     for ( int k=0; k<names.length; ++k ) {
-      if ( names[k].length() > 0 ) setStationBarrier( names[k], 1 );
+      if ( names[k].length() > 0 ) setStationBarrier( names[k], 1, plan );
     }
   }
 
   /** @return true if the station is hidden
    * @param name  station name
    */
-  public boolean isHidden( String name )
+  public boolean isHidden( String name, boolean plan )
   {
     NumStation st = getStation( name );
-    return ( st != null && st.hidden() );
+    return ( st != null && st.hidden(plan) );
   }
 
   /** @return true if the station is barrier
    * @param name  station name
    */
-  public boolean isBarrier( String name )
+  public boolean isBarrier( String name, boolean plan )
   {
     NumStation st = getStation( name );
-    return ( st != null && st.barrier() );
+    return ( st != null && st.barrier(plan) );
   }
 
   // @note for the shot FROM-TO
-  public int canBarrierHidden( String from, String to )
+  public int canBarrierHidden( String from, String to, boolean plan )
   {
     int has_shot = hasShot( from, to );
     if ( has_shot == 0 ) return 0;
     int ret = 0;
     if ( has_shot == 1 ) {
-      if ( ! isHidden( from ) )  ret |= 0x02;
-      if ( ! isBarrier( to ) )   ret |= 0x04;
+      if ( ! isHidden( from, plan ) )  ret |= 0x02;
+      if ( ! isBarrier( to, plan ) )   ret |= 0x04;
     } else { // has_shot == -1
-      if ( ! isBarrier( from ) ) ret |= 0x01;
-      if ( ! isHidden( to ) )    ret |= 0x08;
+      if ( ! isBarrier( from, plan ) ) ret |= 0x01;
+      if ( ! isHidden( to, plan ) )    ret |= 0x08;
     }
     return ret;
   }
+
+  // --------------------------------------------------------------------
 
   /** @return the station from the ID (name)
    * @param id    station ID (name)
@@ -944,6 +947,7 @@ public class TDNum
    */
   private boolean computeNum( List< DBlock > data, String start, String path_fmt, boolean midline_only )
   {
+    TopoDroidApp.updateAnalytic( TDAnalytics.NUM );
     if ( TDInstance.datamode == SurveyInfo.DATAMODE_DIVING ) { // preprocess: convert diving-mode data to normal form
       HashMap< String, Float > depths = new HashMap< String, Float >();
       for ( DBlock blk : data ) { // prepare stations depths
@@ -1007,8 +1011,9 @@ public class TDNum
 
     // for ( TriShot tsh : tmp_shots ) tsh.dump();
 
+    // TRILATERATION
     if ( ! midline_only && TDSetting.mLoopClosure == TDSetting.LOOP_TRIANGLES ) {
-      makeTrilateration( tmp_shots );
+      TrilaterationHelper.makeTrilateration( tmp_shots );
     }
 
     // for ( TriShot tsh : tmp_shots ) tsh.dump();
@@ -1177,6 +1182,7 @@ public class TDNum
       || TDSetting.mLoopClosure == TDSetting.LOOP_WEIGHTED 
       || TDSetting.mLoopClosure == TDSetting.LOOP_SELECTIVE ) {
       // TDLog.v( "NUM loop closure compensation " + TDSetting.mLoopClosure );
+      TopoDroidApp.updateAnalytic( TDAnalytics.LOOP_CLOSURE );
       compensateLoopClosure( mNodes, mShots );
   
       // recompute station positions
@@ -2061,138 +2067,6 @@ public class TDNum
         }
         bx.compensateError( -e, -s, -v );
       }
-    }
-  }
-
-  // -------------------------------------------------------------
-  // TRILATERATION 
-
-  /** correct temporary shots using trilateration
-   * @param shots temporary shot list
-   */
-  private void makeTrilateration( List< TriShot > shots )
-  {
-    ArrayList< TriCluster > clusters = new ArrayList<>();
-    for ( TriShot sh : shots ) sh.cluster = null;
-    boolean repeat = true;
-    while ( repeat ) {
-      repeat = false;
-      for ( TriShot sh : shots ) {
-        if ( sh.cluster != null ) continue;
-        repeat = true;
-        TriCluster cl = new TriCluster();
-        clusters.add( cl );
-        cl.addTmpShot( sh );
-        cl.addStation( sh.from );
-        cl.addStation( sh.to );
-        // TDLog.v("TRI cluster start " + sh.from + " " + sh.to + " [" + String.format(Locale.US, "%.2f", sh.length() ) + "]" );
-        // recursively populate the cluster
-        boolean repeat2 = true;
-        while ( repeat2 ) {
-          repeat2 = false;
-          int ns = shots.size();
-          for ( int n1 = 0; n1 < ns; ++n1 ) { // stations
-            TriShot sh1 = shots.get(n1);
-            if ( sh1.cluster != null ) continue;
-            if ( cl.containsStation( sh1.from ) ) {
-              if ( cl.containsStation( sh1.to ) ) {
-                cl.addTmpShot( sh1 );
-                // TDLog.v("TRI cluster finish " + sh1.from + " " + sh1.to );
-              } else {
-                // TDLog.v("TRI cluster check have " + sh1.from + " missing " + sh1.to + " [" + String.format(Locale.US, "%.2f", sh1.length() ) + "]" );
-                boolean added = false;
-                for ( int n2 = n1+1; n2 < ns; ++n2 ) {
-                  TriShot sh2 = shots.get(n2);
-                  if ( sh2.cluster != null ) continue;
-                  if ( ( sh1.to.equals( sh2.from ) && cl.containsStation( sh2.to ) ) ||
-                       ( sh1.to.equals( sh2.to ) && cl.containsStation( sh2.from ) ) ) {
-                    // TDLog.v("TRI cluster add (2) " + sh2.from + " " + sh2.to + " [" + String.format(Locale.US, "%.2f", sh2.length() ) + "]" );
-                    cl.addTmpShot( sh2 );
-                    added = true;
-                  }
-                }
-                if ( added ) {
-                  // TDLog.v("TRI cluster add (1) " + sh1.from + " " + sh1.to );
-                  cl.addStation( sh1.to );
-                  cl.addTmpShot( sh1 );
-                  repeat2 = true;
-                }
-              }
-            } else if ( cl.containsStation( sh1.to ) ) {
-              // TDLog.v("TRI cluster check missing " + sh1.from + " have " + sh1.to + " [" + String.format(Locale.US, "%.2f", sh1.length() ) + "]" );
-              boolean added = false;
-              for ( int n2 = n1+1; n2 < ns; ++n2 ) {
-                TriShot sh2 = shots.get(n2);
-                if ( sh2.cluster != null ) continue;
-                if ( ( sh1.from.equals( sh2.from ) && cl.containsStation( sh2.to ) ) ||
-                     ( sh1.from.equals( sh2.to ) && cl.containsStation( sh2.from ) ) ) {
-                  // TDLog.v("TRI cluster add (2) " + sh2.from + " " + sh2.to + " [" + String.format(Locale.US, "%.2f", sh2.length() ) + "]" );
-                  cl.addTmpShot( sh2 );
-                  added = true;
-                }
-              }
-              if ( added ) {
-                // TDLog.v("TRI cluster add (1) " + sh1.from + " " + sh1.to + " [" + String.format(Locale.US, "%.2f", sh1.length() ) + "]" );
-                cl.addStation( sh1.from );
-                cl.addTmpShot( sh1 );
-                repeat2 = true;
-              }
-            }
-          }         
-          for ( TriShot sh1 : shots ) { // shots (should not be needed)
-            if ( sh1.cluster != null ) continue;
-            if ( cl.containsStation( sh1.from ) && cl.containsStation( sh1.to ) ) {
-              // TDLog.v("TRI cluster add (final) " + sh1.from + " " + sh1.to + " [" + String.format(Locale.US, "%.2f", sh1.length() ) + "]" );
-              cl.addTmpShot( sh1 );
-            }
-          }
-        }
-      }
-    }
-    // apply trilateration with recursive minimization
-    int nr_triangle = 0;
-    int nr_success  = 0;
-    int nr_fail     = 0;
-    double err = 0.0;
-    // TDLog.v("TRI nr clusters " + clusters.size() );
-    for ( TriCluster cl : clusters ) {
-      if ( cl.nrStations() > 2 ) {
-        ++nr_triangle;
-        break;
-      }
-    }
-    if ( nr_triangle == 0 ) {
-      TDLog.v("NUM trilateration without triangles");
-    } else {
-      for ( TriCluster cl : clusters ) {
-        if ( cl.nrStations() > 2 ) {
-          // cl.dump();
-          Trilateration trilateration = new Trilateration( cl );
-          // TODO check all conditions a trilateration can fail
-          double e = trilateration.getError();
-          int iter = trilateration.getIterations();
-          int nr_l = trilateration.getNrLegs();
-          float max_angle = trilateration.maxAngle();
-          // TDLog.v("TRI error " + e + " iter " + iter + " legs " + nr_l + " pts " + trilateration.getNrPoints() + " max_angle " + max_angle );
-          if ( iter < 0 || max_angle > 10 ) { // FIXME 10 is a trilateration parameters
-            ++ nr_fail;
-          } else {
-            ++ nr_success;
-            err += e;
-            // TDLog.v("TRI apply");
-            trilateration.apply();
-          }
-        }
-      }
-    }
-    if ( nr_fail > 0 ) {
-      if ( nr_success > 0 ) {
-        TDToast.makeWarn( String.format( Locale.US, TDInstance.getResourceString(R.string.trilateration_failure), nr_fail, (nr_fail+nr_success) ) ); 
-      } else {
-        TDToast.makeWarn( R.string.trilateration_failed );
-      }
-    } else if ( nr_success > 0 ) {
-      TDToast.make( String.format( Locale.US, TDInstance.getResourceString(R.plurals.trilateration_success), nr_success ) );
     }
   }
 

@@ -16,11 +16,13 @@ import com.topodroid.util.TDMath;
 import com.topodroid.util.TDLog;
 import com.topodroid.util.TDio;
 import com.topodroid.util.TDString;
+import com.topodroid.util.TDAnalytics;
 // import com.topodroid.util.TDUtil;
 import com.topodroid.prefs.TDSetting;
 import com.topodroid.types.ExtendType;
 import com.topodroid.types.LegType;
 import com.topodroid.TDX.TDAzimuth;
+import com.topodroid.TDX.TopoDroidApp;
 
 import java.io.IOException;
 import java.io.BufferedReader;
@@ -43,12 +45,14 @@ class ParserVisualTopo extends ImportParser
   ParserVisualTopo( InputStreamReader isr, String filename, boolean apply_declination, boolean lrud, boolean leg_first ) throws ParserException
   {
     super( apply_declination );
+    TopoDroidApp.updateAnalytic( TDAnalytics.IMPORT_TRO );
+    if ( mApplyDeclination ) mDeclination = 0.0f;
     mName = TDio.extractName( filename );
     mLrud = lrud;
     mLegFirst = leg_first;
     readFile( isr, filename );
     checkValid();
-
+    if ( mApplyDeclination ) mDeclination = 0.0f;
   }
 
   private static float angle( float value, float unit, boolean dm )
@@ -109,7 +113,7 @@ class ParserVisualTopo extends ImportParser
           } else if ( line.startsWith("Trou") ) {
             String[] params = line.substring(5).split(",");
             if ( params.length > 0 ) {
-              mName = params[0].replaceAll(" ","_");
+              mName = params[0].replace(" ","_"); // ReplaceAll
               // TODO coordinates
             }
           } else if ( vals[0].equals("Param") ) {
@@ -185,7 +189,7 @@ class ParserVisualTopo extends ImportParser
                 mLength  = Float.parseFloat(vals[k]) * ul; ++k; // 2
                 mBearing = angle( Float.parseFloat(vals[k]), ub, dmb); ++k; // 3
                 mClino   = angle( Float.parseFloat(vals[k]), uc, dmc); ++k; // 5
-                mBearing = TDMath.in360( mBearing );
+                mBearing = checkApplyDeclination( mBearing, mDeclination );
                 if ( splay ) {
                   shots.add( new ParserShot( mFrom, TDString.EMPTY, mLength, mBearing, mClino, 0.0f,
                                              ExtendType.EXTEND_UNSET, LegType.NORMAL, false, false, false, "" ) );

@@ -458,6 +458,7 @@ public class AutoCalibDialog extends MyDialog
     Button b = (Button)view;
     if ( b == mBTstart ) {
       if ( ! mDownloading ) {
+        TDLog.v("auto calib toggle downloading false to true");
         mDownloading = mApp.mDataDownloader.toggleDownloading();
         // TDLog.v("AutoCalib START: downloading " + mDownloading );
         ListerHandler handler = new ListerHandler( this ); // FIXME_LISTER
@@ -465,6 +466,7 @@ public class AutoCalibDialog extends MyDialog
         mBTstart.setText( R.string.button_stop );
         mBTwrite.setEnabled( false );
       } else {
+        TDLog.v("auto calib toggle downloading true to false");
         mDownloading = mApp.mDataDownloader.toggleDownloading();
         mApp.mDataDownloader.stopDownloadData( new ListerHandler( this ) );
         // TDLog.v("AutoCalib STOP: downloading " + mDownloading );
@@ -479,7 +481,7 @@ public class AutoCalibDialog extends MyDialog
         // TODO ask for confirm
         byte[] coeff = mCalib.GetCoeff();
         // TODO 
-        // mApp.uploadCalibCoeff( coeff, false, mBTwrite, null ); // false: no MAC check, null CaliInfo
+        // mApp.uploadCalibCoeff( mContext, coeff, false, mBTwrite, null ); // false: no MAC check, null CaliInfo
       } else {
         TDToast.make("cannot upload while downloading");
       }
@@ -488,10 +490,12 @@ public class AutoCalibDialog extends MyDialog
     }
   }
 
+  @SuppressWarnings("deprecated") // from API-33 use android.window.OnBackInvokedDispatcher to register android.window.OnBackInvokedCallback
   @Override
   public void onBackPressed()
   {
     if ( mDownloading ) {
+      TDLog.v("auto calib on back pressed toggle downloading from " + mDownloading );
       mDownloading = mApp.mDataDownloader.toggleDownloading();
       mApp.mDataDownloader.stopDownloadData( new ListerHandler( this ) );
       TDLog.v("AutoCalib BACK: downloading " + mDownloading );
@@ -502,7 +506,8 @@ public class AutoCalibDialog extends MyDialog
     if ( mPw != null ) {
       mPw.close();
     }
-    super.onBackPressed();
+    // super.onBackPressed(); // issue 167
+    dismiss();
   }
 
   // public void displayCoeff( TDVector bg, TDMatrix ag, TDVector bm, TDMatrix am, TDVector nl, TDVector bg2, TDMatrix ag2, TDVector bm2, TDMatrix am2, TDVector nl2 )

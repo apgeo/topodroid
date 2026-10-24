@@ -12,17 +12,19 @@
 package com.topodroid.TDX;
 
 import com.topodroid.util.TDLog;
+import com.topodroid.math.Triangle3D;
+import com.topodroid.math.Vector3D;
 import com.topodroid.dem.DEMsurface;
 import com.topodroid.dem.ParserDEM;
 
 // import com.topodroid.c3in.ParserBluetooth;
 // import com.topodroid.c3in.ParserSketch; // NO_C3D
-import com.topodroid.c3walls.cw.CWConvexHull;
-import com.topodroid.c3walls.cw.CWTriangle;
-import com.topodroid.c3walls.cw.ConvexHullComputer;
-import com.topodroid.c3walls.pcrust.PowercrustComputer;
-import com.topodroid.c3walls.pcrust.PCSegment;
-import com.topodroid.c3walls.pcrust.PCPolygon;
+import com.topodroid.algo.cw.CWConvexHull;
+import com.topodroid.algo.cw.CWTriangle;
+import com.topodroid.algo.cw.ConvexHullComputer;
+import com.topodroid.algo.pcrust.PowercrustComputer;
+import com.topodroid.algo.pcrust.PCSegment;
+import com.topodroid.algo.pcrust.PCPolygon;
 
 import android.content.Context;
 
@@ -256,7 +258,11 @@ public class GlModel
 
   /** toggle the display of the DEM surface
    */
-  static void toggleSurface() { surfaceMode = ! surfaceMode; }
+  static void toggleSurface() 
+  { 
+    surfaceMode = ! surfaceMode;
+    // TDLog.v("Model surface mode " + surfaceMode );
+  }
 
   // static void toggleSurfaceLegs() { surfaceLegsMode = ! surfaceLegsMode; }
 
@@ -757,9 +763,9 @@ public class GlModel
   {
     if ( dem == null ) return;
     mSurfaceBounds = dem.getBounds();
-    // TDLog.v("Model prepare DEM");
+    TDLog.v("Model prepare DEM " + mSurfaceBounds.left + " " + mSurfaceBounds.right + " " + mSurfaceBounds.top + " " + mSurfaceBounds.bottom );
     GlSurface surface = new GlSurface( mContext );
-    // TDLog.v("MODEL surface DEM  init data");
+    TDLog.v("MODEL surface DEM init data and set glSurface");
     surface.initData( dem, mXmed, mYmed, mZmed );
     synchronized( this ) { glSurface = surface; }
 
@@ -804,6 +810,7 @@ public class GlModel
   void prepareTexture( Bitmap texture )
   {
     if ( texture != null && glSurface != null ) {
+      // TDLog.v("Model set surface texture");
       glSurface.setTextureBitmap( texture );
     }
   }
@@ -1197,10 +1204,10 @@ public class GlModel
     DEMsurface surface = parser.getSurface();
     if ( surface != null ) {
       mSurfaceBounds = surface.getBounds();
-      // TDLog.v("Model parser has surface");
+      TDLog.v("Model parser has surface");
       GlSurface gl_surface = new GlSurface( mContext );
-      // TDLog.v("MODEL surface init data");
       valid_surface = gl_surface.initData( surface, mXmed, mYmed, mZmed, parser.surfaceFlipped() );
+      // TDLog.v("MODEL surface init data. Valid " + valid_surface);
       if ( valid_surface ) {
         if ( parser != null && parser.mBitmap != null ) {
           Bitmap texture = parser.mBitmap.getBitmap( surface.east1(), surface.north1(), surface.east2(), surface.north2() );
@@ -1366,6 +1373,7 @@ public class GlModel
   private double prepareStationSurfaceDepth( TglParser parser, DEMsurface surface )
   {
     if ( surface == null ) return 1.0f;
+    // TDLog.v("Model prepare station surface-depth");
     double zmax = 0;
     for ( Cave3DStation st : parser.getStations() ) {
       st.surface_depth = surface.computeZ( st.x, st.y ) - st.z;

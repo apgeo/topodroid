@@ -11,6 +11,7 @@
  */
 package com.topodroid.TDX;
 
+import com.topodroid.algo.clip.Clip;
 import com.topodroid.util.TDLog;
 import com.topodroid.util.TDString;
 import com.topodroid.util.TDUtil;
@@ -429,8 +430,8 @@ public class Scrap
     syncClearSelected();
 
     boolean is_split = false; // 20230118 local var "is_split"
-    DrawingLinePath line1 = new DrawingLinePath( line.mLineType, mScrapIdx );
-    DrawingLinePath line2 = new DrawingLinePath( line.mLineType, mScrapIdx );
+    DrawingLinePath line1 = new DrawingLinePath( line.mLineType, mScrapIdx, line.mScale );
+    DrawingLinePath line2 = new DrawingLinePath( line.mLineType, mScrapIdx, line.mScale );
     line1.setOptions( line.getOptions() );
     line2.setOptions( line.getOptions() );
 
@@ -514,8 +515,8 @@ public class Scrap
    */
   private void doSplitLine( DrawingLinePath line, LinePoint lp, EraseCommand eraseCmd )
   {
-    DrawingLinePath line1 = new DrawingLinePath( line.mLineType, mScrapIdx );
-    DrawingLinePath line2 = new DrawingLinePath( line.mLineType, mScrapIdx );
+    DrawingLinePath line1 = new DrawingLinePath( line.mLineType, mScrapIdx, line.mScale );
+    DrawingLinePath line2 = new DrawingLinePath( line.mLineType, mScrapIdx, line.mScale );
     line1.setOptions( line.getOptions() );
     line2.setOptions( line.getOptions() );
 
@@ -614,6 +615,23 @@ public class Scrap
       // re-bucket last line point
       synchronized ( TDPath.mSelectionLock ) {
         mSelection.rebucket( sp );
+      }
+    }
+  }
+
+  /** make the line a segment
+   * @param line   line
+   */
+  void straightPointLine( DrawingPointLinePath line )
+  {
+    synchronized( TDPath.mCommandsLock ) {
+      synchronized( TDPath.mSelectionLock ) {
+        mSelection.removePath( line );
+        clearSelected();
+      }
+      line.makeStraight( );
+      synchronized ( TDPath.mSelectionLock ) {
+        mSelection.insertPath( line );
       }
     }
   }
@@ -750,7 +768,7 @@ public class Scrap
                 // ret = 7;
                 eraseCmd.addAction( EraseAction.ERASE_MODIFY, path );
                 doRemoveLinePoint( area, pt.mPoint, pt );
-                area.retracePath();
+                area.retracePath( );
               }
             }
           } else if ( path.isPoint() ) { // path  instanceof DrawingPointPath
@@ -1052,7 +1070,7 @@ public class Scrap
    * @param size ???
    * @return true if the line lp1 has been added to a line in the sketch
    */
-  boolean getLineToContinue( DrawingLinePath ap, LinePoint lq1, LinePoint lq2,  int type, float zoom, float size ) 
+  boolean tryToContinueLine( DrawingLinePath ap, LinePoint lq1, LinePoint lq2,  int type, float zoom, float size ) 
   {
     float delta = 2 * size / zoom;
     // TDLog.v("get line to continue, type " + type + " delta " + delta );
@@ -1446,7 +1464,7 @@ public class Scrap
 
   /** fine the area to continue
    * @param ap     area path
-   * @param lp1    area start point
+   * @param lq1    area start point
    * @param lq2    area end point
    * @param type   area type
    * @param zoom   display zoom
@@ -1587,7 +1605,7 @@ public class Scrap
               }
               // TODO update mSelection
               area.recomputeSize();
-              area.retracePath();
+              area.retracePath( );
               mSelection.insertPath( area );
               // area.dump( "af" );
               // TDLog.v("AREA new size " + area.size() );
@@ -1719,7 +1737,7 @@ public class Scrap
   void addLineToLine( DrawingLinePath line1, DrawingLinePath line0 )
   {
     // TDLog.v( "add line to line" );
-    DrawingLinePath line = new DrawingLinePath( line0.mLineType, mScrapIdx );
+    DrawingLinePath line = new DrawingLinePath( line0.mLineType, mScrapIdx, line0.mScale );
     boolean added = false;
     try {
       boolean prepend = line0.mFirst.distance( line1.mFirst ) < line0.mLast.distance( line1.mFirst );
@@ -1826,16 +1844,15 @@ public class Scrap
   // }
 
   /** flip horizontally
-   * @param z   ???
    */
-  void flipXAxis( float z )
+  void flipXAxis( )
   {
     if ( mCurrentStack != null ) {
       Selection selection = new Selection();
       synchronized( TDPath.mCommandsLock ) {
         for ( ICanvasCommand cmd : mCurrentStack ) {
           if ( cmd.commandType() == 0 ) {
-            cmd.flipXAxis(z);
+            cmd.flipXAxis( );
             DrawingPath path = (DrawingPath)cmd;
             if ( path.isLine() ) { // path instanceof DrawingLinePath
               ((DrawingLinePath)path).flipReversed();
@@ -1850,7 +1867,7 @@ public class Scrap
     }
     synchronized( TDPath.mStationsLock ) {
       for ( DrawingStationUser p : mUserStations ) {
-        p.flipXAxis(z);
+        p.flipXAxis( );
       }
     }
   }
@@ -1987,7 +2004,7 @@ public class Scrap
     DrawingLinePath line2 = (DrawingLinePath)spmin.mItem;
 
     //
-    DrawingLinePath line = new DrawingLinePath( line2.mLineType, mScrapIdx );
+    DrawingLinePath line = new DrawingLinePath( line2.mLineType, mScrapIdx, line2.mScale );
     boolean appended = false;
     try {
       boolean reversed1 = ( pt1 == line1.mLast );
@@ -2619,7 +2636,7 @@ public class Scrap
       }
 
       // area.mPoints = pts2;
-      area.retracePath();
+      area.retracePath( );
       
       if ( ret == 0 ) {
         synchronized( TDPath.mSelectionLock ) {
@@ -2648,41 +2665,34 @@ public class Scrap
     }
   }
 
+
+  /** shift the hot item
+   * @param dx  X shift
+   * @param dy  Y shift
+   */
   // void shiftHotItem( float dx, float dy, float range ) 
-  void shiftHotItem( float dx, float dy, List< DrawingOutlinePath > xsections )
+  void shiftHotItem( float dx, float dy )
   { 
     synchronized( TDPath.mSelectionLock ) {
       // SelectionPoint sp = mSelected.shiftHotItem( dx, dy, range );
       SelectionPoint sp = mSelected.shiftHotItem( dx, dy );
       if ( sp != null ) {
-        DrawingPath path = sp.mItem;
-        if ( path.isPoint() ) { // path instanceof DrawingPointPath
-          DrawingPointPath pt = (DrawingPointPath)path;
-          if ( BrushManager.isPointSection( pt.mPointType )  ) {
-            String scrap_name = TDUtil.replacePrefix( TDInstance.survey, pt.getOption( TDString.OPTION_SCRAP ) );
-            if ( scrap_name != null ) {
-              // TDLog.v("Shift " + scrap_name + " X-section " + xsections.size() );
-              synchronized( TDPath.mXSectionsLock ) {
-                for ( DrawingOutlinePath xsection : xsections ) {
-                  if ( xsection.isScrapName( scrap_name ) ) {
-                    xsection.mPath.shiftBy( dx, dy );
-                    // break;
-                  }
-                }
-              }
-            }
-          }
-        }
         mSelection.checkBucket( sp );
       }
     }
   }
 
+  /** @return the next selected point
+   */
   SelectionPoint nextHotItem() { return mSelected.nextHotItem(); }
+
+  /** @return the previous selected point
+   */
   SelectionPoint prevHotItem() { return mSelected.prevHotItem(); }
 
-  // compute the bounding box for a scrap index or the global one
-  // @param scrap   scrap index (-1 for global bbox)
+  /** compute the bounding box for this scrap
+   * @return the scrap bounding box
+   */
   RectF computeBBox( )
   {
     float xmin=1000000f, xmax=-1000000f, 
@@ -2702,13 +2712,18 @@ public class Scrap
     return mBBox;
   }
 
-  // get the bounding box: must have been previously computed with computeBBox()
-  // this is done by the command manager getBoundingBox()
+  /** @return the scrap bounding box: must have been previously computed with computeBBox()
+   * @note this is done by the command manager getBoundingBox()
+   */
   RectF getBBox() 
   {
     return mBBox;
   }
 
+  /** get an audio point 
+   * @param bid  audio ID of the point
+   * @return the audio point or null
+   */
   DrawingAudioPath getAudioPoint( long bid )
   {
     synchronized( TDPath.mCommandsLock ) {
@@ -2728,6 +2743,8 @@ public class Scrap
     return null;
   }
 
+  /** @return the are of a x-section
+   */
   float computeSectionArea()
   {
     float ret = 0;
@@ -2772,7 +2789,7 @@ public class Scrap
           // get the line/station
           String scrap = TDUtil.replacePrefix( TDInstance.survey, p.getOption( TDString.OPTION_SCRAP ) );
           if ( scrap != null ) {
-            TDLog.v( "link xsection: point scrap " + scrap );
+            // TDLog.v( "link xsection: point scrap " + scrap );
             int pos = scrap.lastIndexOf( "-xx" );
             if ( pos > 0 ) {
               String id = scrap.substring(pos+1); // line id
@@ -2815,6 +2832,8 @@ public class Scrap
     }
   }
 
+  /** redo a drawing action
+   */
   public void redo()
   {
     final int length = mRedoStack.toArray().length;
@@ -2957,7 +2976,7 @@ public class Scrap
 
   // AREA ACTIONS ----------------------------------------------------
 
-  void shiftAreaShaders( float dx, float dy, float s, boolean landscape )
+  void shiftAreaShaders( float dx, float dy, float s, boolean landscape ) // AREA SCALE ?
   {
     synchronized ( TDPath.mCommandsLock ) {
       for ( ICanvasCommand c : mCurrentStack ) {
@@ -2967,6 +2986,29 @@ public class Scrap
           if ( path.isArea() ) { // path instanceof DrawingAreaPath
             DrawingAreaPath area = (DrawingAreaPath)path;
             area.shiftShaderBy( dx, dy, s );
+          }
+        }
+      }
+    }
+  }
+
+  /** add the (shifted) outlines to the list
+   * @param outines   list of outlines
+   * @param dx        X shift
+   * @param dy        Y shift
+   */
+  void addOutline( ArrayList<DrawingLinePath> outlines, float dx, float dy )
+  {
+    synchronized( TDPath.mCommandsLock ) {
+      for ( ICanvasCommand cmd : mCurrentStack  ) {
+        if ( cmd.commandType() == 0 ) {
+          DrawingPath path = (DrawingPath)cmd;
+          if ( path.isLine() ) { // path instanceof DrawingLinePath
+            DrawingLinePath line = (DrawingLinePath)path;
+            if ( line.hasOutline() ) {
+              DrawingLinePath outline = new DrawingLinePath( line, dx, dy );
+              outlines.add( outline );
+            }
           }
         }
       }
@@ -3009,7 +3051,9 @@ public class Scrap
           DrawingPath path = (DrawingPath)cmd;
           if ( path.isLine() ) { // path instanceof DrawingLinePath
             DrawingLinePath line = (DrawingLinePath)path;
-            if ( line.hasOutline() ) line.drawWithPaint( canvas, mat, bbox, BrushManager.fixedGrid100Paint );
+            if ( line.hasOutline() ) {
+              line.drawWithPaint( canvas, mat, bbox, BrushManager.fixedGrid100Paint );
+            }
           }
         }
       }
@@ -3023,7 +3067,7 @@ public class Scrap
    * @param bbox      clipping rectangle
    * @param xor_color xor colors
    */
-  void drawAll( Canvas canvas, Matrix matrix, float scale, RectF bbox, int xor_color )
+  void drawAll( Canvas canvas, Matrix matrix, float scale, float zoom, RectF bbox, boolean sections, int xor_color )
   {
     if ( mCurrentStack == null ) return;
     synchronized( TDPath.mCommandsLock ) {
@@ -3031,21 +3075,26 @@ public class Scrap
         for ( ICanvasCommand cmd : mCurrentStack  ) {
           if ( cmd.commandType() == 0 ) {
             DrawingPath path = (DrawingPath)cmd;
-            cmd.draw( canvas, matrix, scale, bbox, xor_color );
             if ( path.isLine() ) { // path instanceof DrawingLinePath
               DrawingLinePath line = (DrawingLinePath)path;
+              Paint paint = new Paint( line.mPaint );
+              if ( xor_color == 1 ) paint.setColor( BrushManager.xorColor( paint.getColor() ) );
+              if ( ! TDSetting.mUnscaledLines ) line.zoomPathEffect( zoom );
+              line.drawWithPaint( canvas, matrix, bbox, paint );
               if ( BrushManager.isLineSection( line.mLineType ) ) { // add direction-tick to section-lines
-                Paint paint = new Paint( BrushManager.mSectionPaint );
-                // paint.setColor( xor_color ^ paint.getColor() );
-                paint.setColor( BrushManager.xorColor( paint.getColor() ) );
+                // Paint paint = new Paint( BrushManager.mSectionPaint );
+                // // paint.setColor( xor_color ^ paint.getColor() );
+                // paint.setColor( BrushManager.xorColor( paint.getColor() ) );
                 drawDirectionTick( canvas, matrix, line, TDSetting.mArrowLength, paint );
               } else if ( BrushManager.isLineSlope( line.mLineType ) ) {
-                Paint paint = new Paint( BrushManager.mLSidePaint );
-                // paint.setColor( xor_color ^ paint.getColor() );
-                paint.setColor( BrushManager.xorColor( paint.getColor() ) );
+                // Paint paint = new Paint( BrushManager.mLSidePaint );
+                // // paint.setColor( xor_color ^ paint.getColor() );
+                // paint.setColor( BrushManager.xorColor( paint.getColor() ) );
                 float lside = line.getLSide(); if ( lside < 1 ) lside = TDSetting.mSlopeLSide;
                 drawDirectionTick( canvas, matrix, line, lside*0.5f, paint ); // lside is divided by 2 to make it roughly long as in therion pdf
               }
+            } else {
+              cmd.draw( canvas, matrix, scale, bbox, xor_color );
             }
           }
         }
@@ -3054,21 +3103,26 @@ public class Scrap
           if ( cmd.commandType() == 0 ) {
             DrawingPath path = (DrawingPath)cmd;
             if ( DrawingLevel.isLevelVisible( (DrawingPath)cmd ) ) {
-              cmd.draw( canvas, matrix, scale, bbox, xor_color );
               if ( path.isLine() ) { // path instanceof DrawingLinePath
                 DrawingLinePath line = (DrawingLinePath)path;
+                Paint paint = new Paint( line.mPaint );
+                if ( xor_color == 1 ) paint.setColor( BrushManager.xorColor( paint.getColor() ) );
+                if ( ! TDSetting.mUnscaledLines ) line.zoomPathEffect( zoom );
+                line.drawWithPaint( canvas, matrix, bbox, paint );
                 if ( BrushManager.isLineSection( line.mLineType ) ) { // add direction-tick to section-lines
-                  Paint paint = new Paint( BrushManager.mSectionPaint );
-                  // paint.setColor( xor_color ^ paint.getColor() );
-                  paint.setColor( BrushManager.xorColor( paint.getColor() ) );
+                  // Paint paint = new Paint( BrushManager.mSectionPaint );
+                  // // paint.setColor( xor_color ^ paint.getColor() );
+                  // paint.setColor( BrushManager.xorColor( paint.getColor() ) );
                   drawDirectionTick( canvas, matrix, line, TDSetting.mArrowLength, paint );
                 } else if ( BrushManager.isLineSlope( line.mLineType ) ) {
-                  Paint paint = new Paint( BrushManager.mLSidePaint );
-                  // paint.setColor( xor_color ^ paint.getColor() );
-                  paint.setColor( BrushManager.xorColor( paint.getColor() ) );
+                  // Paint paint = new Paint( BrushManager.mLSidePaint );
+                  // // paint.setColor( xor_color ^ paint.getColor() );
+                  // paint.setColor( BrushManager.xorColor( paint.getColor() ) );
                   float lside = line.getLSide(); if ( lside < 1 ) lside = TDSetting.mSlopeLSide;
                   drawDirectionTick( canvas, matrix, line, lside*0.5f, paint );
                 }
+              } else {
+                cmd.draw( canvas, matrix, scale, bbox, xor_color );
               }
             }
           }
@@ -3099,8 +3153,9 @@ public class Scrap
    * @param matrix   transform matrix
    * @param scale    rescaling factor
    * @param bbox     clipping rectangle
+   * @param sections whether to display x-sections
    */
-  void drawAll( Canvas canvas, Matrix matrix, float scale, RectF bbox )
+  void drawAll( Canvas canvas, Matrix matrix, float scale, float zoom, RectF bbox, boolean sections )
   {
     if ( mCurrentStack == null ) return;
     synchronized( TDPath.mCommandsLock ) {
@@ -3111,6 +3166,7 @@ public class Scrap
             cmd.draw( canvas, matrix, scale, bbox );
             if ( path.isLine() ) { // path instanceof DrawingLinePath
               DrawingLinePath line = (DrawingLinePath)path;
+              if ( ! TDSetting.mUnscaledLines ) line.zoomPathEffect( zoom );
               if ( BrushManager.isLineSection( line.mLineType ) ) { // add direction-tick to section-lines
                 drawDirectionTick( canvas, matrix, line, TDSetting.mArrowLength, BrushManager.mSectionPaint );
               } else if ( BrushManager.isLineSlope( line.mLineType ) ) {
@@ -3128,6 +3184,7 @@ public class Scrap
               cmd.draw( canvas, matrix, scale, bbox );
               if ( path.isLine() ) { // path instanceof DrawingLinePath
                 DrawingLinePath line = (DrawingLinePath)path;
+                if ( ! TDSetting.mUnscaledLines ) line.zoomPathEffect( zoom );
                 if ( BrushManager.isLineSection( line.mLineType ) ) { // add direction-tick to section-lines
                   drawDirectionTick( canvas, matrix, line, TDSetting.mArrowLength, BrushManager.mSectionPaint );
                 } else if ( BrushManager.isLineSlope( line.mLineType ) ) {
@@ -3480,7 +3537,7 @@ public class Scrap
   }
 
   /** join the lines in the multiselction
-   * @param dcim   maximum gap for join
+   * @param dmin   maximum gap for join
    */
   void joinMultiselection( float dmin )
   {
@@ -3521,7 +3578,7 @@ public class Scrap
 	    retrace = true;
 	  }
 	  if ( retrace ) {
-            l1.retracePath();
+            l1.retracePath( );
 	  }
         }
       }
@@ -3678,4 +3735,101 @@ public class Scrap
     return null;
   }
 
+  /** @return the section line of a given x-section, or null if not found
+   * @param scrap_name    X-section fullname
+   */
+  DrawingLinePath findSectionLine( String scrap_name )
+  {
+    for ( ICanvasCommand cmd : mCurrentStack ) {
+      if ( cmd instanceof DrawingLinePath ) {
+        DrawingLinePath path = (DrawingLinePath)cmd;
+        if ( BrushManager.isLineSection( path.mLineType )  ) {
+          if ( scrap_name.equals( path.getOption( TDString.OPTION_SCRAP ) ) ) return path;
+        }
+      }
+    }
+    // TDLog.v("failed find section line " + scrap_name );
+    return null;
+  }
+
+  /** recover the symbols types // FIXME NOT TESTED
+   */
+  void recoverSymbols() 
+  {
+    for ( ICanvasCommand cmd : mCurrentStack ) {
+      if ( ( cmd instanceof DrawingPointPath ) && ( BrushManager.mPointLib != null ) ) {
+        DrawingPointPath point = (DrawingPointPath)cmd;
+        if ( BrushManager.isPointUser( point.mPointType ) ) {
+          String name = point.getOption( TDString.OPTION_SYMBOL );
+          if ( name != null ) {
+            // Symbol symbol = BrushManager.mPointLib.get( name );
+            int idx = BrushManager.mPointLib.getSymbolIndexByThName( name );
+            if ( idx >= 0 ) point.setPointType( idx );
+          }
+        }
+      } else if ( ( cmd instanceof DrawingLinePath ) && ( BrushManager.mLineLib != null ) ) {
+        DrawingLinePath line = (DrawingLinePath)cmd;
+        if ( BrushManager.isLineUser( line.mLineType ) ) {
+	  String name = line.getOption( TDString.OPTION_SYMBOL );
+	  if ( name != null ) {
+	    // Symbol symbol = BrushManager.mLineLib.get( name );
+	    int idx = BrushManager.mLineLib.getSymbolIndexByThName( name );
+            if ( idx >= 0 ) line.setLineType( idx );
+	  }
+        }
+      } else if ( ( cmd instanceof DrawingAreaPath ) && ( BrushManager.mAreaLib != null ) ) {
+        DrawingAreaPath area = (DrawingAreaPath)cmd;
+        if ( BrushManager.isAreaUser( area.mAreaType ) ) {
+	  String name = area.getOption( TDString.OPTION_SYMBOL );
+	  if ( name != null ) {
+	    // Symbol symbol = BrushManager.mLineLib.get( name );
+	    int idx = BrushManager.mAreaLib.getSymbolIndexByThName( name );
+            if ( idx >= 0 ) area.setAreaType( idx );
+	  }
+        }
+      }
+    }
+  }
+
+  /** @returni true if there is a sectioon-point at a given scrap name
+   * @param name  section scrap name, ie,  <survey_name>-[xs|xh]-<station_name>-<plot_name>
+   * @note this method scans all the items and is not efficient: somehow the scrap should keep a list of the section-points
+   */
+  boolean hasSectionPointWithScrapName( String name ) 
+  {
+    if ( name == null || name.length() == 0 ) return false;
+    for ( ICanvasCommand cmd : mCurrentStack ) {
+      if ( ( cmd instanceof DrawingPointPath ) ) {
+        DrawingPointPath pt = (DrawingPointPath)cmd;
+        if ( BrushManager.isPointSection( pt.mPointType ) ) {
+          if ( name.equals( pt.getOption( TDString.OPTION_SCRAP ) ) ) {
+            // TDLog.v("SectionPoint options " + pt.getOptions() + " scrap " + name + " --> TRUE");
+            return true;
+          // } else {
+          //   TDLog.v("SectionPoint options " + pt.getOptions() + " scrap " + name + " --> FALSE");
+          }
+        }
+      }
+    }
+    return false;
+  }
+
+  /** clip a line to this scrap outline
+   * @param line  line to clip
+   * @param clip_mode  clipping mode
+   */
+  void clipLine( DrawingLinePath line, int clip_mode ) 
+  {
+    Clip.toOutline( mCurrentStack, line, clip_mode );
+  }
+
+  /** clip an area to the scrap outline
+   * @param area  area to clip
+   */
+  void clipArea( DrawingAreaPath area ) 
+  {
+    Clip.toOutline( mCurrentStack, area );
+  }
+
 }
+

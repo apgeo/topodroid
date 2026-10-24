@@ -4,7 +4,7 @@
 TopoDroid has a large number of settings, which are arranged in sections and subsections.
 Seldom used settings are collected under "second" sections.<br>
 Settings can be exported and imported. It is possible to restrict the export/import to specific categories of settings.<br>
-The "AI" button in the <i>Settings Window</i> opens a dialog for the AI-guided change to the settings.<br>
+The "AI" button in the <i>Settings Window</i> opens a dialog for an AI-guided change to the settings.<br>
 <ul>
   <li><a href="#main">Main</a></li>
   <li><a href="#import_export">Import/Export</a></li>
@@ -34,14 +34,14 @@ The "AI" button in the <i>Settings Window</i> opens a dialog for the AI-guided c
       <li><a href="#wall_model">Wall model</a></li>
     </ul>
   </li>
-  <li><a href="#second_main">Second main</a>
+  <li><a href="#second_main">Main - secondary</a>
     <ul>
-      <li><a href="#second_survey_data">Second Survey Data</a></li>
-      <li><a href="#second_splay_data">Second Splay data</a></li>
-      <li><a href="#second_sketching">Second Sketching</a></li>
-      <li><a href="#second_lines">Second Lines</a></li>
-      <li><a href="#second_devices">Second Devices</a></li>
-      <li><a href="#second_import_export">Second import/export</a></li>
+      <li><a href="#second_survey_data">Survey Data - secondary</a></li>
+      <li><a href="#second_splay_data">Splay data - secondary</a></li>
+      <li><a href="#second_sketching">Sketching - secondary</a></li>
+      <li><a href="#second_lines">Lines - secondary</a></li>
+      <li><a href="#second_devices">Devices - secondary</a></li>
+      <li><a href="#second_import_export">Import/export - secondary</a></li>
     </ul>
   </li>
   <li><a href="#settings_import_export">Settings import/export</a></li>
@@ -52,13 +52,16 @@ The "AI" button in the <i>Settings Window</i> opens a dialog for the AI-guided c
 <h2 id="main">Main</h2>
 <ul>
   <!-- li><a href="page_cwd.htm">Work directory.</a> Default "unset" (ie "TopoDroid")</li -->
+  <li><i>Usage profile</i> {basic, normal, advanced, expert, tester}. [normal]</li>
   <li><i>Text size</i>: size of the text in lists. &gt;= 1. [14]</li>
   <li><i>Buttons size</i> {small, normal, medium, large, huge}. [normal]</li>
-  <li><i>Usage profile</i> {basic, normal, advanced, expert, tester}. [normal]</li>
-  <!-- li>Co-surveying service. Default OFF</li -->
-  <li><i>User manual</i>: available translations. To change this setting from english to something else TopoDroid needs internet access {English, Spanish, Italian, Russian, Hungarian, French, Portuguese, Chinese}.</li>
-  <li>App <a href="page_language.htm">language</a> {default, Bulgarian, Chinese, English, German, Hungarian, Italian, Portuguese, Russian, Spanish.}. Default "default" (i.e. system locale)</li>
+  <li><i>Symbols size</i> [18 pt]</li>
+  <li>Hidden <i>Navigation bar</i> [no]</li>
   <li><i>Screen orientation</i> (unspecified, portrait, landscape) [unspecified]</li>
+  <li>App <a href="page_language.htm">language</a> {default, Bulgarian, Chinese, English, German, Hungarian, Italian, Portuguese, Russian, Spanish.}. Default "default" (i.e. system locale)</li>
+  <li><i>User manual</i>: available translations. To change this setting from english to something else TopoDroid needs internet access {English, Spanish, Italian, Russian, Hungarian, French, Portuguese, Chinese}.</li>
+  <li><i>Analytics</i> of functions usage [enabled]</li>
+  <!-- li>Co-surveying service. Default OFF</li -->
   <!-- li>Backup clear menu</li -->
 </ul>
 
@@ -225,7 +228,7 @@ The "AI" button in the <i>Settings Window</i> opens a dialog for the AI-guided c
   <li><i>Thumbnails size</i>: photo thumbnails size [80,400]. [200 pxl]</li>
   <li><i>Editable stations</i>: inline-editable stations [no]</li>
   <li><i>Sketch origin</i>: origin in common to all sketches or not</li>
-  <li><i>Shared x-sections</i>: x-sections shared among sketches</li>
+  <!-- li><i>Shared x-sections</i>: x-sections shared among sketches</li -->
 </ul>
 
 <hr style="height:1px;background-color:black;">
@@ -281,7 +284,7 @@ The "AI" button in the <i>Settings Window</i> opens a dialog for the AI-guided c
 <h2 id="sketching">Sketching</h2>
 <ul>
   <!-- li>Drawing tool picker {recent, list, grid, triple grid}. [most-recent]</li -->
-  <li><i>Corner drag</i>: enable corner-drag in <u>Drawing window</u> and <u>Overview window</u>. [no]</li>
+  <!-- li><i>Corner drag</i>: enable corner-drag in <u>Drawing window</u> and <u>Overview window</u>. [no]</li -->
   <li><i>Zoom controls</i> {off,temporary,permanent}. [off]</li>
   <li><i>X-section H-threshold</i>: x-section horizontal threshold</li>
   <li><i>Midline check</i>: check if stations are attached to midline. [yes]</li>
@@ -306,6 +309,7 @@ The "AI" button in the <i>Settings Window</i> opens a dialog for the AI-guided c
 
 <h3 id="lines">Lines</h3>
 <ul>
+  <li><i>Non-zoomed line effects</i>: line effect (eg. pit) are not zoomed [no]</li>
   <li><i>Line width</i>: drawing line width (N.B. wall line are twice this). [1 pxl]</li>
   <li><i>Line style scale</i>: scale factor of line drawing styles</li>
   <li><i>Line style</i> {Bezier, fine, normal, coarse, simplified}. [normal]</li>
@@ -313,7 +317,7 @@ The "AI" button in the <i>Settings Window</i> opens a dialog for the AI-guided c
   <li><i>Close closed lines</i>: whether to close lines of "closed" type. [yes]</li>
   <li><i>Slope line l-size</i>: section lines "direction tick" size [1,20]. Default 8 [x unit]</li>
   <li><i>Section line tick size</i>: size of the section line tick</li>
-  <li><i>Section points</i>: add <i>Therion</i> section point to section line. [yes]</li>
+  <!-- li><i>Section-points</i>: add <i>Therion</i> section-point to section-line. [yes]</li -->
   <!-- li><i>Line join</i>: enable line join (closed lines cannot be joined)</li -->
   <li><i>Area border visibility</i> area border default visibility [yes]</li>
 </ul>
@@ -325,10 +329,10 @@ The "AI" button in the <i>Settings Window</i> opens a dialog for the AI-guided c
   <li><i>Survey line width</i> [0.5,10]. [1 pxl]</li>
   <li><i>Station name size</i> [24 pxl]</li>
   <li><i>Green dots size</i>: green dots radius [0.5,100]. [5 pxl]</li>
-  <li><i>Selection radius</i> [24 pxl]</li>
-  <li><i>Eraser size</i> [36 pxl]</li>
-  <li><i>Shift sensitivity</i> [60 pxl]</li>
-  <li><i>Pointing tolerance</i>: pointing radius. [16 pxl]</li>
+  <!-- li><i>Selection radius</i> [24 pxl]</li -->
+  <!-- li><i>Eraser size</i> [36 pxl]</li -->
+  <!-- li><i>Shift sensitivity</i> [60 pxl]</li -->
+  <!-- li><i>Pointing tolerance</i>: pointing radius. [16 pxl]</li -->
   <li><i>Splay transparency</i> [80% opacity]</li>
 </ul>
 
@@ -337,7 +341,7 @@ The "AI" button in the <i>Settings Window</i> opens a dialog for the AI-guided c
 <h2 id="devices">Devices</h2>
 <ul>
   <li><i>Bluetooth</i>: check if BT is enabled on start. [yes]</li>
-  <li><i>Data connection mode</i>: {on-demand, continuous, multi}. [on-demand]</li>
+  <li><i>Data connection mode</i>: {on-demand, continuous, multi-batch}. [on-demand]</li>
   <!-- li>Auto reconnect (in continuous mode). [yes]</li -->
   <li><i>Number of new data</i>: get the number of new data before batch download</li>
   <li><i>Socket</i>: BT socket type {normal,insecure}. [device dependent default]</li>
@@ -371,7 +375,7 @@ The "AI" button in the <i>Settings Window</i> opens a dialog for the AI-guided c
   <li><i>Station text size</i>: size of station text [20 pts].</li>
   <li><i>Selection radius</i> [50 pxl]</li>
   <li><i>Distance message</i>: show distance message instead of box [np].</li>
-  <li><i>Station dialog</i>: show station dialog instead of box [no].</li>
+  <!-- li><i>Station dialog</i>: show station dialog instead of box [no].</li -->
   <li><i>Top grid</i>: grid over instead of below model [no].</li>
   <li><i>Grid extent</i> [10 cells]</li>
   <li><i>Visible names</i>: whether station names are always visible even when the survey is hidden (above Android 9) [no]</li>
@@ -382,7 +386,7 @@ The "AI" button in the <i>Settings Window</i> opens a dialog for the AI-guided c
 <h3 id="dem">DEM</h3>
 <ul>
   <li><i>DEM buffer</i>: extension of DEM buffer around survey [200 m].</li>
-  <li><i>DEM max size</i> [400 m]</li>
+  <li><i>DEM max size</i> for lox files [400 cells]</li>
   <li><i>DEM reduce</i>: DEM reduction mode. {subsample, clip} [subsample]</li>
 </ul>
 
@@ -390,7 +394,7 @@ The "AI" button in the <i>Settings Window</i> opens a dialog for the AI-guided c
 
 <h3 id="wall_model">Wall model</h3>
 <ul>
-  <li><i>Splay usage</i>: the parser use of the splays data {none, normal, xsection} [normal]</li>
+  <li><i>Splay usage</i>: the parser use of the splays data {none, normal, x-section} [normal]</li>
   <li><i>All splays</i>: whether to use all splays for Convex Hull model [yes].</li>
   <li><i>Projected walls</i>: whether to use splays projected on a normal plane [no].</li>
   <li><i>Splay threshold</i>: splay minimum value of the splay-shot cosine (Hull model) [0.5].</li>
@@ -421,44 +425,47 @@ The "AI" button in the <i>Settings Window</i> opens a dialog for the AI-guided c
 
 <hr style="height:2px;background-color:black;">
 
-<h2 id="second_main">Second main</h2>
+<h2 id="second_main">Main - secondary</h2>
 <ul>
   <li><i>Single back</i>: whether to close windows with single back [no]</li>
   <li><i>Navigation bar</i>: whether the navigation bar is hidden and is only shown with a slide-up [no]</li>
   <li><i>Palettes</i>: additional palettes menu [no]</li>
   <li><i>Keyboard</i>. Enable <a href="page_keypad.htm">second keyboards</a> instead of Android default keyboard [no]</li>
   <li><i>No keyboard cursor</i> [yes]</li>
+  <li><i>Bulk surveys operations</i></li>
   <li><i>Packets log</i> [no]</li>
   <li><i>Sketch editing</i>: <i>Therion</i> th2 editing [no]</li>
+  <li><i>AI key</i> (Gemini API key)</li>
   <!-- li>Developer mode</li -->
 </ul>
 
 <hr style="height:1px;background-color:black;">
 
-<h3 id="second_survey_data">Second Survey Data</h3>
+<h3 id="second_survey_data">Survey Data - secondary</h3>
 <ul>
   <li><i>Diving mode</i></li>
-  <li><i>Backsight splay</i>: check if first splay after new leg should be considered a backsight leg (only for forward policy with leg after splays: failure of backsight check is highlighted violet). [no]</li>
+  <li><i>Shot tampering</i>: allow modifying downloaded data</li>
+  <li><i>Backsight-check</i>: if first splay after a leg should be considered a backsight check of the leg (only for forward policy with leg after splays: failure of backsight check is highlighted violet). [no]</li>
   <li><i>Recent shots</i>: recent data highlight.</li>
   <li><i>Recent data timeout</i></li>
   <li><i>Fractional extend</i>: whether to allow fractional extend. [no]</li>
   <li><i>Backshot DistoX</i>: whether to swap stations for DistoX backshots. [no]</li>
   <li><i>Plane fitting</i>: enable plane fitting of splays</li>
   <li><i>Sensores</i>: enable Android sensors [no]</li>
-  <li><i>Loop closure</i>: none, normal, weighted, selective, triangulation [no]</li>
+  <li><i>Loop closure</i>: none, normal, weighted, selective, triangles [no]</li>
   <li><i>Loop threshold</i>: loop selective closure threshold (percent of loop length)</li>
   <li><i>Android compass</i>: enable Android compass/clino</li>
   <li><i>Shot direction timer</i>: shot direction timer countdown. [10 s]</li>
   <li><i>Beep volume</i>: beep volume for shot direction timer and leg feedback [10,100%]. [50%]</li>
   <li><i>Beep length</i>: beep duration for leg feedback [milliseconds]. [500]</li>
-  <li><i>Blunder shots</i>: skip blunder leg-shots</li>
+  <li><i>Blunder shots</i>: skip blunder leg-shots (shots that differ only in length)</li>
   <li><i>Splay station re-assign</i>: maintain assigned splay stations on renumbering</li>
   <li><i>Splay group-rename</i>: splay group-station assign only forward</li> 
 </ul>
 
 <hr style="height:1px;background-color:black;">
 
-<h3 id="second_splay_data">Second Splay data</h3>
+<h3 id="second_splay_data">Splay data = secondary</h3>
 <ul>
   <li>Splay classes [no]</li>
   <li>Splay coloring: none, color-picker, color-palette [none]</li>
@@ -474,7 +481,7 @@ The "AI" button in the <i>Settings Window</i> opens a dialog for the AI-guided c
 
 <hr style="height:1px;background-color:black;">
 
-<h3 id="second_sketching">Second Sketching</h3>
+<h3 id="second_sketching">Sketching = secondary</h3>
 <ul>
   <li><i>Sketch shift/scale</i> [no]</li>
   <li><i>Sketch split/merge</i> (split, copy, outlines, merge) [no]</li>
@@ -494,7 +501,7 @@ The "AI" button in the <i>Settings Window</i> opens a dialog for the AI-guided c
 
 <hr style="height:1px;background-color:black;">
 
-<h3 id="second_lines">Second Lines</h3>
+<h3 id="second_lines">Lines - secondary</h3>
 <ul>
   <li><i>Straightening angle</i> [45&deg;]</li>
   <li><i>Interpolation accuracy</i>: for Bezier lines</li>
@@ -505,13 +512,14 @@ The "AI" button in the <i>Settings Window</i> opens a dialog for the AI-guided c
   <li><i>Line/Area snap</i> [no]</li>
   <li><i>Smooth/straighten segments</i></li>
   <li><i>Straighten lines</i> [no]</li>
+  <li><i>Line/area clipping</i> to outline [no]</li>
   <li><i>Path multiselection</i>: enable line-area path multiselection.</li>
   <!-- li><i>Composite actions</i>: enable line/area long-tap actions.</li -->
 </ul>
 
 <hr style="height:1px;background-color:black;">
 
-<h3 id="second_devices">Second Devices</h3>
+<h3 id="second_devices">Device - secondary</h3>
 <ul>
   <li><i>BT aliases</i>: manually set BT aliases for measurement devices.</li>
   <li><i>unnamed devices</i> [no] </li>
@@ -530,12 +538,12 @@ The "AI" button in the <i>Settings Window</i> opens a dialog for the AI-guided c
 
 <hr style="height:1px;background-color:black;">
 
-<h3 id="second_import_export">Second import/export</h3>
+<h3 id="second_import_export">Import/export - secondary</h3>
 
 <ul>
   <li><i>Zipped symbols files</i>: store/load symbol files to/from zip archives</li>
   <li><i>Import datamode</i></li>
-  <li><i>Auto X-sections</i>: insert X-Sections in sketch exports</li>
+  <li><i>Auto x-sections</i>: insert x-sections in sketch exports</li>
   <li><i>Stations</i>: include stations in sketch exports</li>
   <li><i>LRUD splay count</i>: number of splays used for LRUD [default false]</li>
   <li><i>Zip-share category</i>: categorized zip-share [default false]</li> 

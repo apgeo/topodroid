@@ -14,7 +14,7 @@ package com.topodroid.TDX;
 import com.topodroid.util.TDLog;
 import com.topodroid.util.TDUtil;
 import com.topodroid.util.TDString;
-import com.topodroid.util.TDStatus;
+import com.topodroid.util.TDAnalytics;
 // import com.topodroid.util.TDColor;
 import com.topodroid.ui.MyKeyboard;
 import com.topodroid.ui.MyCheckBox;
@@ -28,6 +28,7 @@ import com.topodroid.ui.TDLayout;
 import com.topodroid.prefs.TDSetting;
 import com.topodroid.types.LegType;
 import com.topodroid.types.ExtendType;
+import com.topodroid.types.TDStatus;
 
 
 
@@ -47,7 +48,6 @@ import android.text.InputType;
 import android.content.Context;
 // import android.content.res.Resources;
 import android.content.DialogInterface;
-// import android.inputmethodservice.KeyboardView;
 
 import android.widget.TextView;
 import android.widget.EditText;
@@ -64,6 +64,8 @@ class ShotEditDialog extends MyDialog
                      , View.OnLongClickListener
                      , MyColorPicker.IColorChanged
 {
+  private static final boolean LOG = false;
+
   private final ShotWindow mParent;
   private DBlock mBlk;
   private DBlock mPrevBlk;
@@ -119,7 +121,7 @@ class ShotEditDialog extends MyDialog
   private String shot_clino;     // clino    - distance
   // private boolean shot_manual;
   private boolean editable;      // whether the shot data are editable
-  private float shot_stretch; // FIXME_STRETCH
+  private float shot_stretch;    // fractional part of the shot extend - FIXME_STRETCH
 
   private String shot_extra;
   private int  shot_extend;
@@ -170,6 +172,7 @@ class ShotEditDialog extends MyDialog
   private MyCheckBox mButtonSensor = null;
   // private MyCheckBox mButtonShot   = null; // INTERMEDIATE_DATA
   private MyCheckBox mButtonSurvey = null;
+  private MyCheckBox mButtonBackSplay = null;
 
   private MyCheckBox mButtonDelete = null;
   private MyCheckBox mButtonCheck  = null;
@@ -212,6 +215,7 @@ class ShotEditDialog extends MyDialog
     // TDLog.v("splay type " + splay_type );
     mColor  = mBlk.getPaintColor();
     hasAudio = TDandroid.checkMicrophone( mContext );
+    TopoDroidApp.updateAnalytic( TDAnalytics.SHOT_EDIT );
   }
 
   /** load a shot and fill the fields of the interface
@@ -419,7 +423,7 @@ class ShotEditDialog extends MyDialog
     int size = TDSetting.mSizeButtons; // TopoDroidApp.getScaledSize( mContext );
     // boolean photoCheck = TDandroid.checkCamera( mContext );
 
-    initLayout( R.layout.shot_dialog, null );
+    initLayout( R.layout.shot_dialog, R.string.title_shot_edit );
 
     mETdistance = (EditText) findViewById(R.id.shot_distance);
     mETbearing  = (EditText) findViewById(R.id.shot_bearing);
@@ -451,7 +455,6 @@ class ShotEditDialog extends MyDialog
     // mCBdeleteLeg = (CheckBox) findViewById(R.id.delete_leg );
     // mButtonLRUD.setOnClickListener( this );
 
-    // mKeyboard = new MyKeyboard( mContext, (KeyboardView)findViewById( R.id.keyboardview ), R.xml.my_keyboard_base_sign, R.xml.my_keyboard_qwerty );
     mKeyboard = MyKeyboard.getMyKeyboard( mContext, findViewById( R.id.keyboardview ), R.xml.my_keyboard_base_sign, R.xml.my_keyboard_qwerty );
 
     if ( TDSetting.mKeyboard ) {
@@ -652,8 +655,8 @@ class ShotEditDialog extends MyDialog
     // TDLog.v("SAVE block");
 
     boolean can_do_backleg = false;
-    boolean backleg_val = mCBbackLeg != null && mCBbackLeg.isChecked();
-    boolean all_splay = mCBallSplay.isChecked();
+    boolean backleg_val = mCBbackLeg != null  && mCBbackLeg.isChecked();
+    boolean all_splay   = mCBallSplay != null && mCBallSplay.isChecked();
     // FIXME_X2_SPLAY
     int set_xsplay = -1;
     if ( splay_type >= 0 ) {
@@ -667,6 +670,7 @@ class ShotEditDialog extends MyDialog
     if ( mCBlegPrev.isChecked() ) {
       // secondary leg shot have empty FROM, TO, ignore EXTEND, no STRETCH, survey FLAG, extra LEG_TYPE, no COMMENT
       mBlk.setTypeSecLeg();
+      mBlk.setComment("");
       mParent.updateShotNameAndFlags( "", "", ExtendType.EXTEND_IGNORE, 0, 0, LegType.EXTRA, "", mBlk, false );
       return true;
       // shot_from = "";
@@ -718,8 +722,8 @@ class ShotEditDialog extends MyDialog
     // else                            { flag = DBlock.FLAG_SURVEY; }
     if ( mBlk.isTampered() ) flag |= DBlock.FLAG_TAMPERED;
     // flag |= mBlk.cavwayBits(); // cavway bits are restored by resetFlag()
-    shot_flag = mBlk.resetFlag( flag );
-    // TDLog.v("shot flag " + shot_flag );
+    shot_flag = mBlk.resetFlag( flag ); // set the block flag - retain TAMPERED and Cavway bits
+    if ( LOG ) TDLog.v("shot " + mBlk.mId + " reset flag with " + flag + " -> " + shot_flag );
 
     shot_extend = mBlk.getIntExtend();
     if ( mRBleft.isChecked() )       { shot_extend = ExtendType.EXTEND_LEFT; }
@@ -773,6 +777,7 @@ class ShotEditDialog extends MyDialog
     if ( shot_from.length() > 0 ) {
       if ( shot_to.length() > 0 ) {
         renumber = mCBrenumber.isChecked();
+        if ( LOG ) TDLog.v("renumber " + renumber + " all_splay " + all_splay + " is set to false");
         if ( TDSetting.mSplayClasses ) splay_classes = all_splay;
         all_splay = false;
         set_xsplay = -1;
@@ -785,8 +790,7 @@ class ShotEditDialog extends MyDialog
     }
 
     // TDLog.v("renumber " + renumber + " comment " + comment );
-
-    // TDLog.v( "all_splay " + all_splay + " set_xsplay " + set_xsplay + " splay_type " + splay_type );
+    // TDLog.v( "renumber " + renumber + " all_splay " + all_splay + " splay classes " + splay_classes + " set_xsplay " + set_xsplay + " splay_type " + splay_type );
 
     if ( all_splay ) {
       if ( set_xsplay >= 0 ) {
@@ -809,7 +813,7 @@ class ShotEditDialog extends MyDialog
       // mParent.updateSplayLegType( mBlk, leg );
       mParent.updateShotNameAndFlags( shot_from, shot_to, extend, shot_stretch, shot_flag, leg, comment, mBlk, renumber );
     } else {
-      // TDLog.v("other " + set_xsplay );
+      // TDLog.v("other: set_xsplay " + set_xsplay + " blk isSplay " + mBlk.isSplay() );
       // mBlk.setName( shot_from, shot_to ); // done by parent.updateShot
       long leg = LegType.NORMAL;
       if ( set_xsplay > 0 && mBlk.isSplay() ) {
@@ -839,13 +843,13 @@ class ShotEditDialog extends MyDialog
           mParent.updateShotDistanceBearingClino( d, b, c, mBlk );
 	}
       } catch (NumberFormatException e ) {
-        TDLog.e( e.getMessage() );
+        TDLog.e( "Shot edit " + e.getMessage() );
         return false;
       }
     }
 
     // if ( renumber ) {
-    //   TDLog.v( "renumber shots after block id " + mBlk.mId );
+    //   if ( LOG ) TDLog.v( "renumber shots after block id " + mBlk.mId );
     //   mParent.renumberShotsAfter( mBlk );
     // }
 
@@ -925,10 +929,7 @@ class ShotEditDialog extends MyDialog
       }
     }
 
-    if ( ! TDInstance.isSurveyMutable ) { // IMMUTABLE
-      TDToast.makeWarn("Immutable survey");
-      return;
-    }
+    if ( TDInstance.isSurveyImmutable() ) return; // IMMUTABLE
 
     if ( b == mCBlegPrev ) {
       // TDLog.v( "CB leg clicked ");
@@ -1115,6 +1116,9 @@ class ShotEditDialog extends MyDialog
     // } else if ( b == mButtonShot ) {  // INSERT NEW SHOT // INTERMEDIATE_DATA
     //   mParent.dialogInsertShotAt( mBlk );
     //   dismiss();
+    } else if ( mButtonBackSplay != null && b == mButtonBackSplay ) { // BACKSPLAY clear backsight flag
+      mParent.clearBacksightFlag( mBlk );
+      dismiss();
     } else if ( mButtonSurvey != null && b == mButtonSurvey ) { // SPLIT
       if ( TDLevel.overExpert ) {
         mParent.doSplitOrMoveDialog( mBlk.mId );
@@ -1159,6 +1163,7 @@ class ShotEditDialog extends MyDialog
     //   onBackPressed();
   }
 
+  @SuppressWarnings("deprecated")
   @Override
   public void onBackPressed()
   {
@@ -1211,7 +1216,7 @@ class ShotEditDialog extends MyDialog
 
   private void createMoreButtons( int size )
   {
-    int nr_buttons = 5; // ( mBlk.type() == DBlock.BLOCK_MAIN_LEG )? 7 : 6;
+    int nr_buttons = 6; // ( mBlk.type() == DBlock.BLOCK_MAIN_LEG )? 7 : 6;
 
     // mButtonPlot   = new MyCheckBox( mContext, size, R.drawable.iz_plot, R.drawable.iz_plot ); 
     // mButtonPlot.setOnClickListener( this );
@@ -1240,6 +1245,14 @@ class ShotEditDialog extends MyDialog
       -- nr_buttons;
     }
 
+    if ( TDSetting.mBacksightSplay && mBlk.isBackSplay() ) {
+      mButtonBackSplay = new MyCheckBox( mContext, size, R.drawable.iz_backsplay, R.drawable.iz_backsplay );
+      mButtonBackSplay.setOnClickListener( this );
+    } else {
+      mButtonBackSplay = null;
+      -- nr_buttons;
+    }
+
     // mButtonShot   = new MyCheckBox( mContext, size, R.drawable.iz_add_leg, R.drawable.iz_add_leg ); // INTERMEDIATE_DATA
     // mButtonShot.setOnClickListener( this );
 
@@ -1256,6 +1269,7 @@ class ShotEditDialog extends MyDialog
     if ( mButtonAudio  != null ) mButtonX[pos++] = mButtonAudio;
     if ( mButtonSensor != null ) mButtonX[pos++] = mButtonSensor;
     // if ( mButtonShot   != null ) mButtonX[pos++] = mButtonShot; // INTERMEDIATE_DATA
+    if ( mButtonBackSplay != null ) mButtonX[pos++] = mButtonBackSplay;
     if ( mButtonSurvey != null ) mButtonX[pos++] = mButtonSurvey;
 
     LinearLayout layout4x = (LinearLayout) findViewById( R.id.layout4x );

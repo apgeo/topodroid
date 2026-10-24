@@ -207,7 +207,11 @@ public class DrawingSplayPath extends DrawingPath
   {
     if ( intersects( bbox ) ) {
       if ( not_edit && mSplayMode == SPLAY_MODE_POINT ) {
-        TDGreenDot.draw( canvas, matrix, xEnd, yEnd, TDSetting.mDotRadius*1.5f*scale, mPaint );
+        if ( mBlock.isRecent( ) ) { //HBspl_o_color
+          TDGreenDot.draw(canvas, matrix, xEnd, yEnd, TDSetting.mDotRadius * 1.5f * scale, BrushManager.paintSplayLatest ); //HBspl_o
+        } else {
+          TDGreenDot.draw(canvas, matrix, xEnd, yEnd, TDSetting.mDotRadius * 1.5f * scale, mPaint);
+        }
       } else {
         mTransformedPath = new Path( mPath );
         mTransformedPath.transform( matrix );
@@ -230,7 +234,11 @@ public class DrawingSplayPath extends DrawingPath
   {
     if ( intersects( bbox ) ) {
       if ( not_edit && mSplayMode == SPLAY_MODE_POINT ) {
-        TDGreenDot.draw( canvas, matrix, xEnd, yEnd, TDSetting.mDotRadius*1.5f*scale, mPaint );
+        if ( mBlock.isRecent( ) ) { //HBspl_o_color
+          TDGreenDot.draw(canvas, matrix, xEnd, yEnd, TDSetting.mDotRadius * 1.5f * scale, BrushManager.paintSplayLatest );//HBspl_o
+        } else {
+          TDGreenDot.draw(canvas, matrix, xEnd, yEnd, TDSetting.mDotRadius * 1.5f * scale, mPaint);
+        }
       } else {
         mTransformedPath = new Path( mPath );
         mTransformedPath.transform( matrix );
@@ -240,6 +248,36 @@ public class DrawingSplayPath extends DrawingPath
   }
 
   // -------------------------------------------------------------------------------------------------
+
+  /** set the paint by te Cavway flag
+   * @param  blk  splay block
+   * @return true if the block has a cavway flag and the paint was set
+   */
+  boolean setSplayPaintCavwayFlag( DBlock blk )
+  {
+    int cavway_flag = blk.cavwayFlag();
+    if ( cavway_flag <= 0 ) return false;
+    int alpha = (int)( TDSetting.mSplayAlpha * 255 / 100 );
+    switch ( cavway_flag ) {
+      case CavwayConst.FLAG_FEATURE: 
+        copyPathPaint( BrushManager.paintSplayFeature, alpha );
+        break;
+      case CavwayConst.FLAG_RIDGE:
+        copyPathPaint( BrushManager.paintSplayRidge, alpha );
+        break;
+      case CavwayConst.FLAG_BACKSIGHT:
+        copyPathPaint( BrushManager.paintSplayBacksight, alpha );
+        break;
+      case CavwayConst.FLAG_GENERIC:
+        copyPathPaint( BrushManager.paintSplayGeneric, alpha );
+        break;
+      default:
+        copyPathPaint( BrushManager.fixedOrangePaint, alpha );
+        break;
+    }
+    return true;
+  }
+
 
   /** set splay paint - default behaviour
    * @param h_paint  paint used for H-splay
@@ -256,25 +294,7 @@ public class DrawingSplayPath extends DrawingPath
       mPaint = BrushManager.paintSplayXB; // BLUE
       return true;
     }
-    int cavway_flag = blk.cavwayFlag();
-    if ( cavway_flag > 0 ) {
-      switch ( cavway_flag ) {
-        case CavwayConst.FLAG_FEATURE: 
-          mPaint = BrushManager.paintSplayFeature;
-          break;
-        case CavwayConst.FLAG_RIDGE:
-          mPaint = BrushManager.paintSplayRidge;
-          break;
-        case CavwayConst.FLAG_BACKSIGHT:
-          mPaint = BrushManager.paintSplayBacksight;
-          break;
-        case CavwayConst.FLAG_GENERIC:
-          mPaint = BrushManager.paintSplayGeneric;
-          break;
-        default:
-          mPaint = BrushManager.fixedOrangePaint;
-          break;
-      }
+    if ( setSplayPaintCavwayFlag( blk ) ) {
       return true;
     }
     // if ( blk.isHighlighted() ) {

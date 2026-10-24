@@ -15,9 +15,10 @@
 package com.topodroid.TDX;
 
 import com.topodroid.util.TDMath;
-// import com.topodroid.util.TDLog;
+import com.topodroid.util.TDLog;
 import com.topodroid.util.TDColor;
 import com.topodroid.util.TDUtil;
+import com.topodroid.util.TDAnalytics;
 import com.topodroid.ui.MyDialog;
 import com.topodroid.ui.MyButton;
 import com.topodroid.prefs.TDSetting;
@@ -47,8 +48,8 @@ class DrawingStationDialog extends MyDialog
     // private TextView mHiddenLabel;
     // private TextView mCoords;
     private Button mBtnOK;
-    private Button mBtnCurrent;
-    private TextView mTextCurrent;
+    private Button mBtnActive;
+    private TextView mTextActive;
     private Button mBtnBarrier;
     private Button mBtnHidden;
     private CheckBox mCbSplaysOn;
@@ -58,6 +59,7 @@ class DrawingStationDialog extends MyDialog
     private EditText mComment;
     private Button mBtnXSection;
     private Button mBtnXDelete;
+    private Button mBtnXPoint;
     private Button mBtnDirect;
     private Button mBtnInverse;
     private CheckBox mCBhorizontal;
@@ -72,7 +74,7 @@ class DrawingStationDialog extends MyDialog
     private final DrawingStationUser mPath;
     private final TopoDroidApp mApp;
 
-    private String mStationName;
+    private String mStationName; // num-station name
     private int mFlag; // saved-station flag (if any)
     private boolean mIsBarrier;
     private boolean mIsHidden;
@@ -80,16 +82,28 @@ class DrawingStationDialog extends MyDialog
     private float mBearing;
     private float mClino;
     private String mGeoCode = "";
-    private List< DBlock > mBlk;
+    private List< DBlock > mBlk;   // list of blocks of the legs at ths station
+    private String mXSectionName;  // name of x-section without section-point or null
 
     // cannot use disabled compass, otherwise there is no way to choose x-section at junction station
     // private boolean sensorCheck; // whether android sensor is enabled
     private boolean mSensors;    // whether use compass or delete x-section
 
+    /** cstr 
+     * @param context    context
+     * @param parent     parent activity
+     * @param app        application
+     * @param station    (auto) station
+     * @param path       user-station
+     * @param is_barrier whether the station is "barrier"
+     * @param is_hidden  whether the station is "hidden"
+     * @param blk        legs at the station
+     * @param xsection_name name of xsection if there is xsection and section-point exists, otherwise null
+     */
     DrawingStationDialog( Context context, DrawingWindow parent, TopoDroidApp app,
                           DrawingStationName station, DrawingStationUser path,
                           boolean is_barrier, boolean is_hidden, // boolean global_xsections,
-                          List< DBlock > blk )
+                          List< DBlock > blk, String xsection_name )
     {
       super( context, null, R.string.DrawingStationDialog ); // null app
       mParent   = parent;
@@ -101,13 +115,18 @@ class DrawingStationDialog extends MyDialog
       mIsHidden  = is_hidden; 
       // mGlobalXSections = global_xsections;
       mBlk       = blk;
+      mXSectionName = xsection_name;
+      // TDLog.v("Station dialog: section name " + xsection_name );
       // sensorCheck = TDSetting.mWithAzimuth && TDLevel.overNormal;
+      TopoDroidApp.updateAnalytic( TDAnalytics.PLOT_STATION );
     }
 
     @Override
-    protected void onCreate(Bundle savedInstanceState)
+    protected void onCreate( Bundle savedInstanceState )
     {
       super.onCreate(savedInstanceState);
+
+      // TDLog.v("Station dialog: name " + mStationName );
   
       String title = resString(R.string.STATION) + " " + mStationName;
       initLayout( R.layout.drawing_station_dialog, title );
@@ -123,14 +142,15 @@ class DrawingStationDialog extends MyDialog
       mCbSplaysOn  = (CheckBox) findViewById(R.id.btn_splays_on );
       mCbSplaysOff = (CheckBox) findViewById(R.id.btn_splays_off );
       mBtnOK       = (Button) findViewById(R.id.btn_ok);
-      mBtnCurrent  = (Button) findViewById(R.id.btn_set);
-      mTextCurrent = (TextView) findViewById(R.id.station_set);
+      mBtnActive   = (Button) findViewById(R.id.btn_active);
+      mTextActive  = (TextView) findViewById(R.id.station_set);
       mBtnSaved    = (Button) findViewById(R.id.btn_saved);
       mBtnCancel   = (Button) findViewById(R.id.btn_cancel);
 
       mBtnXSection  = (Button) findViewById(R.id.btn_xsection );
       mCBhorizontal = (CheckBox) findViewById(R.id.cb_horizontal );
       mBtnXDelete   = (Button) findViewById(R.id.btn_xdelete );  // delete / sensors
+      mBtnXPoint    = (Button) findViewById(R.id.btn_xpoint );  // section-point
       mBtnDirect  = (Button) findViewById( R.id.btn_direct );
       mBtnInverse = (Button) findViewById( R.id.btn_inverse );
       mETnick = (EditText) findViewById( R.id.nick );  // section name
@@ -158,7 +178,7 @@ class DrawingStationDialog extends MyDialog
       if ( mParent.isAnySection() ) {
         mBtnOK.setVisibility( View.GONE );
         ((LinearLayout)findViewById( R.id.layout_set )).setVisibility( View.GONE );
-        // mBtnCurrent.setVisibility( View.GONE );
+        // mBtnActive.setVisibility( View.GONE );
         // ((TextView)findViewById(R.id.station_set)).setVisibility( View.GONE );
         ((LinearLayout)findViewById( R.id.layout_barrier )).setVisibility( View.GONE );
         // mBtnBarrier.setVisibility( View.GONE );
@@ -169,13 +189,14 @@ class DrawingStationDialog extends MyDialog
         mLabel.setVisibility( View.GONE );
         mCbSplaysOn.setOnClickListener( this );
         mCbSplaysOff.setOnClickListener( this );
-	mCbSplaysOn.setChecked( mParent.isStationSplaysOn( mStationName ) );
-	mCbSplaysOff.setChecked( mParent.isStationSplaysOff( mStationName ) );
+        mCbSplaysOn.setChecked( mParent.isStationSplaysOn( mStationName ) );
+        mCbSplaysOff.setChecked( mParent.isStationSplaysOff( mStationName ) );
 
         mETnick.setVisibility( View.GONE );
         mBtnXSection.setVisibility( View.GONE );
         mCBhorizontal.setVisibility( View.GONE );
         mBtnXDelete.setVisibility( View.GONE );
+        mBtnXPoint.setVisibility( View.GONE );
         mBtnDirect.setVisibility( View.GONE );
         mBtnInverse.setVisibility( View.GONE );
       } else {
@@ -190,9 +211,11 @@ class DrawingStationDialog extends MyDialog
           }
           mBtnOK.setOnClickListener( this );
         }
-        mBtnCurrent.setOnClickListener( this );
+        mBtnActive.setOnClickListener( this );
+        String current_station = StationName.getCurrentStationName();
+        TDLog.v("Station " + mStationName + " current " + current_station );
         if ( mStationName.equals( StationName.getCurrentStationName() ) ) {
-          mTextCurrent.setText( R.string.station_reset );
+          mTextActive.setText( R.string.station_reset );
         }
         mCbSplaysOn.setOnClickListener( this );
         mCbSplaysOff.setOnClickListener( this );
@@ -203,6 +226,7 @@ class DrawingStationDialog extends MyDialog
           mBtnXDelete.setOnClickListener( this );
 
           if ( mStation.mXSectionType == PlotType.PLOT_NULL ) {
+            mBtnXPoint.setVisibility( View.GONE );
             int leg_size = mBlk.size();
             String direct  = null;
             String inverse = null;
@@ -293,6 +317,11 @@ class DrawingStationDialog extends MyDialog
             mBtnXSection.setOnClickListener( this );
             mCBhorizontal.setVisibility( View.GONE );
             mBtnXDelete.setOnClickListener( this );
+            if ( mXSectionName != null ) { 
+              mBtnXPoint.setOnClickListener( this );
+            } else {
+              mBtnXPoint.setVisibility( View.GONE );
+            }
             mBtnDirect.setVisibility( View.GONE );
             mBtnInverse.setVisibility( View.GONE );
           } 
@@ -301,6 +330,7 @@ class DrawingStationDialog extends MyDialog
           mBtnXSection.setVisibility( View.GONE );
           mCBhorizontal.setVisibility( View.GONE );
           mBtnXDelete.setVisibility( View.GONE );
+          mBtnXPoint.setVisibility( View.GONE );
           mBtnDirect.setVisibility( View.GONE );
           mBtnInverse.setVisibility( View.GONE );
         }
@@ -354,6 +384,8 @@ class DrawingStationDialog extends MyDialog
       } else if ( /* TDLevel.overExpert && */ b == mBtnGeoCode ) {
         (new GeoCodeDialog( mContext, this, mGeoCode )).show();
         return;
+      } else if ( TDLevel.overNormal && b == mBtnXPoint ) {
+        mParent.addStationSectionPoint( mStation, mXSectionName );
       } else if ( /* TDLevel.overExpert && */ b == mBtnOkComment ) {
         boolean fail = true;
         String comment = TDUtil.getTextOrNull( mComment );
@@ -374,7 +406,8 @@ class DrawingStationDialog extends MyDialog
         return;
       } else if ( b == mBtnCancel ) {
         /* nothing */
-      } else if ( b == mBtnCurrent ) {
+      } else if ( b == mBtnActive ) {
+        TDLog.v("Set Station " + mStationName );
         mParent.setCurrentStationName( mStationName, mStation );
       } else if ( b == mBtnBarrier ) {
         mParent.toggleStationBarrier( mStationName, mIsBarrier );
@@ -396,7 +429,7 @@ class DrawingStationDialog extends MyDialog
         mParent.openXSection( mStation, mStationName, mParent.getPlotType(), mBearing, mClino, false, nick );
       } else if ( b == mBtnXDelete ) {
         if ( mSensors ) {
-          TimerTask timer = new TimerTask( this, TimerTask.Y_AXIS, TDSetting.mTimerWait, 10 );
+          TimerTask timer = new TimerTask( mParent, this, TimerTask.Y_AXIS, TDSetting.mTimerWait, 10 );
           timer.execute();
           return;
         } else {

@@ -12,6 +12,9 @@
 package com.topodroid.tdm;
 
 import com.topodroid.util.TDLog;
+import com.topodroid.util.TDUtil;
+import com.topodroid.TDX.DrawThread;
+import com.topodroid.TDX.IDrawingSurface;
 
 import android.content.Context;
 
@@ -31,69 +34,24 @@ import android.util.AttributeSet;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 // import android.view.View;
-
 // import android.view.MotionEvent;
 
+import java.util.List;
 import java.util.ArrayList;
 // import java.util.TreeSet;
 import java.util.Collections;
 // import java.util.Iterator;
-import java.util.List;
 
 /**
  */
 public class TdmViewSurface extends SurfaceView
                             implements SurfaceHolder.Callback
+                            , IDrawingSurface
 {
-
-  final List< TdmPossibleEquate > mPossibleEquates;
-
-  /** clear the list of possible equates
-   */
-  void clearPossibleEquates()
-  {
-    synchronized( mPossibleEquates ) {
-      mPossibleEquates.clear();
-    }
-  }
-  
-  /** add a possible equate
-   * @param st1  first station
-   * @param st2  second station
-   * @return true if success
-   */
-  boolean addPossibleEquate( TdmViewStation st1, TdmViewStation st2 )
-  {
-    if ( st1 == null || st2 == null ) return false;
-    if ( st1.survey() == st2.survey() ) return false; // could test on TdmViewCommands
-    synchronized( mPossibleEquates ) {
-      mPossibleEquates.add( new TdmPossibleEquate( st1, st2 ) );
-    }
-    return true;
-  }
-
-  /** @return true if there are possible equates
-   */
-  boolean hasPossibeEquates() { return mPossibleEquates.size() > 0; }
-
-  /** @return the number of possible equates
-   */
-  int nrPossibleEquates() { return mPossibleEquates.size(); }
-
-  List< TdmPossibleEquate > getPossibleEquates( TdmViewStation st ) 
-  {
-    ArrayList<TdmPossibleEquate> ret = new ArrayList<>();
-    for ( TdmPossibleEquate eq : mPossibleEquates ) {
-      if ( eq.contains( st ) ) ret.add( eq );
-    }
-    return ret;
-  }
-
-  // --------------------------------------------------------------
 
   private Boolean _run;
   protected DrawThread thread;
-  public boolean isDrawing = true;
+  boolean mIsDrawing = true;
   private SurfaceHolder mHolder; // canvas holder
   private Context mContext;
   private TdmViewActivity mActivity;
@@ -103,9 +61,11 @@ public class TdmViewSurface extends SurfaceView
   private PointF mDisplayCenter;
   private int mStationRate = 1;
 
+
   ArrayList< TdmViewCommand > mCommandManager; // FIXME not private only to export DXF
-  TdmViewCommand mCommand = null;
+  TdmViewCommand mSelectedCommand = null;      // command with selected station
   final List< TdmViewEquate > mEquates;
+  final List< TdmPossibleEquate > mPossibleEquates;
 
   float mXoffset;
   float mYoffset;
@@ -114,77 +74,6 @@ public class TdmViewSurface extends SurfaceView
   private Paint  mPaint;  // equate paint
   private Paint  mPaint2; // possible equate paint
 
-  /** @return true if there is an equate between the two surveys 
-   * @param cmd1   view of the first survey
-   * @param cmd2   view of the second survey
-   */
-  boolean hasEquated( TdmViewCommand cmd1, TdmViewCommand cmd2 )
-  {
-    for ( TdmViewEquate eq : mEquates ) {
-      if ( eq.contains( cmd1 ) && eq.contains( cmd2 ) ) return true;
-    }
-    return false;
-  }
-
-  /** @return the bounding box of all the stations
-   */
-  RectF getBoundingBox()
-  {
-    RectF box = new RectF();
-    boolean initialized = false;
-    for ( TdmViewCommand cmd : mCommandManager ) {
-      if ( initialized ) {
-        cmd.updateBoundingBox( box );
-      } else {
-        initialized = cmd.initBoundingBox( box );
-      }
-    }
-    return box;
-  }
-
-  void changeStationRate( int rate ) 
-  { 
-    if ( rate < 0 ) {
-      mStationRate <<= 1;
-    } else if ( rate > 0 ) {
-      mStationRate >>= 1;
-    }
-    if ( mStationRate < 1 ) mStationRate = 1;
-  }
-
-  /** @return X scene coord from the X canvas coord
-   * @param x_canvas   X canvas coord
-   */
-  float canvasToSceneX( float x_canvas ) { return (x_canvas + mXoffset)/mZoom; }
-
-  /** @return Y scene coord from the Y canvas coord
-   * @param y_canvas   Y canvas coord
-   */
-  float canvasToSceneY( float y_canvas ) { return (y_canvas + mYoffset)/mZoom; }
-
-  /** @return X canvas coord from the X scene coord
-   * @param x_scene   X scene coord
-   */
-  float sceneToCanvasX( float x_scene ) { return x_scene*mZoom - mXoffset; }
-
-  /** @return Y canvas coord from the Y scene coord
-   * @param y_scene   Y scene coord
-   */
-  float sceneToCanvasY( float y_scene ) { return y_scene*mZoom - mYoffset; }
-
-  /** @return the canvas width
-   */
-  public int width()  { return mWidth; }
-
-  /** @return the canvas height
-   */
-  public int height() { return mHeight; }
-
-  /** set the parent activity
-   * @param act   parent activity
-   */
-  void setActivity( TdmViewActivity act ) { mActivity = act; }
-
   /** cstr
    * @param context  context
    * @param attrs    ???
@@ -192,6 +81,7 @@ public class TdmViewSurface extends SurfaceView
   public TdmViewSurface(Context context, AttributeSet attrs) 
   {
     super(context, attrs);
+    // TDLog.v("Tdm view surface cstr");
     mWidth = 0;
     mHeight = 0;
 
@@ -226,17 +116,115 @@ public class TdmViewSurface extends SurfaceView
     mCommandManager = new ArrayList< TdmViewCommand >();
     mEquates = Collections.synchronizedList( new ArrayList< TdmViewEquate >() );
     mPossibleEquates = Collections.synchronizedList( new ArrayList<TdmPossibleEquate>() );
-
   }
+
+  /** @return the list of commands with a selected station
+   */
+  List< TdmViewCommand > getAllSelectedCommands()
+  {
+    ArrayList< TdmViewCommand > ret = new ArrayList<>();
+    for ( TdmViewCommand cmd : mCommandManager ) {
+      if ( cmd.hasSelected() ) {
+        ret.add( cmd );
+      }
+    }
+    return ret;
+  }
+
+  /** @return true if there is an equate between the two surveys 
+   * @param cmd1   view of the first survey
+   * @param cmd2   view of the second survey
+   */
+  boolean hasEquated( TdmViewCommand cmd1, TdmViewCommand cmd2 )
+  {
+    for ( TdmViewEquate eq : mEquates ) {
+      if ( eq.contains( cmd1 ) && eq.contains( cmd2 ) ) return true;
+    }
+    return false;
+  }
+
+  RectF mBoundingBox = null; // save the bounding box FIXME not sure this is ok
+
+  /** @return the bounding box of all the stations
+   * scene coords
+   */
+  RectF getBoundingBox()
+  {
+    if ( mBoundingBox == null ) {
+      mBoundingBox = new RectF();
+      boolean initialized = false;
+      for ( TdmViewCommand cmd : mCommandManager ) {
+        if ( initialized ) {
+          cmd.updateBoundingBox( mBoundingBox );
+        } else {
+          initialized = cmd.initBoundingBox( mBoundingBox );
+        }
+      }
+      // TDLog.v("got bounding box " + mBoundingBox.left + " " + mBoundingBox.right + " Y " + mBoundingBox.top + " " + mBoundingBox.bottom + " offset " + mXoffset + " " + mYoffset + " zoom " + mZoom );
+    }
+    return mBoundingBox;
+  }
+
+  /** change the display-frequency of the station names
+   * @param change   display-frequency change
+   */
+  void changeStationRate( int rate ) 
+  { 
+    if ( rate < 0 ) {
+      mStationRate <<= 1;
+    } else if ( rate > 0 ) {
+      mStationRate >>= 1;
+    }
+    if ( mStationRate < 1 ) mStationRate = 1;
+  }
+
+  /** reset display-frequency of station names to 1
+   */
+  void resetStationRate() { mStationRate = 1; }
+
+  /** @return X scene coord from the X canvas coord
+   * @param x_canvas   X canvas coord
+   */
+  float canvasToSceneX( float x_canvas ) { return (x_canvas + mXoffset)/mZoom; }
+
+  /** @return Y scene coord from the Y canvas coord
+   * @param y_canvas   Y canvas coord
+   */
+  float canvasToSceneY( float y_canvas ) { return (y_canvas + mYoffset)/mZoom; }
+
+  /** @return X canvas coord from the X scene coord
+   * @param x_scene   X scene coord
+   */
+  float sceneToCanvasX( float x_scene ) { return x_scene*mZoom - mXoffset; }
+
+  /** @return Y canvas coord from the Y scene coord
+   * @param y_scene   Y scene coord
+   */
+  float sceneToCanvasY( float y_scene ) { return y_scene*mZoom - mYoffset; }
+
+  /** @return the canvas width
+   */
+  public int width()  { return mWidth; }
+
+  /** @return the canvas height
+   */
+  public int height() { return mHeight; }
+
+  /** set the parent activity
+   * @param act   parent activity
+   */
+  void setActivity( TdmViewActivity act ) { mActivity = act; }
 
   /** clear selected station
    */
-  void resetStation()
+  void clearSelectedStation()
   {
-    for ( TdmViewCommand command : mCommandManager ) {
-      command.mSelected = null;
+    // TDLog.v("Surface clear all selected");
+    for ( TdmViewCommand command : mCommandManager ) { // this is needed when there is an equate selection
+      command.clearSelected();
     }
-    mCommand = null;
+    // if ( mSelectedCommand != null ) mSelectedCommand.clearSelected();
+    mSelectedCommand = null;
   }
 
   /** set the center of the display
@@ -251,9 +239,9 @@ public class TdmViewSurface extends SurfaceView
   /** add a set of equates to the scene
    * @param equates   list of equates to add to the scene
    */
-  void addEquates( ArrayList< TdmEquate > equates )
+  void addViewEquates( ArrayList< TdmEquate > equates )
   {
-    // TDLog.v("View surface: add equates: size " + equates.size() );
+    // TDLog.v("View surface: add equates: size " + equates.size() + " cmd " + mCommandManager.size() );
     synchronized( mEquates ) {
       mEquates.clear();
       for ( TdmViewCommand command : mCommandManager ) {
@@ -263,21 +251,28 @@ public class TdmViewSurface extends SurfaceView
 
     ArrayList< TdmViewEquate > tmp_equates = new ArrayList<>();
     for ( TdmEquate equate : equates ) {
+      // equate.dumpEquate();
       ArrayList< TdmViewStation > vst = new ArrayList<>();
       for ( TdmViewCommand command : mCommandManager ) {
-        String survey_name = command.mSurvey.mName;
-        int len = survey_name.length();
-        // while ( len > 0 && survey_name.charAt( len-1 ) == '.' ) --len; // 2025-12-15
-        survey_name = survey_name.substring( 0, len );
-        String st = equate.getSurveyStation( survey_name );
-        if ( st != null ) {
-          TdmViewStation vt = command.getViewStation( st );
-          if ( vt != null ) {
-            vst.add( vt );
-          } else {
-            TDLog.e("TdManager survey " + survey_name + " station " + st + " not in cmd-manager" );
-          }
+        TdmViewStation vt = equate.getCommandStation( command );
+        if ( vt != null ) {
+          vst.add( vt );
+          // TDLog.v("added view station " + vt.mStation.mName );
         }
+        // String survey_name = command.mSurvey.mName;
+        // int len = survey_name.length();
+        // // while ( len > 0 && survey_name.charAt( len-1 ) == '.' ) --len; // 2025-12-15
+        // survey_name = survey_name.substring( 0, len );
+        // String st = equate.getSurveyStation( survey_name );
+        // TDLog.v("Try to get station " + st + " with cmd for " + survey_name + " " + command.mStations.size() + " stations " + command.dumpStations() );
+        // if ( st != null ) {
+        //   TdmViewStation vt = command.getViewStation( st );
+        //   if ( vt != null ) {
+        //     vst.add( vt );
+        //   } else {
+        //     TDLog.e("TdManager survey " + survey_name + " station " + st + " not in cmd-manager" );
+        //   }
+        // }
       }
       if ( vst.size() > 1 ) {
         TdmViewEquate veq = new TdmViewEquate( equate );
@@ -300,19 +295,23 @@ public class TdmViewSurface extends SurfaceView
    * @param yoff      Y offset
    * @param equates   ...
    */
-  void addSurvey( TdmSurvey survey, int color, float xoff, float yoff, ArrayList< TdmEquate > equates )
+  void addTdmSurvey( TdmSurvey survey, int color, float xoff, float yoff, ArrayList< TdmEquate > equates )
   {
-    TdmViewCommand command = new TdmViewCommand( survey, color, xoff, yoff );
-    ArrayList< String > equate_stations = new ArrayList<>();
-
+    // TDLog.v("TDM view add survey " + survey.getFullName() );
     String survey_name = survey.getName();
     int len = survey_name.length();
     // while ( len > 0 && survey_name.charAt( len-1 ) == '.' ) --len; // 2025-12-15
     survey_name = survey_name.substring( 0, len );
+
+    // TDLog.v("Tdm view surface add cmd " + survey.getFullName() + " equates " + equates.size() );
+    TdmViewCommand command = new TdmViewCommand( survey, color, xoff, yoff );
+    ArrayList< String > equate_stations = new ArrayList<>();
+
     for ( TdmEquate equate : equates ) {
+      // equate.dumpEquate();
       String station = equate.getSurveyStation( survey_name );
       if ( station != null ) {
-        // TDLog.v("View surface: equate station " + station + " survey <" + survey_name  + ">" );
+        // TDLog.v("Tdm view surface: equate station " + station + " survey <" + survey.getFullName()  + ">" );
         equate_stations.add( station );
       }
     }
@@ -332,6 +331,28 @@ public class TdmViewSurface extends SurfaceView
     mCommandManager.add( command );
   }
 
+  // private void shiftBBox( float dx, float dy )
+  // {
+  //   if ( mBoundingBox != null ) {
+  //     TDLog.v("shift BBOX " + dx + " " + dy );
+  //     mBoundingBox.left   += dx;
+  //     mBoundingBox.right  += dx;
+  //     mBoundingBox.top    += dy;
+  //     mBoundingBox.bottom += dy;
+  //   }
+  // }
+
+  // private void scaleBBox( float inv_f )
+  // {
+  //   if ( mBoundingBox != null ) {
+  //     TDLog.v("scale BBOX " + inv_f );
+  //     mBoundingBox.left   *= inv_f;
+  //     mBoundingBox.right  *= inv_f;
+  //     mBoundingBox.top    *= inv_f;
+  //     mBoundingBox.bottom *= inv_f;
+  //   }
+  // }
+
   /** apply a transformation
    * @param dx   delta X
    * @param dy   delta Y
@@ -348,6 +369,8 @@ public class TdmViewSurface extends SurfaceView
     mMatrix = new Matrix();
     mMatrix.postTranslate( mXoffset, mYoffset );
     mMatrix.postScale( mZoom, mZoom );
+    // shiftBBox( dx, dy );
+    // scaleBBox( rs );
   }
 
   /** change zoom
@@ -360,61 +383,81 @@ public class TdmViewSurface extends SurfaceView
     float dx = mWidth*(1/zoom1-1/zoom0)/2;
     float dy = mHeight*(1/zoom1-1/zoom0)/2;
     transform( dx, dy, f );
+    // shiftBBox( dx, dy );
+    // scaleBBox( f );
     // FIXME TODO translate towards (0,0) so that the offset does not change
     // transform( 0, 0, f );
   }
 
   /** get the survey at a point (x,y)
-   * @param x   X coordinate
-   * @param y   Y coordinate
-   * @param cmd excluded drawing item (null: no exclusion)
-   * @return true if a drawing item has been found (and saved in mCommand)
+   * @param x    X coordinate (canvas)
+   * @param y    Y coordinate
+   * @param cmds excluded drawing items (null: no exclusion)
+   * @return true if a drawing item has been found (and saved in mSelectedCommand)
    */
-  boolean getSurveyAt( float x, float y, TdmViewCommand cmd )
+  boolean getSurveyAt( float x, float y, List<TdmViewCommand> cmds, float tolerance )
   {
-    if ( cmd == null ) {
+    if ( cmds == null ) {
       x = x / mZoom; // canvasToSceneX( x );
       y = y / mZoom; // canvasToSceneY( y );
     } // else 
       // x,y are scene coords
-    // TDLog.v("View surface: get survey at " + x + " " + y );
-    mCommand = null;
+    // TDLog.v("View surface: get survey at " + x + " " + y + ( (cmds != null)? " all" : " best") );
+    mSelectedCommand = null;
     double dmin = 100000; // FIXME a large number
     for ( TdmViewCommand command : mCommandManager ) {
-      if ( command != cmd ) {
-        double d = command.getStationAt( x, y );
-        if ( d < 40 && d < dmin ) {
+      if ( ! command.isShowingStations () ) continue;
+      if ( cmds != null ) {
+        if ( cmds.contains( command ) ) continue;
+        double d = command.getStationAt( x, y, tolerance );
+        if ( d < tolerance ) {
+          mSelectedCommand = command;
+          break;
+        }
+      } else { // find the best
+        double d = command.getStationAt( x, y, tolerance );
+        if ( d < tolerance && d < dmin ) {
           dmin = d;
-          mCommand = command;
+          // if ( mSelectedCommand != null ) mSelectedCommand.clearSelected(); // leave the other selection to highlight the equate
+          mSelectedCommand = command;
         }
       }
     }
-    return (mCommand != null);
+    return (mSelectedCommand != null);
   }
 
   /** @return the selected station
    */
   TdmViewStation selectedStation()
   {
-    return ( mCommand == null )? null : mCommand.mSelected;
+    return ( mSelectedCommand == null )? null : mSelectedCommand.getSelected();
   }
 
   /** @return the selected command
    */
-  TdmViewCommand selectedCommand() { return mCommand; }
+  TdmViewCommand selectedCommand() { return mSelectedCommand; }
 
   /** @return the name of the selected station 
    */
   String selectedStationName()
   { 
-    return ( mCommand == null )? null : mCommand.mSelected.name();
+    return ( mSelectedCommand == null )? null : mSelectedCommand.getSelectedName();
+  }
+
+  /** @return the selected station of the given command, or null 
+   * @param cmd   view-command
+   */
+  String selectedStationName( TdmViewCommand cmd )
+  {
+    if ( cmd == null || !  cmd.hasSelected() ) return null;
+    return cmd.getSelectedName();
   }
 
   /** @return the name of the selected command
    */
   String selectedCommandName()
   { 
-    return ( mCommand == null )? null : mCommand.name();
+    return ( mSelectedCommand == null )? null : mSelectedCommand.name();
   }
      
   /** shift the display
@@ -423,39 +466,68 @@ public class TdmViewSurface extends SurfaceView
    */
   void shift( float dx, float dy ) 
   { 
-    if ( mCommand != null ) {
-      mCommand.shift( dx, dy );
+    if ( mSelectedCommand != null ) {
+      mSelectedCommand.shift( dx, dy );
       // update equates
       synchronized( mEquates ) {
         for ( TdmViewEquate equate : mEquates ) {
-          equate.shift( dx, dy, mCommand );
+          equate.shift( dx, dy, mSelectedCommand );
         }
       }
       synchronized( mPossibleEquates ) {
         for ( TdmPossibleEquate equate : mPossibleEquates ) {
-          equate.shift( dx, dy, mCommand );
+          equate.shift( dx, dy, mSelectedCommand );
         }
       }
     } else {
       transform( dx, dy, 1 );
     }
+    // shiftBBox( dx, dy );
   }
 
+  static boolean printBbox = true;
+  static float mXoffsetOld = 0;
+  static float mZoomOld = 0;
+
+  void setDrawing( boolean val ) { mIsDrawing = val; }
 
   // ------------------------------------------------------------------------
+  // interface IDrawingSurface
+
+  /** @return true if it is drawing 
+   */
+  public boolean isDrawing() { return mIsDrawing; }
+
+  public void refresh( SurfaceHolder holder ) { refreshCanvas( holder ); }
+
   /** refresh the canvas
    */
-  void refresh()
+  void refreshCanvas( SurfaceHolder holder )
   {
+    if ( TdmViewActivity.resetTouched() ) {
+      TDUtil.slowDown( 10 );
+    }
     Canvas canvas = null;
     try {
-      canvas = mHolder.lockCanvas();
+      canvas = holder.lockCanvas();
+      if ( canvas == null ) return; // the surface is not ready (or has been destroyed)
       canvas.drawColor(0, PorterDuff.Mode.CLEAR);
 
       mWidth  = canvas.getWidth();
       mHeight = canvas.getHeight();
       canvas.drawColor(0, PorterDuff.Mode.CLEAR);
-      for ( TdmViewCommand command : mCommandManager ) command.executeAll( canvas, previewDoneHandler, mStationRate );
+      float z = 1.0f; // mZoom
+      float x = mXoffset / z;
+      float y = mYoffset / z;
+      RectF bbox = new RectF( - x, -y, mWidth - x, mHeight - y );
+      // RectF bbox = new RectF( sceneToCanvasX(0), sceneToCanvasY(0), sceneToCanvasX(mWidth), sceneToCanvasY(mHeight) );
+      int nr_bk = 0;
+      for ( TdmViewCommand command : mCommandManager ) nr_bk += command.executeAll( canvas, previewDoneHandler, mStationRate, bbox ); // getBoundingBox() );
+      if ( mXoffset != mXoffsetOld || mZoom != mZoomOld ) {
+        // TDLog.v("Surface off " + mXoffset + " " + mYoffset + " zoom " + mZoom + " buckets " + nr_bk );
+        mXoffsetOld = mXoffset;
+        mZoomOld = mZoom;
+      }
       // the view-stations in the view-equate have different transformation matrix
       // the two matrices have the same scale, but different translations
       synchronized( mPossibleEquates ) {
@@ -466,7 +538,7 @@ public class TdmViewSurface extends SurfaceView
       }
     } finally {
       if ( canvas != null ) {
-        mHolder.unlockCanvasAndPost( canvas );
+        holder.unlockCanvasAndPost( canvas );
       }
     }
   }
@@ -475,45 +547,43 @@ public class TdmViewSurface extends SurfaceView
   {
     @Override
     public void handleMessage(Message msg) {
-      isDrawing = false;
+      mIsDrawing = false;
     }
   };
 
-  /** canvas drawing thread
-   */
-  class DrawThread extends  Thread
-  {
-    private SurfaceHolder mSurfaceHolder;
+  // /** canvas drawing thread
+  //  * TODO use com.topodroid.TDX.DrawThread
+  //  */
+  // class DrawThread extends  Thread
+  // {
+  //   private SurfaceHolder mSurfaceHolder;
 
-    public DrawThread(SurfaceHolder surfaceHolder)
-    {
-      mSurfaceHolder = surfaceHolder;
-    }
+  //   public DrawThread(SurfaceHolder surfaceHolder)
+  //   {
+  //     mSurfaceHolder = surfaceHolder;
+  //   }
 
-    public void setRunning(boolean run)
-    {
-      _run = run;
-    }
+  //   public void setRunning(boolean run)
+  //   {
+  //     _run = run;
+  //   }
 
-    @Override
-    public void run() 
-    {
-      while ( _run ) {
-        if ( isDrawing ) {
-          refresh();
-        } else {
-          try {
-            // TDLog.v( "View surface: drawing thread sleeps ..." );
-            sleep(100);
-          } catch ( InterruptedException e ) { TDLog.v("Interrupted"); }
-        }
-      }
-    }
-  }
+  //   @Override
+  //   public void run() 
+  //   {
+  //     while ( _run ) {
+  //       if ( isDrawing() ) {
+  //         refreshCanvas();
+  //         TDUtil.yieldDown( 20 );
+  //       } else {
+  //         TDUtil.yieldDown( 40 );
+  //       }
+  //     }
+  //   }
+  // }
 
   // ---------------------------------------------------------------------
   // SELECT - EDIT
-
 
   public void surfaceChanged(SurfaceHolder mHolder, int format, int width,  int height) 
   {
@@ -525,13 +595,13 @@ public class TdmViewSurface extends SurfaceView
   {
     // TDLog.v( "View surface: created " );
     if (thread == null ) {
-      thread = new DrawThread(mHolder);
+      thread = new DrawThread( this, mHolder );
     }
     thread.setRunning(true);
     thread.start();
   }
 
-  public void surfaceDestroyed(SurfaceHolder mHolder) 
+  public void surfaceDestroyed( SurfaceHolder holder ) 
   {
     // TDLog.v( "View surface: destroyed " );
     boolean retry = true;
@@ -546,5 +616,54 @@ public class TdmViewSurface extends SurfaceView
     }
     thread = null;
   }
+
+  // --------------------------------------------------------------
+  // POSSIBLE EQUATES 
+
+  /** clear the list of possible equates
+   */
+  void clearPossibleEquates()
+  {
+    synchronized( mPossibleEquates ) {
+      mPossibleEquates.clear();
+    }
+  }
+  
+  /** add a possible equate
+   * @param st1  first station
+   * @param st2  second station
+   * @return true if success
+   */
+  boolean addPossibleEquate( TdmViewStation st1, TdmViewStation st2 )
+  {
+    if ( st1 == null || st2 == null ) return false;
+    if ( st1.survey() == st2.survey() ) return false; // could test on TdmViewCommands
+    synchronized( mPossibleEquates ) {
+      mPossibleEquates.add( new TdmPossibleEquate( st1, st2 ) );
+    }
+    return true;
+  }
+
+  /** @return true if there are possible equates
+   */
+  boolean hasPossibeEquates() { return mPossibleEquates.size() > 0; }
+
+  /** @return the number of possible equates
+   */
+  int nrPossibleEquates() { return mPossibleEquates.size(); }
+
+  /** @return the list of possible equates that contain a station
+   * @param st  station
+   */
+  List< TdmPossibleEquate > getPossibleEquates( TdmViewStation st ) 
+  {
+    ArrayList<TdmPossibleEquate> ret = new ArrayList<>();
+    for ( TdmPossibleEquate eq : mPossibleEquates ) {
+      if ( eq.contains( st ) ) ret.add( eq );
+    }
+    return ret;
+  }
+
+  // --------------------------------------------------------------
 
 }

@@ -1,8 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?>
+
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+  android:id="@+id/root_view"
+  android:layout_width="match_parent"
+  android:layout_height="match_parent"
+  android:fitsSystemWindows="true"
+  >
+  <TextView android:id="@+id/title"
+    style="@style/text_title_base"
+  />
+
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" 
   android:layout_width="match_parent" 
   android:layout_height="match_parent"
   android:orientation="vertical"
+  android:layout_below="@id/title"
   >
 
   <RelativeLayout
@@ -96,14 +108,14 @@
         android:importantForAutofill="no"
       />
 
-      <TextView android:id="@+id/survey_xsections" 
+      <!-- TextView android:id="@+id/survey_xsections" 
         android:layout_width="match_parent"
       	android:ems="25"
         android:layout_height="wrap_content" 
         android:singleLine="true"
         android:text="@string/empty"
         android:layout_marginTop="@dimen/marginv"
-      />
+      / -->
 
       <TextView android:id="@+id/survey_datamode" 
         android:layout_width="match_parent"
@@ -123,3 +135,4 @@
   </FrameLayout>
 
 </LinearLayout>
+</RelativeLayout>

@@ -12,6 +12,7 @@
 package com.topodroid.TDX;
 
 import com.topodroid.prefs.TDSetting;
+import com.topodroid.types.SymbolType;
 
 import android.content.Context;
 
@@ -61,6 +62,16 @@ class EnableSymbol implements View.OnClickListener
   /** @return the symbol group
    */
   String getGroupName()  { return mSymbol.getGroupName(); }
+
+  // TDSKETCH to be used
+  int getType () { return mType; }
+
+  /** @return true if the symbol type is not LINE (ie Point or AREA)
+   */
+  boolean isNotLine() { return mType != SymbolType.LINE; }
+
+  // TDSKETCH to be used
+  SymbolInterface getSymbol() { return mSymbol; }
 
   // boolean getEnabled() { return mSymbol.isEnabled(); }
   // void setEnabled( boolean enabled ) { mSymbol.mEnabled = enabled; }

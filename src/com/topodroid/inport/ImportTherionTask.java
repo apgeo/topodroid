@@ -49,12 +49,14 @@ public class ImportTherionTask extends ImportTask
     long sid = 0;
     try {
       // if fr == null, str[0] is the filename, otherwise it is the survey name
-      ParserTherion parser = new ParserTherion( isr, str[0], true, mTherionPath ); // apply_declination = true
+      String filepath = str[2];
+      ParserTherion parser = new ParserTherion( isr, str[0], true, mTherionPath, filepath ); // apply_declination = true
       if ( ! parser.isValid() ) return -2L;
       if ( mApp.get() == null ) return -1L;
       if ( hasSurveyName( parser.mName ) ) {
         return -1L;
       }
+      mPartial = parser.isPartial();
 
       sid = mApp.get().setSurveyFromName( str[1], SurveyInfo.DATAMODE_NORMAL, false, true ); // IMPORT TH no update
 

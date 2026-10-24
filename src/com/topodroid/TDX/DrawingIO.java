@@ -16,6 +16,7 @@ import com.topodroid.util.TDFile;
 import com.topodroid.util.TDString;
 import com.topodroid.util.TDVersion;
 import com.topodroid.util.TDUtil;
+import com.topodroid.util.TDAnalytics;
 import com.topodroid.num.NumStation;
 import com.topodroid.num.TDNum;
 import com.topodroid.prefs.TDSetting;
@@ -507,14 +508,15 @@ public class DrawingIO
    * @param multisketch multisketch ...
    * @param th2_edit    therion th2 editor TH2EDIT
    */
-  static void exportTherionExport( DrawingCommandManager manager, int type, File file, String fullname, String projname, int proj_dir, int oblique, boolean multisketch, boolean th2_edit )
+  static void exportTherionExport( DrawingCommandManager manager, int type, File file, String fullname, String projname, int proj_dir, int oblique, boolean multisketch, boolean th2_edit, boolean shared )
   {
+    TopoDroidApp.updateAnalytic( TDAnalytics.EXPORT_TH2 );
     // TDLog.Log( TDLog.LOG_IO, "export therion " + fullname + " file " + file.getPath() );
     // TDLog.v( "EXPORT THERION " + fullname + " file " + file.getPath() );
     try {
       FileWriter fw = TDFile.getFileWriter( file );
       BufferedWriter bw = new BufferedWriter( fw );
-      exportTherion( manager, type, bw, fullname, projname, proj_dir, oblique, multisketch, th2_edit ); // TH2EDIT
+      exportTherion( manager, type, bw, fullname, projname, proj_dir, oblique, multisketch, th2_edit, shared ); // TH2EDIT
     } catch ( IOException e ) {
       TDLog.e( "THERION export i/o error [1] " + e.getMessage() );
     }
@@ -522,8 +524,11 @@ public class DrawingIO
 
   /**
    * @param oblique   oblique projection angle (not used)
+   * @param multisketch
+   * @param th2_edit
+   * @param shared    whether to share export (not used)
    */
-  static void exportTherion( DrawingCommandManager manager, int type, BufferedWriter bw, String fullname, String projname, int proj_dir, int oblique, boolean multisketch, boolean th2_edit )  // TH2EDIT
+  static void exportTherion( DrawingCommandManager manager, int type, BufferedWriter bw, String fullname, String projname, int proj_dir, int oblique, boolean multisketch, boolean th2_edit, boolean shared )  // TH2EDIT
   {
     try {
       manager.exportTherion( type, bw, fullname, projname, proj_dir, oblique, multisketch, th2_edit );  // TH2EDIT
@@ -668,6 +673,7 @@ public class DrawingIO
     return (flag == 0x07)? version : 0;
   }
 
+  // called by DrawingSurface
   static boolean doLoadDataStream( DrawingSurface surface,
                                    String filename,
                                    float dx, float dy,
@@ -678,7 +684,8 @@ public class DrawingIO
 				   String plotName )
   {
     // TDLog.v( "load data stream file " + filename + " plot name " + ( (plotName == null)? "null" : plotName ) );
-    BrushManager.resetPointOrientations();
+    // BrushManager.resetPointOrientations(); // FIXME_ORIENTATION
+
     // int project_dir = 0;
     // float north_x1, north_y1, north_x2, north_y2;
 
@@ -744,6 +751,7 @@ public class DrawingIO
           switch ( what ) {
             case 'V':
               version = dis.readInt();
+              if ( version > TDVersion.VERSION_TDR ) return false;
               // TDLog.Log( TDLog.LOG_PLOT, "TDR version " + version );
               break;
             case 'I': // plot info: bounding box
@@ -880,22 +888,24 @@ public class DrawingIO
   }
 
   /** load the outline of a xection scrap
-   * @param surface    drawing surface
+   * @param surface    drawing surface (can be null)
    * @param filename   xsection filename
-   * @param dx
-   * @param dy
+   * @param dx         X offset
+   * @param dy         Y offset
    * @param name       xsection name
-   * @param scrap_id   index of the scrap of the section point
+   * @param scrap_id   index of the scrap of the section point (used only if surface is not null)
+   * @return list of outline paths
    */
-  static void doLoadOutlineDataStream( DrawingSurface surface,
+  static List<DrawingLinePath> doLoadOutlineDataStream( DrawingSurface surface,
                                    String filename,
                                    float dx, float dy, String name, int scrap_id )
   {
     int version = 0;
     boolean in_scrap = false;
     // int scrap_index = 0;
+    List<DrawingLinePath> ret = new ArrayList<>();
 
-    // TDLog.Log( TDLog.LOG_IO, "load outline tdr file " + filename );
+    // TDLog.v( "load outline tdr file " + filename );
     // TLog.v("drawing I/O load outline stream " + filename + " name " + ((name == null)? "null" : name) );
     synchronized( TDPath.mTdrLock ) { // FIXME-THREAD_SAFE
       try {
@@ -904,7 +914,7 @@ public class DrawingIO
         // BufferedInputStream bfis = new BufferedInputStream( fis );
         // DataInputStream dis = new DataInputStream( bfis );
         DataInputStream dis = TDFile.getTopoDroidFileInputStream( filename );
-        if ( dis == null ) return;
+        if ( dis == null ) return null;
         boolean todo = true;
         while ( todo ) {
           DrawingLinePath path = null;
@@ -992,12 +1002,16 @@ public class DrawingIO
           if (    in_scrap && path != null 
                && ( BrushManager.isLineWallGroup( path.mLineType ) || path.hasOutline() ) ) {
             // TDLog.v("outline add path ... " + path.mFirst.x + " " + path.mFirst.y + " path size " + path.size()  );
-            path.setPathPaint( BrushManager.fixedGrid100Paint );
-            if ( name != null ) { // xsection outline
-              surface.addXSectionOutlinePath( new DrawingOutlinePath( name, path, scrap_id ) );
-            } else {
-              surface.addScrapOutlinePath( path );
+            path.setPathPaint( BrushManager.outlinePaint );
+            if ( surface != null ) {
+              if ( name != null ) { // xsection outline
+                // TDLog.v("Drawing IO add xsection outline: " + name + " scrap ID " + scrap_id );
+                surface.addXSectionOutlinePath( new DrawingOutlinePath( name, path, scrap_id ) );
+              } else {
+                surface.addScrapOutlinePath( path );
+              }
             }
+            ret.add( path );
           }
         }
         dis.close();
@@ -1009,6 +1023,7 @@ public class DrawingIO
       }
       // TDLog.v( "read: " + sb.toString() );
     }
+    return ret;
   }
 
   /** change the scrap name into a tdr file
@@ -1243,7 +1258,7 @@ public class DrawingIO
   {
     try { 
       dos.write( 'V' ); // version
-      dos.writeInt( TDVersion.code() );
+      dos.writeInt( TDVersion.VERSION_TDR );
       dos.write( 'S' ); // scrap
       dos.writeUTF( scrap_name );
       dos.writeInt( type );
@@ -1296,7 +1311,7 @@ public class DrawingIO
       //   synchronized( TDPath.mStationsLock ) {
       //     for ( DrawingStationName st : stations ) {
       //       NumStation station = st.getNumStation();
-      //       if ( station != null && station.barriered() ) continue;
+      //       if ( station != null && station.barriered( type == PlotType.PLOT_PLAN ) ) continue;
       //       if ( bbox.left > st.cx || bbox.right  < st.cx ) continue;
       //       if ( bbox.top  > st.cy || bbox.bottom < st.cy ) continue;
       //       st.toDataStream( dos, -1 );
@@ -1338,7 +1353,7 @@ public class DrawingIO
     // TDLog.v( "cstack size " + cstack.size() );
     try { 
       dos.write( 'V' ); // version
-      dos.writeInt( TDVersion.code() );
+      dos.writeInt( TDVersion.VERSION_TDR );
       dos.write( 'S' ); // scrap
       dos.writeUTF( scrap_name );
       dos.writeInt( type );
@@ -1405,7 +1420,7 @@ public class DrawingIO
         synchronized( TDPath.mStationsLock ) {
           for ( DrawingStationName st : stations ) {
             NumStation station = st.getNumStation();
-            if ( station != null && station.barriered() ) continue;
+            if ( station != null && station.barriered( type == PlotType.PLOT_PLAN ) ) continue;
             if ( bbox.left > st.cx || bbox.right  < st.cx ) continue;
             if ( bbox.top  > st.cy || bbox.bottom < st.cy ) continue;
             st.toDataStream( dos, -1 );
@@ -1453,7 +1468,7 @@ public class DrawingIO
         scale*(xoff+bb.xmin), scale*(yoff-bb.ymax), name ); // this is fine is sketch origin is first station
     }
     pw.format("\n");
-    pw.format("# %s created by TopoDroid v. %s\n\n", TDUtil.currentDate(), TDVersion.string() );
+    pw.format("# %s created by %s v. %s\n\n", TDUtil.currentDate(), TDVersion.APP_NAME, TDVersion.string() );
     out.write( sw.getBuffer().toString() );
   }
 
@@ -1585,6 +1600,111 @@ public class DrawingIO
     }
   }
 
+  /** load the drawing commands of a section sketch // TDSKETCH
+   * @param filename    xsection tdr filename
+   * @param survey_name survey name used to fix scrap options
+   * @param dx          X shift
+   * @param dy          Y shift
+   * @return cached drawing paths
+   *
+  static ArrayList< DrawingPath > loadDataStreamPaths( String filename, String survey_name, float dx, float dy )
+  {
+    ArrayList< DrawingPath > paths = new ArrayList<>();
+    synchronized ( TDPath.mTdrLock ) {
+      try {
+        int version = 0;
+        boolean in_scrap = false;
+        int scrap_index = 0;
+        DataInputStream dis = TDFile.getTopoDroidFileInputStream( filename );
+        if ( dis == null ) return paths;
+        boolean todo = true;
+        while ( todo ) {
+          DrawingPath path = null;
+          int what = dis.read();
+          switch ( what ) {
+            case 'V':
+              version = dis.readInt();
+              break;
+            case 'I':
+              dis.readFloat();
+              dis.readFloat();
+              dis.readFloat();
+              dis.readFloat();
+              if ( dis.readInt() == 1 ) {
+                dis.readFloat();
+                dis.readFloat();
+                dis.readFloat();
+                dis.readFloat();
+              }
+              break;
+            case 'S':
+              dis.readUTF();
+              {
+                int type = dis.readInt();
+                if ( type == PlotType.PLOT_PROJECTED ) {
+                  dis.readInt();
+                }
+              }
+              dis.readUTF();
+              dis.readUTF();
+              dis.readUTF();
+              in_scrap = true;
+              break;
+            case 'N':
+              scrap_index = dis.readInt();
+              break;
+            case 'P':
+              path = DrawingPointPath.loadDataStream( version, dis, dx, dy );
+              if ( path != null ) path = ((DrawingPointPath)path).fixScrap( survey_name );
+              break;
+            case 'T':
+              path = DrawingLabelPath.loadDataStream( version, dis, dx, dy );
+              break;
+            case 'Y':
+              path = DrawingPhotoPath.loadDataStream( version, dis, dx, dy );
+              break;
+            case 'Z':
+              path = DrawingAudioPath.loadDataStream( version, dis, dx, dy );
+              break;
+            case 'L':
+              path = DrawingLinePath.loadDataStream( version, dis, dx, dy );
+              break;
+            case 'A':
+              path = DrawingAreaPath.loadDataStream( version, dis, dx, dy );
+              break;
+            case 'J':
+              path = DrawingSpecialPath.loadDataStream( version, dis, dx, dy );
+              break;
+            case 'U':
+              DrawingStationUser.loadDataStream( version, dis );
+              break;
+            case 'X':
+              DrawingStationName.loadDataStream( version, dis );
+              break;
+            case 'F':
+            case 'E':
+              todo = false;
+              break;
+            default:
+              todo = false;
+              break;
+          }
+          if ( path != null && in_scrap && path.mScrap == scrap_index ) {
+            if ( path instanceof DrawingSpecialPath ) {
+              if ( ((DrawingSpecialPath)path).isSpecialType( DrawingSpecialPath.SPECIAL_DOT ) ) continue;
+            }
+            paths.add( path );
+          }
+        }
+        dis.close();
+      } catch ( IOException e ) {
+        TDLog.e( "load section paths failed " + e.getMessage() );
+      }
+    }
+    return paths;
+  }
+  */ // END TDSKETCH
+
   /** export a line item to therion file
    * @param out   output writer
    * @param lp    line item
@@ -1620,13 +1740,13 @@ public class DrawingIO
    * @param stations  set of station names
    * @param bbox      clipping rectangle
    */
-  static private void exportTherionStations( BufferedWriter out, List< DrawingStationName > stations, RectF bbox ) throws IOException
+  static private void exportTherionStations( BufferedWriter out, List< DrawingStationName > stations, RectF bbox, boolean plan ) throws IOException
   {
     if ( stations == null ) return;
     synchronized( TDPath.mStationsLock ) {
       for ( DrawingStationName st : stations ) {
         NumStation station = st.getNumStation();
-        if ( station != null && station.barriered() ) continue;
+        if ( station != null && station.barriered( plan ) ) continue;
         // FIXME if station is in the convex hull (bbox) of the lines
         if ( bbox != null ) {
           if ( bbox.left > st.cx || bbox.right  < st.cx ) continue;
@@ -1744,7 +1864,7 @@ public class DrawingIO
               }
             }
             if ( TDSetting.mAutoStations ) { // TH2EDIT 
-              exportTherionStations( out, stations, scrap_bbox );
+              exportTherionStations( out, stations, scrap_bbox, type == PlotType.PLOT_PLAN );
             }
           } else {
             List< DrawingStationUser > userstations = scrap.mUserStations;
@@ -1938,7 +2058,7 @@ public class DrawingIO
           exportTherionSplays( out, splays, bbox );
         }
         if ( TDSetting.mAutoStations ) {
-          exportTherionStations( out, stations, bbox );
+          exportTherionStations( out, stations, bbox, type == PlotType.PLOT_PLAN );
         }
         exportTherionScrapEnd( out );
         out.flush();
@@ -2368,19 +2488,26 @@ public class DrawingIO
   static void doExportAsTCsx( PrintWriter pw, String survey, String cave, String branch, /* String session, */ String bind,
                              List< DrawingPath > paths, List< PlotInfo > all_sections, List< PlotInfo > sections )
   {
+    // TDLog.v("CSX paths " + paths.size() 
+    //   + " auto-sections " +  TDSetting.mAutoXSections + " all-sections " + ((all_sections != null)? all_sections.size() : "null")
+    //   + " sections " + ((sections != null)? sections.size() : "null" ) );
     int csxIndex = 0;
     for ( DrawingPath p : paths ) {
       if ( p.mType == DrawingPath.DRAWING_PATH_AREA ) {
+        // TDLog.v("CSV area");
         DrawingAreaPath ap = (DrawingAreaPath)p;
   // system and special points
         ap.toTCsurvey( pw, survey, cave, branch, bind /* , mDrawingUtil */ ); 
       } else if ( p.mType == DrawingPath.DRAWING_PATH_LINE ) {
+        // TDLog.v("CSV line");
         DrawingLinePath lp = (DrawingLinePath)p;
         lp.toTCsurvey( pw, survey, cave, branch, bind /* , mDrawingUtil */ );
       } else if ( p.mType == DrawingPath.DRAWING_PATH_POINT ) {
+        // TDLog.v("CSV point");
         DrawingPointPath pp = (DrawingPointPath)p;
         String section_info = null;
         if ( TDSetting.mAutoXSections && all_sections != null && BrushManager.isPointSection( pp.mPointType ) ) {
+          // TDLog.v("CSV section point");
           // option: -scrap survey-xx# 
           PlotInfo section = null;
           String scrapname = TDUtil.replacePrefix( TDInstance.survey, pp.getOption( TDString.OPTION_SCRAP ) );
@@ -2413,11 +2540,13 @@ public class DrawingIO
           pp.toTCsurvey( pw, survey, cave, branch, bind, section_info, section );
         } else {
           if ( TDSetting.mExportMedia || ! BrushManager.isPointMedia( pp.mPointType ) ) {
+            // TDLog.v("CSX media");
             pp.toTCsurvey( pw, survey, cave, branch, bind );
           }
         }
       }
     }
+    // TDLog.v("CSX do export as TCsx done");
   }
 
   // static void doExportAsCsx( PrintWriter pw, String survey, String cave, String branch, /* String session, */ String bind,
@@ -2795,7 +2924,8 @@ public class DrawingIO
                     String station = scrap.substring( prefix.length() );
                     if ( station.length() > 0 ) {
                       for ( StationMap sm : name_map ) if ( sm.mFrom.equals( station ) ) {
-                        point_path.mOptions = TDString.OPTION_SCRAP + " " + prefix + sm.mTo;
+		                // point_path.mOptions = TDString.OPTION_SCRAP + " " + prefix + sm.mTo;
+                        point_path.setOptions( TDString.OPTION_SCRAP + " " + prefix + sm.mTo ); // TDSKETCH
                         break;
                       }
                     }

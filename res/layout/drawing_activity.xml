@@ -1,8 +1,22 @@
 <?xml version="1.0" encoding="utf-8"?>
+
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+  android:id="@+id/root_view"
+  android:layout_width="match_parent"
+  android:layout_height="match_parent"
+  android:fitsSystemWindows="true"
+  >
+  <TextView android:id="@+id/title"
+    style="@style/text_title_base"
+  />
+
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
   android:layout_width="match_parent"
   android:layout_height="match_parent"
   android:orientation="vertical"
+  android:focusable="true"
+  android:focusableInTouchMode="true"
+  android:layout_below="@id/title"
   >
 
   <RelativeLayout
@@ -18,6 +32,7 @@
       android:layout_height="match_parent"
       android:clickable="true"
       android:focusable="true"
+      android:focusableInTouchMode="true"
       />
 
     <LinearLayout
@@ -99,19 +114,50 @@
     />
     <LinearLayout android:id="@+id/layout_scale"
       android:layout_width="match_parent"
-      android:layout_height="16dp"
+      android:layout_height="wrap_content"
       android:orientation="horizontal"
       android:background="#666666"
       >
-      <SeekBar android:id="@+id/scalebar"
+      <!-- SeekBar android:id="@+id/scalebar"
         android:layout_gravity="center"
         android:layout_width="match_parent"
         android:layout_height="match_parent" 
         android:max="200"
         android:background="#666666"
         android:progressDrawable="@xml/progress3"
+      / -->
+      <Button android:id="@+id/scale_xs"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:text="XS"
+      />
+      <Button android:id="@+id/scale_s"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:text="S"
+      />
+      <Button android:id="@+id/scale_m"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:text="M"
+      />
+      <Button android:id="@+id/scale_l"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:text="L"
+      />
+      <Button android:id="@+id/scale_xl"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:text="XL"
       />
     </LinearLayout>
   </LinearLayout>
 
 </FrameLayout>
+</RelativeLayout>

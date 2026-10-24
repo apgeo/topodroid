@@ -15,6 +15,7 @@ package com.topodroid.TDX;
 import com.topodroid.util.TDUtil;
 import com.topodroid.util.TDString;
 import com.topodroid.util.TDLog;
+import com.topodroid.util.TDAnalytics;
 import com.topodroid.ui.MyKeyboard;
 import com.topodroid.ui.MyDialog;
 import com.topodroid.prefs.TDSetting;
@@ -39,8 +40,6 @@ import android.content.ClipboardManager;
 import android.content.ClipData;
 // import android.content.ClipDescription;
 
-// import android.inputmethodservice.KeyboardView;
-
 class FixedAddDialog extends MyDialog
                      implements View.OnClickListener
                      , View.OnLongClickListener
@@ -59,6 +58,7 @@ class FixedAddDialog extends MyDialog
   private Button   mBtnNS;
   private Button   mBtnEW;
   private Button   mBtnOK;
+  private Button   mBtnCancel;
   private Button   mBtnProj4;
   private Button   mBtnView;
   private Button   mBtnClipboard;
@@ -75,6 +75,7 @@ class FixedAddDialog extends MyDialog
   FixedAddDialog( Context context, FixedActivity parent /* , boolean has_clipboard */ )
   {
     super( context, null, R.string.FixedAddDialog ); // null app
+    TopoDroidApp.updateAnalytic( TDAnalytics.LATLNG );
     mParent = parent;
     // hasClipBoard = has_clipboard; // always false
   }
@@ -101,7 +102,6 @@ class FixedAddDialog extends MyDialog
     mNorth = true;
     mEast  = true;
 
-    // mKeyboard = new MyKeyboard( mContext, (KeyboardView)findViewById( R.id.keyboardview ), R.xml.my_keyboard, R.xml.my_keyboard_qwerty );
     mKeyboard = MyKeyboard.getMyKeyboard( mContext, findViewById( R.id.keyboardview ), R.xml.my_keyboard, R.xml.my_keyboard_qwerty );
 
     if ( TDSetting.mKeyboard ) {
@@ -143,6 +143,8 @@ class FixedAddDialog extends MyDialog
     mBtnEW.setOnClickListener( this );
     mBtnOK = (Button) findViewById(R.id.button_ok);
     mBtnOK.setOnClickListener( this );
+    mBtnCancel = (Button) findViewById(R.id.button_cancel);
+    mBtnCancel.setOnClickListener( this );
     mBtnProj4 = (Button) findViewById(R.id.button_proj4);
     mBtnProj4.setOnClickListener( this );
     mBtnView = (Button) findViewById(R.id.button_view);
@@ -347,7 +349,7 @@ class FixedAddDialog extends MyDialog
             try {
               accur = Double.parseDouble( accur_str );
             } catch ( NumberFormatException e ) {
-              TDLog.e( e.getMessage() );
+              TDLog.e( "Fixed add dialog: " + e.getMessage() );
             }
           }
         }
@@ -355,12 +357,15 @@ class FixedAddDialog extends MyDialog
       } else {
         return;
       }
+    // } else if ( b == mBtnCancel ) {
+    //   /* nothing */
     }
     onBackPressed();
   }
 
   /** react to BACK tap: dismiss the dialog
    */
+  @SuppressWarnings("deprecated")
   @Override
   public void onBackPressed()
   {

@@ -78,9 +78,7 @@ public class ExportDialogTdm extends MyDialog
 
     mBtnOk   = (Button) findViewById(R.id.button_ok );
     mBtnOk.setOnClickListener( this );
-    // mBtnBack = (Button) findViewById(R.id.button_back );
-    // mBtnBack.setOnClickListener( this );
-    ( (Button) findViewById(R.id.button_back ) ).setOnClickListener( this );
+    ( (Button) findViewById(R.id.button_cancel ) ).setOnClickListener( this );
 
     // Bundle extras = getIntent().getExtras();
     // String title  = extras.getString( TopoDroidApp.TOPODROID_SURVEY );
@@ -117,7 +115,7 @@ public class ExportDialogTdm extends MyDialog
     // TDLog.v("TDM selected " + mSelected );
     Button b = (Button)v;
     if ( b == mBtnOk && mSelected != null ) {
-      mParent.doExport( mSelected, getFilename(), null, -1L, false ); // null prefix, false second, -1=first
+      mParent.doExport( mSelected, getFilename(), null, -1L, false, null, false ); // null prefix, false second, -1=first, ..., false shared
     // } else if ( b == mBtnBack ) {
     //   /* nothing */
     }
@@ -134,6 +132,12 @@ public class ExportDialogTdm extends MyDialog
     }
     return mSurvey;
   } 
+
+  // @Override
+  // public void onBackPressed()
+  // {
+  //   dismiss();
+  // }
 
 }
 

@@ -32,11 +32,12 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 
 import android.os.Bundle;
+import android.app.Activity;
+
 import android.widget.RadioButton;
 
 import android.content.Context;
 
-// import android.inputmethodservice.KeyboardView;
 
 import android.widget.TextView;
 import android.widget.EditText;
@@ -53,6 +54,7 @@ class ShotNewDialog extends MyDialog
 {
   // private ShotWindow mParent;
   private final ILister mLister;
+  private Activity mParent;
   private DBlock mPrevBlk;
   private boolean  notDone;
   private long mAt; // id of the shot where to add new shot (-1 end)
@@ -99,9 +101,10 @@ class ShotNewDialog extends MyDialog
    * @param last_blk   last data block
    * @param at         ID where to insert the new data
    */
-  ShotNewDialog( Context context, TopoDroidApp app, ILister lister, DBlock last_blk, long at )
+  ShotNewDialog( Context context, Activity parent, TopoDroidApp app, ILister lister, DBlock last_blk, long at )
   {
     super( context, app, R.string.ShotNewDialog );
+    mParent  = parent;
     mLister  = lister;
     mPrevBlk = last_blk;
     notDone  = true;
@@ -156,7 +159,6 @@ class ShotNewDialog extends MyDialog
     mETup       = (EditText) findViewById(R.id.shot_up );
     mETdown     = (EditText) findViewById(R.id.shot_down );
 
-    // mKeyboard = new MyKeyboard( mContext, (KeyboardView)findViewById( R.id.keyboardview ), R.xml.my_keyboard_base_sign, R.xml.my_keyboard_qwerty );
     mKeyboard = MyKeyboard.getMyKeyboard( mContext, findViewById( R.id.keyboardview ), R.xml.my_keyboard_base_sign, R.xml.my_keyboard_qwerty );
 
     if ( TDSetting.mKeyboard ) {
@@ -262,7 +264,7 @@ class ShotNewDialog extends MyDialog
 
     mBtnOk    = (Button) findViewById(R.id.button_ok_shot_name );
     mBtnSave  = (Button) findViewById(R.id.button_save_shot_name );
-    mBtnBack  = (Button) findViewById(R.id.button_cancel_name );
+    mBtnBack  = (Button) findViewById(R.id.button_cancel );
 
     LinearLayout layout4 = (LinearLayout) findViewById( R.id.layout4 );
     int size = TDSetting.mSizeButtons; // TopoDroidApp.getScaledSize( mContext );
@@ -391,7 +393,7 @@ class ShotNewDialog extends MyDialog
         bx = 360 - Float.parseFloat( b.replace(',','.') ); // DIVING_BEARING
         if ( bx >= 360 ) bx -= 360;
       } catch ( NumberFormatException e ) {
-        TDLog.e( e.getMessage() );
+        TDLog.e( "Shot new " + e.getMessage() );
       }
     }
     return bx;
@@ -659,7 +661,7 @@ class ShotNewDialog extends MyDialog
         dismiss();
       }
     } else if ( sensorCheck && b == mBtnSensor ) {
-      mTimer = new TimerTask( this, TimerTask.Y_AXIS, TDSetting.mTimerWait, 10 );
+      mTimer = new TimerTask( mParent, this, TimerTask.Y_AXIS, TDSetting.mTimerWait, 10 );
       mTimer.execute();
     } else if ( cameraCheck && b == mBtnCamera ) {
       new QCamCompass( mContext, TopoDroidApp.mShotWindow, this, null, true, true, PhotoInfo.CAMERA_TOPODROID, null ).show();
@@ -672,6 +674,7 @@ class ShotNewDialog extends MyDialog
 
   /** implements user back-press
    */
+  @SuppressWarnings("deprecated")
   @Override
   public void onBackPressed()
   {

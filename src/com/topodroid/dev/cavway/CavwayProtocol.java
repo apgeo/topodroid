@@ -22,6 +22,7 @@ import com.topodroid.packetX.MemoryData;
 import com.topodroid.packetX.CavwayData;
 import com.topodroid.util.TDLog;
 import com.topodroid.util.TDUtil;
+import com.topodroid.prefs.TDSetting;
 
 import android.annotation.SuppressLint;
 import android.content.Context;
@@ -63,6 +64,7 @@ public class CavwayProtocol extends TopoDroidProtocol
   public static final int PACKET_CALIB_DATA  = 0x22; // PACKET_MEASURE_DATA | 0x02
 
   public static final int PACKET_NONE           = 0;
+  public static final int PACKET_OOB            = 0x0f;
   public static final int PACKET_ERROR          = 0x80;
 
   // public long mG2X, mG2Y, mG2Z;
@@ -148,7 +150,7 @@ public class CavwayProtocol extends TopoDroidProtocol
     mCavwayFlag = ( (flag >> 1) & 0x7 ) ^ 0x7; // cavway flag: this uses the complementary values than in the device
     // boolean is_scan = (packetdata[1] & (0x01<<6)) == 0;
     // if ( is_scan ) mCavwayFlag != (1<<4);
-    TDLog.v( String.format( "Cavway byte[1] %02X", flag ) ); // DEBUG check the flag values
+    // TDLog.v( String.format( "Cavway byte[1] %02X", flag ) ); // DEBUG check the flag values
     // 0x9F = 1001.1111 = start of scan
     // 0xBF = 1011.1111 = continue of scan
 
@@ -206,10 +208,15 @@ public class CavwayProtocol extends TopoDroidProtocol
 
     return ( packetdata[0] == 0x01 )? DataType.PACKET_DATA 
          : ( packetdata[0] == 0x02 )? DataType.PACKET_G    //definite a new identifier? PACKET_G not suitable
+         : ( ( packetdata[0] & MemoryOctet.BYTE_PACKET_OVER_BAND ) == 0 )? DataType.PACKET_OOB
          : PACKET_NONE;
   }
 
-  @SuppressLint("DefaultLocale")
+  /** report only errors above 1 % (abs of G and M) or 1 degree (dip) or 0.4 degree (angle diff.)
+   * The threshold can be set on the Cavway
+   * @param errbytes   error info bytes (9 bytes)
+   * @return error string - empty if no error above threshold
+   */
   private String parseErrInfo(byte[] errbytes)
   {
     // if ( LOG ) {
@@ -220,49 +227,75 @@ public class CavwayProtocol extends TopoDroidProtocol
 
     //string error_type = "";
     if ( errbytes[0] == 0xFF ) {
-      return "No error";
+      return ""; // No error
     }
+    // TDLog.v("ERROR " + ((errbytes[0]>>7)&1) + " " + ((errbytes[0]>>6)&1) + " " + ((errbytes[0]>>5)&1) + " " + ((errbytes[0]>>4)&1) + " len " + errbytes.length );
     StringBuilder res = new StringBuilder();
-    int err_cnt = 0;
-    if ( ( (errbytes[0] >> 7) & 0x1 ) == 0x00 ) { //absG error
-      if ( err_cnt == 0 ) res.append( "Error. " );
-      res.append( "G: " );
-      res.append( String.format("%.4f ", MemoryOctet.toInt(errbytes[4 * err_cnt + 2] ,errbytes[4 * err_cnt + 1]) / ABSSCALE) );
-      res.append( String.format("%.4f ", MemoryOctet.toInt(errbytes[4 * err_cnt + 4] ,errbytes[4 * err_cnt + 3]) / ABSSCALE) );
-      err_cnt++;
-      // if (err_cnt == 2) return res.toString();
+    int cnt = 0; // error count
+    int idx = 0; // index in errbytes
+    if ( ( ( (errbytes[0] >> 7) & 0x1 ) == 0x00 ) /* && (4 * cnt + 4 < 9 ) */ ) { // absG error
+      float g1 = MemoryOctet.toInt(errbytes[idx + 2], errbytes[idx + 1]) / ABSSCALE;
+      float g2 = MemoryOctet.toInt(errbytes[idx + 4], errbytes[idx + 3]) / ABSSCALE;
+      // TDLog.v("G " + cnt + ": " + errbytes[idx + 1] + " " + errbytes[idx + 2] + " " + errbytes[idx + 3] + " " + errbytes[idx + 4] + " = " + g1 + " " + g2 );
+      cnt ++ ;
+      idx += 4;
+	  g1 = (g1 - 1)*100;
+	  g2 = (g2 - 1)*100;
+	  if ( cnt == 1 ) res.append( "E: " );
+      if ( Math.abs(g1) >= TDSetting.mCvwyAbs ) {
+        res.append( String.format(Locale.US, "G1 %.1f ", g1 ) );
+      }
+	  if ( Math.abs(g2) >= TDSetting.mCvwyAbs ) {
+        res.append( String.format(Locale.US, "G2 %.1f ", g2 ) );
+      }
+      // if (cnt == 2) return res.toString();
     }
-    if ( ( (errbytes[0] >> 6) & 0x1) == 0x00 ) {  //absM error
-      if ( err_cnt == 0 ) res.append( "Error. " );
-      res.append( "M: " );
-      res.append( String.format("%.4f ", MemoryOctet.toInt(errbytes[4 * err_cnt + 2] ,errbytes[4 * err_cnt + 1]) / ABSSCALE) );
-      res.append( String.format("%.4f ", MemoryOctet.toInt(errbytes[4 * err_cnt + 4] ,errbytes[4 * err_cnt + 3]) / ABSSCALE) );
-      err_cnt++;
-      if (err_cnt == 2) return res.toString();
+    if ( ( ( (errbytes[0] >> 6) & 0x1) == 0x00 ) /* && (4 * cnt + 4 < 9 ) */ ) {  // absM error
+      float m1 = MemoryOctet.toInt(errbytes[idx + 2], errbytes[idx + 1]) / ABSSCALE;
+      float m2 = MemoryOctet.toInt(errbytes[idx + 4], errbytes[idx + 3]) / ABSSCALE;
+      // TDLog.v("M " + cnt + ": " + errbytes[idx + 1] + " " + errbytes[idx + 2] + " " + errbytes[idx + 3] + " " + errbytes[idx + 4] + " = " + m1 + " " + m2 );
+      cnt++;
+      idx += 4;
+	  m1 = (m1 - 1)*100;
+	  m1 = (m2 - 1)*100;
+	  if ( cnt == 1 ) res.append( "E: " );
+      if ( Math.abs(m1) >= TDSetting.mCvwyAbs ) {
+        res.append( String.format(Locale.US, "M1 %.1f ", m1 ) );
+      }
+	  if ( Math.abs(m2) >= TDSetting.mCvwyAbs ) {
+        res.append( String.format(Locale.US, "M2 %.1f ", m2 ) );
+      }
+	  if (cnt == 2) return res.toString();
     }
 
-    if ( ( (errbytes[0] >> 5) & 0x1 ) == 0x00 ){  //dip error
-      if ( err_cnt == 0 ) res.append( "Error. " );
-      float ftmp;
-      res.append( "Dip: ");
-      ftmp = MemoryOctet.toInt(errbytes[4 * err_cnt + 2],errbytes[4 * err_cnt + 1]) * ANGLESCALE;
-      if(ftmp > 180) ftmp -= 360f;      //The 2 bytes should be negative here
-      res.append( String.format("%.2f ",ftmp) );
-      ftmp = MemoryOctet.toInt(errbytes[4 * err_cnt + 4],errbytes[4 * err_cnt + 3]) * ANGLESCALE;
-      if(ftmp > 180) ftmp -= 360f;      //The 2 bytes should be negative here
-      res.append( String.format("%.2f ", ftmp) );
-      err_cnt++;
-      if (err_cnt == 2) return res.toString();
+    if ( ( ( (errbytes[0] >> 5) & 0x1 ) == 0x00 ) && (4 * cnt + 4 < 9 ) ) {  // dip error
+      float d1 = MemoryOctet.toInt(errbytes[idx + 2], errbytes[idx + 1]) * ANGLESCALE;
+      float d2 = MemoryOctet.toInt(errbytes[idx + 4], errbytes[idx + 3]) * ANGLESCALE;
+      // TDLog.v("D " + cnt + ": " + errbytes[idx + 1] + " " + errbytes[idx + 2] + " " + errbytes[idx + 3] + " " + errbytes[idx + 4] + " = " + d1 + " " + d2 );
+      cnt++;
+      idx += 4;
+	  if ( cnt == 1 ) res.append( "E: " );
+      if ( d1 > 180 ) d1 -= 360f;      //The 2 bytes should be negative here
+      if ( d2 > 180 ) d2 -= 360f;      //The 2 bytes should be negative here
+      if ( Math.abs(d1) > TDSetting.mCvwyDip ) {
+	    res.append( String.format(Locale.US, "D1 %.1f", d1 ) );
+	  }
+	  if ( Math.abs(d2) > TDSetting.mCvwyDip ) {
+        res.append( String.format(Locale.US, "D2 %.1f ", d2 ) );
+	  }
+      if (cnt == 2) return res.toString();
     }
 
-    if ( ( (errbytes[0] >> 4) & 0x1 ) == 0x00 ) { //angle error
-      if ( err_cnt == 0 ) res.append( "Error. " );
-      float ftmp;
-      res.append( "Angle: ");
-      ftmp = MemoryOctet.toInt(errbytes[4 * err_cnt + 2],errbytes[4 * err_cnt + 1]) * ANGLESCALE;
-      res.append( String.format("%.2f ",ftmp) );
-      err_cnt++;
-      // if (err_cnt == 2) return res.toString();
+    if ( ( ( (errbytes[0] >> 4) & 0x1 ) == 0x00 ) && (4 * cnt + 2 < 9 ) ) { // angle error
+      float a1 = MemoryOctet.toInt(errbytes[idx + 2], errbytes[idx + 1]) * ANGLESCALE;
+      // TDLog.v("A " + cnt + ": " + errbytes[idx + 1] + " " + errbytes[idx + 2] + " = " + a1 );
+      cnt++;
+      // idx += 2;
+      if ( Math.abs(a1) > TDSetting.mCvwyAngle ) {
+        if ( cnt == 1 ) res.append( "E: " );
+        res.append( String.format(Locale.US, "A %.1f ", a1) );
+        // if (cnt == 2) return res.toString();
+      }
     }
     return res.toString();
   }
@@ -287,7 +320,10 @@ public class CavwayProtocol extends TopoDroidProtocol
     if ( LOG ) TDLog.v( TAG + " packet byte[0] " + String.format("%02x", databuf[0] ) + " " + String.format("%02x", databuf[1] ) );
     // scan mode   01 bf 1011.1111
     // normal mode 01 ff 1111.1111
-    if ( (databuf[0] == MemoryOctet.BYTE_PACKET_DATA || databuf[0] == MemoryOctet.BYTE_PACKET_G ) && databuf.length ==  CavwayData.SIZE  ) { // shot / calib data
+    if ( (   databuf[0] == MemoryOctet.BYTE_PACKET_DATA
+          || databuf[0] == MemoryOctet.BYTE_PACKET_G
+          || ((databuf[0] & MemoryOctet.BYTE_PACKET_OVER_BAND) == 0 )
+         ) && databuf.length ==  CavwayData.SIZE  ) { // shot / calib data
       if ( mComm.isDownloading() ) {
         mTime = TDUtil.getSeconds(); // not necesary because mTime is set by handleCavwayPacket
         for ( int kk=0; kk< CavwayData.SIZE ; ++kk ) {
@@ -308,6 +344,9 @@ public class CavwayProtocol extends TopoDroidProtocol
               } else if (  res == DataType.PACKET_G ) {
                 mComm.handleCavwayPacket(res, mLister, 0, mComment, 0 );
                 return PACKET_CALIB_DATA; 
+              } else if (  res == DataType.PACKET_OOB ) {
+                TDLog.t( TAG + "out-of-band packet");
+                return PACKET_OOB;
               } else {
                 return PACKET_ERROR;
               }
@@ -342,7 +381,7 @@ public class CavwayProtocol extends TopoDroidProtocol
           if ( LOG ) TDLog.v( TAG + "hw v. " + mHardVer );
           return PACKET_INFO_HARDWARE;
         } else if ( addr == CavwayDetails.TIMESTAMP_ADDRESS ) {
-          // TDLog.v(String.format("Reply %d %d %d %d %02x %02x %02x %02x", 
+          // TDLog.v(String.format(Locale.US, "Reply %d %d %d %d %02x %02x %02x %02x", 
           //   databuf[4], databuf[5], databuf[6], databuf[7], databuf[4], databuf[5], databuf[6], databuf[7] ) );
           mTimeStamp = MemoryData.toLong( databuf[7], databuf[6], databuf[5], databuf[4]); // seconds since the epoch
           if ( LOG ) TDLog.v( TAG + "time " + mTimeStamp );
@@ -351,9 +390,8 @@ public class CavwayProtocol extends TopoDroidProtocol
           mComm.mHasWritten = true;
           return PACKET_INFO_TIMESTAMP;
         } else if ( command == MemoryOctet.BYTE_PACKET_3D ) { // 0x3d
-          if ( LOG ) TDLog.v( TAG + "reply (3D)");
-          TDLog.v(String.format("PROTO Reply to 0x3d: %d %d %d %d %02x %02x %02x %02x", 
-            databuf[4], databuf[5], databuf[6], databuf[7], databuf[4], databuf[5], databuf[6], databuf[7] ) );
+          if ( LOG ) TDLog.v(String.format(Locale.US, "PROTO Reply to 0x3d: %d %d %d %d %02x %02x %02x %02x", 
+                             databuf[4], databuf[5], databuf[6], databuf[7], databuf[4], databuf[5], databuf[6], databuf[7] ) );
           if ( mComm.isReadingMemory() ) {
             if ( LOG ) TDLog.v( TAG + "handle memory read");
             System.arraycopy( databuf, 4, mPacketBytes, 0,  CavwayData.SIZE  );
@@ -364,9 +402,8 @@ public class CavwayProtocol extends TopoDroidProtocol
           return PACKET_REPLY;
         } else if ( command == MemoryOctet.BYTE_PACKET_3E ) { // 0x3e
           // if ( LOG ) TDLog.v( TAG + "write reply (3E)");
-          if ( LOG ) TDLog.v( TAG + "write reply (3E)");
-          TDLog.v(String.format(Locale.US, "PROTO Reply to 0x3e: %d %d %d %d %02x %02x %02x %02x", 
-            databuf[4], databuf[5], databuf[6], databuf[7], databuf[4], databuf[5], databuf[6], databuf[7] ) );
+          if ( LOG ) TDLog.v(String.format(Locale.US, "PROTO Reply to 0x3e: %d %d %d %d %02x %02x %02x %02x", 
+                             databuf[4], databuf[5], databuf[6], databuf[7], databuf[4], databuf[5], databuf[6], databuf[7] ) );
           System.arraycopy( databuf, 4, mRepliedData, 0, 4 );
           mComm.mHasWritten = true;
           return PACKET_WRITE_REPLY;

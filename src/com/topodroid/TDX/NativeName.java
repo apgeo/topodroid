@@ -20,14 +20,41 @@ import java.util.Set;
 class NativeName
 {
   static NativeName mNativeName = null; // singleton
+  static boolean hasLib = false;
+  // static boolean triedLib = false; // TDSKETCH
 
   public native static String incrementName( String name, Set<String> stations );
 
   public native void initLog();
 
+  // nativename is so important that we load it immediately
   static {
-    System.loadLibrary( "nativename" );
+    try {
+      System.loadLibrary( "nativename" );
+      hasLib = true;
+    } catch ( UnsatisfiedLinkError e ) {
+      TDLog.e("Failed load nativename lib");
+      hasLib = false; // make sure it is false if failed
+    }
   }
+ 
+/* TDSKETCH
+  // this could be done lazy instead at static time
+  static boolean checkNativeLib()
+  {
+    if ( ! triedLib ) {
+      triedLib = true;
+      try {
+        System.loadLibrary( "nativename" );
+        hasLib = true;
+      } catch ( UnsatisfiedLinkError e ) {
+        TDLog.e("Failed load nativename lib");
+        hasLib = false; // make sure it is false if failed
+      }
+    }
+    return hasLib;
+  }
+*/
 
   private NativeName()
   {
@@ -39,6 +66,7 @@ class NativeName
    */
   static NativeName get()
   {
+    // if ( ! checkNativeLib() ) return null; // TDSKETCH
     if ( mNativeName == null ) {
       try {
         mNativeName = new NativeName();
@@ -46,9 +74,21 @@ class NativeName
       } catch ( java.lang.UnsatisfiedLinkError e ) {
         TDLog.e("Native link error " + e.getMessage() );
         mNativeName = null;
+        hasLib = false;
       }
     }
     return mNativeName;
+  }
+
+  /** utility method to get the next name
+   * @param native_name  NativeName object - can be null
+   * @param name         name string
+   * @param sts          set of names in use
+   * @return the next usable name
+   */
+  static String nextName( NativeName native_name, String name, Set<String> sts )
+  {
+    return  ( native_name != null )? native_name.incrementName( name, sts ) : DistoXStationName.incrementName( name, sts );
   }
 
 

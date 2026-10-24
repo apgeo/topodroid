@@ -12,6 +12,7 @@
 package com.topodroid.TDX;
 
 import com.topodroid.util.TDLog;
+import com.topodroid.util.TDAnalytics;
 import com.topodroid.ui.MyDialog;
 import com.topodroid.prefs.TDSetting;
 
@@ -47,6 +48,7 @@ class GeoCodeDialog extends MyDialog
   GeoCodeDialog( Context context, IGeoCoder geocoder, String geocode )
   {
     super( context, null, R.string.GeoCodeDialog ); // null app
+    TopoDroidApp.updateAnalytic( TDAnalytics.GEOCODE );
     mGeoCoder = geocoder;
     mGeoCodes = TopoDroidApp.getGeoCodes();
     mGeoCodes.resetSelected();
@@ -71,7 +73,7 @@ class GeoCodeDialog extends MyDialog
     list.setDividerHeight( 2 );
 
     if ( mGeoCodes.size() > 0 ) {
-      mAdapter = new GeoCodeAdapter( mContext, R.layout.geocode_row, mGeoCodes.getGeoCodes() );
+      mAdapter = new GeoCodeAdapter( mContext, R.layout.select_text_row, mGeoCodes.getGeoCodes() );
       list.setAdapter( mAdapter );
     }
   }

@@ -3,7 +3,7 @@
 
 The <u>Survey Data window</u> displays the list of the shots of the survey.<br><p>
 
-The title displays the survey name, and, in multi/double device mode, the active device.
+The title displays the survey name, and, in multi/alternate-device batch mode, the active device.
 The title color depends on the current station assignment policy:
 <ul>
 <li>blue: foreshot policies</li>
@@ -17,10 +17,6 @@ The title color depends on the current station assignment policy:
 Shot properties are shown through the foreground and background color of the shot data and station names.
 <br><p>
 
-TopoDroid distinguishes four kinds of shots (displayed with different colors): "leg", "repeated-leg", "splay", and "blank".
-Splays can be further classified as "cross" (X), horizontal (H), vertical (V), and "scan" (shots acquired in scan mode).
-<a href="page_shot_edit1.htm">Splay classes</a> X-H-V are disabled by default [G].<br><p>
-
 Shot data foreground color:
 <ol>
 <li>[white] "leg" (the first shot of a group of repeated measurements): this shot has both the "From" and the "To" station set</li>
@@ -32,8 +28,15 @@ Shot data foreground color:
 <li>[orange] blank shots, i.e, shots with the stations not set yet</li>
 <li>[yellow]: back-leg (backsight policy)</li>
 <li>[violet]: blank leg</li>
-<li>[red]: tampered shot</li>
+<li>[light red]: tampered shot</li>
 </ol><p>
+
+TopoDroid distinguishes four kinds of shots (displayed with different colors): "leg", "repeated-leg", "splay", and "blank".
+A series of consecutive shots is recognized as a leg if they are close in distance, azimuth and clino.
+By default, there must be at least three shots. The first shot is marked as "leg" (and assigned stations), the others are
+"repeated-leg". If the shots are not close enough, the first is a splay, and the other are "blank".<br>
+Splays can be further classified as "cross" (X), horizontal (H), vertical (V), and "scan" (shots acquired in scan mode).
+<a href="page_shot_edit1.htm">Splay classes</a> X-H-V are disabled by default [G].<br><p>
 
 Shot data background color:
 <ul>
@@ -45,6 +48,7 @@ Shot data background color:
 Station name foreground color:
 <ul>
 <li>[bright green] current station</li>
+<li>[red] shot inconsistend with its siblings</li>
 </ul><p>
 
 Station names background color:
@@ -52,8 +56,10 @@ Station names background color:
 <li>[dark green] last downloaded shots</li>
 <li>[gray] shot in "multi-shot" selection set</li>
 <li>[dark yellow] DistoX back-shot data</li>
-<li>[violet] backsight splay</li>
+<li>[violet] backsight-check splay, with failed check</li>
 </ul><p>
+
+Shot data: see <a href="manual07.htm">SHOT LIST</a> for more information about each entry.<p>
 
 <img src="shots_list.png" alt="shots list"/><p>
 
@@ -69,9 +75,10 @@ is changed.<br><p>
 
 <h4>ACTIONS</h4>
 <ul style="margin-top:0">
-<li>tap on the shot data opens the shot <a href="page_shot_edit1.htm">edit dialog</a></li>
+<li>tap on the shot data: opens the shot <a href="page_shot_edit1.htm">edit dialog</a></li>
+<li>long tap on the shot data: start <a href="page_multishot.htm">multi-shot</a> select</li>
 <!--li>tap on a shot clino: shot <a href="page_shot_edit2.htm">secondary actions</a></li-->
-<li>tap on a station: show/hide splays at the station</li>
+<li>tap on a station: opens the <a href="page_saved_station.htm">Saved stations</a> dialog (here you can enable the display of the splays belonging to the station)</li>
 <li>long tap on a station: select/deselect the <a href="page_current.htm">"active" station</a></li>
 </ul><br><p>
 
@@ -91,7 +98,7 @@ is changed.<br><p>
 
 <b>Long taps</b><br>
 <ul style="margin-top:0">
-<li>"Download": device switch (only for multi device modes)</li>
+<li>"Download": device switch (only for multi-batch device modes or batch mode with alternate dveice)</li>
 <li>"Sketch": immediately open the most recent sketch</li>
 <li>"Manual data": instruments calibration dialog</li>
 <li>"Search": move to the next result</li>
@@ -104,9 +111,9 @@ Multi-shot selection buttons:<br>
 <li><img src="btn_multishot_flip_extend.png"     width="36" border="1"> flip the shots extend</li>
 <li><img src="btn_right.png"  width="36" border="1"> set the shots extend to <i>right</i></li>
 <li><img src="btn_multishot_special_actions.png" width="36" border="1"> special actions dialog [T]</li>
-<li><img src="btn_delete.png" width="36" border="1"> delete the shots and put them in the shot-buffer.
-Hidden secondary-leg shots are deleted and added to the shot-buffer when the corresponding leg shot is deleted</li>
-<li><img src="btn_copy.png"   width="36" border="1"> copy the shots to the shot-buffer</li>
+<li><img src="btn_delete.png" width="36" border="1"> delete the shots and put them in the <a href="page_shot_paste.htm">shot-buffer</a>.
+Hidden secondary-leg shots are deleted and added to the <a href="page_shot_paste.htm">shot-buffer</a> when the corresponding leg shot is deleted</li>
+<li><img src="btn_copy.png"   width="36" border="1"> copy the shots to the <a href="page_shot_paste.htm">shot-buffer</a></li>
 <li><img src="btn_clear.png"  width="36" border="1"> close the multi-shot selection</li>
 </ul><br><p>
 
@@ -125,7 +132,7 @@ If the 3D modelling is enabled there is also a button to create a new 3D model, 
 <ul style="margin-top:0">
 <li><u>Close</u>: closes the current survey</li>
 <li><u>Survey info</u>: opens the <u>Survey Info window</u></li>
-<li><u>Recover/paste</u>: deleted item (shot or sketch) <a href="page_undelete.htm">recovery</a> [N]/[E]</li>
+<li><u>Recover | Paste</u>: <a href="page_undelete.htm">recover</a> a deleted item (shot or sketch), or <a href="page_shot_paste.htm">shot-buffer paste</a> (long press) [N]/[E]</li>
 <li><u>Photo</u>: pictures taken for this survey [A]</li>
 <li><u>Audio</u>: audios recorded in this survey [T]</li>
 <li><u>Sensor</u>: sensor data taken for this survey [E]</li>
@@ -145,7 +152,7 @@ If the 3D modelling is enabled there is also a button to create a new 3D model, 
   <li><i>Editable stations</i>: defines if station names are editable in the shot list [default no] [E]</li>
   <li><i>Data default-export</i>: default data export format [default none]</li>
   <li><i>Sketch origin</i>: whether to suggest always the same origin or not [default no]</li>
-  <li><i>Shared x-sections</i>: whether at-station x-section should be shared by default [default no]</li>
+  <!-- li><i>Shared x-sections</i>: whether at-station x-section should be shared by default [default no]</li -->
   <li><i>UNITS</i>
     <ul style="margin-top:0; margin-bottom:0">
     <li><i>Length units</i>: either meters or feet (0.3048 m) [default meters]</li>
@@ -159,18 +166,21 @@ If the 3D modelling is enabled there is also a button to create a new 3D model, 
     <li><i>Leg tolerance</i>: the angle tolerance (percent) between consecutive shots of a leg [default 0.05, min 0]. The length tolerance is the product of the angle tolerance and the length.</li>
     <li><i>Maximum shot length</i>: longer shots are "overshoot" and marked as "deleted" [default 50 m, min 20 m]</li>
     <li><i>Minimum leg length</i>: shorter legs are highlighted with an orange background [default 0 m]</li>
-    <li><i>Leg minimum shots</i>: minimum number of close consecutive shots for a leg [default 3, min 2, max 4] [E]</li>
+    <li><i>Leg shots number</i>: minimum number of close consecutive shots for a leg [default 3, min 2, max 4] [E]</li>
     <li><i>Shot vertical-extend threshold</i>: the azimuth span around the perpendicular to the reference azimuth for the <a href="page_azimuth.htm">shot "extend"</a> to be vertical [default 10, min 0, max 90] (used both for legs and splays) [N]</li>
     <li><i>Leg WENS threshold</i> (<i>Therion</i> "vthreshold"): the LRUD for manually entered shots are considered West-East-North-South when the shot inclination exceeds the WENS threshold [default 80, min 0, max 90] [N]</li>
     <li><i>Manual extend reference</i>: either manual L/R or relative to the <a href="page_azimuth.htm">extend reference</a> azimuth [default relative] [A]</li>
     <li>whether to show <i>prev/next buttons</i> in the shot edit dialog [default yes] [A]</li>
     <li><i>Backsight</i> fields in the shot manual input dialog [N] [default no] [A]</li>
     <li><i>Leg-shot feedback</i>: feedback on leg-shot recognition: "none", "sound" or "haptic" [default "none"] [N]</li>
-    <li><i>Backshot DistoX</i>: DistoX in "backshot" mode [default no] [N]</li>
-    <li><i>Loop closure</i> error compensation. It is advisable not to do the compensation, as this allows to see graphically the mis-closures, and spot possible survey errors [default "none"]  [N]</li>
-    <li><i>Timer</i>: number of seconds of delay before measuring directions with the Android sensors [default 10, min 0] [E]</li>
-    <li><i>Beep volume</i>: beep volume, for manual shot timer and leg feedback [default 50, min 10, max 100%] [E]</li>
-    <li><i>Beep length</i>: beep duration, for leg feedback [default 500 ms] [E]</li>
+    <li><i>Addiional settings</i>
+      <ul style="margin-top:0; margin-bottom:0">
+        <li><i>Backshot DistoX</i>: DistoX in "backshot" mode [default no] [N]</li>
+        <li><i>Loop closure</i> error compensation. It is advisable not to do the compensation, as this allows to see graphically the mis-closures, and spot possible survey errors [default "none"]  [N]</li>
+        <li><i>Timer</i>: number of seconds of delay before measuring directions with the Android sensors [default 10, min 0] [E]</li>
+        <li><i>Beep volume</i>: beep volume, for manual shot timer and leg feedback [default 50, min 10, max 100%] [E]</li>
+        <li><i>Beep length</i>: beep duration, for leg feedback [default 500 ms] [E]</li>
+      </ul>
     </ul>
   </li>
   <li><i>LOCATION <a href="page_fixed_list.htm">settings</a></i></li>
@@ -199,9 +209,9 @@ In the <i>weighted</i> policy [E] the mis-closures of the loops are weighted acc
 <!-- i don't recall exactly how this works -->
 The <i>selective</i> [T] compensation applies only the corrections of loops with mis-closure smaller than a certain percent
 (the "loop threshold" setting) of the loop length.
-The loops above threshold are displayed violet.
-<br>
-Finally, the special loop compensation based on <i>triangles</i> is for <a href="page_trilateration.htm">trilateration</a> [T].
+The loops above threshold are displayed violet.<br>
+The <a href="page_trilateration.htm"><i>trilateration</i></a> adjust the azimuth angles of shots that make triangles, by forcing the sum of internal
+angles of the triangle projected on the horizontal plane to be 180 degrees.
 <br><p>
 
 <a href="manual05.htm">&lt; Calibration data</a> |

@@ -16,7 +16,9 @@ import com.topodroid.util.TDFile;
 import com.topodroid.util.TDVersion;
 import com.topodroid.util.TDUtil;
 import com.topodroid.util.TDString;
+import com.topodroid.util.TDAnalytics;
 import com.topodroid.TDX.TglColor;
+import com.topodroid.TDX.TopoDroidApp;
 
 // import java.io.File;
 import java.io.IOException;
@@ -27,6 +29,7 @@ import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.PrintWriter;
 
+import java.util.List;
 import java.util.ArrayList;
 // import java.util.Date;
 // import java.text.SimpleDateFormat;
@@ -45,13 +48,13 @@ class TdmConfig extends TdmFile
   private boolean mSave;        // whether this Tdm_Config needs to be saved
 
   /** cstr
-   * @param filepath ...
-   * @param save     ...
+   * @param filepath tdconfig (short) filename
+   * @param save     whether this tdconfig needs saving
    */
   public TdmConfig( String filepath, boolean save )
   {
     super( filepath, null );
-    TDLog.v("Tdm_Config cstr filepath " + filepath );
+    // TDLog.v("Tdm_Config cstr filepath " + filepath );
     // mParentDir = (new File( filepath )).getParentFile().getName() + "/";
     // mSurvey    = null;
     mInputs    = new ArrayList< TdmInput >();
@@ -70,11 +73,19 @@ class TdmConfig extends TdmFile
    */
   void populateViewSurveys( ArrayList< TdmSurvey > surveys )
   {
+    // TDLog.v("Tdm config populate surveys " + surveys.size() );
     mViewSurveys = new ArrayList< TdmSurvey >(); // current view surveys
+    ArrayList< TdmSurvey > reduced_surveys = new ArrayList<>();
     for ( TdmSurvey survey : surveys ) {
       // TDLog.v("Populate survey " + survey.getName() );
-      survey.reduce();
-      mViewSurveys.add( survey );
+      survey.reduce( reduced_surveys );
+    }
+    for ( TdmSurvey reduced_survey : reduced_surveys ) {
+      mViewSurveys.add( reduced_survey );
+    }
+    // TDLog.v("Tdm config populate reduced surveys " + reduced_surveys.size() );
+    if ( reduced_surveys.size() > 0 ) {
+      TopoDroidApp.updateAnalytic( TDAnalytics.TDM_DISCONNECED );
     }
   }
 
@@ -83,7 +94,7 @@ class TdmConfig extends TdmFile
    */
   void dropEquates( String survey )
   {
-    TDLog.v("drop equates with " + survey );
+    // TDLog.v("drop equates with " + survey );
     if ( survey == null || survey.length() == 0 ) return;
     ArrayList< TdmEquate > equates = new ArrayList<>();
     for ( TdmEquate equate : mEquates ) {
@@ -101,6 +112,7 @@ class TdmConfig extends TdmFile
   void clearEquates()
   {
     mEquates.clear();
+    setSave();
   }
 
   /** insert an equate
@@ -111,7 +123,7 @@ class TdmConfig extends TdmFile
     if ( equate == null ) return;
     mEquates.add( equate );
     setSave();
-    TDLog.v("add eqaute " + equate.stationsString() + " Nr. equates " + mEquates.size() );
+    // TDLog.v("add eqaute " + equate.stationsString() + " Nr. equates " + mEquates.size() );
   }
 
   /** unconditionally remove an equate
@@ -119,9 +131,38 @@ class TdmConfig extends TdmFile
    */
   void removeEquate( TdmEquate equate ) 
   { 
-    TDLog.v("Config remove equate " + equate.stationsString() );
+    // TDLog.v("Config remove equate " + equate.stationsString() );
     mEquates.remove( equate );
     setSave();
+  }
+
+  /** @return true if there is already an equate between two stations
+   * @param st1  first station fullname
+   * @param st2  second station fullname
+   */
+  boolean hasEquate( String st1, String st2 )
+  {
+    for ( TdmEquate eq : mEquates ) {
+      if ( eq.contains( st1 ) && eq.contains( st2 ) ) return true;
+    }
+    return false;
+  }
+
+  /** @return true if there is already an equate between two of the stations
+   * @param sts  list of station fullnames
+   */
+  boolean hasEquate( List<String> sts )
+  {
+    for ( TdmEquate eq : mEquates ) {
+      boolean one_station = false;
+      for ( String st : sts ) {
+        if ( eq.contains( st ) ) {
+          if ( one_station ) return true;
+          one_station = true;
+        }
+      }
+    }
+    return false;
   }
     
   /** @return true if the cave-project has a given input
@@ -328,7 +369,7 @@ class TdmConfig extends TdmFile
    */
   boolean writeTdmConfig( boolean force )
   {
-    // TDLog.v( "save tdconfig " + this + " save " + mSave + " force " + force );
+    TDLog.v( "save tdconfig " + this + " save " + mSave + " force " + force );
     boolean ret = false;
     if ( mSave || force ) { // was mRead || force
       String filepath = getFilepath();
@@ -366,7 +407,7 @@ class TdmConfig extends TdmFile
   private void writeTd( PrintWriter pw ) throws IOException
   {
     // TDLog.v("save config " + mSurveyName );
-    pw.format("# created by TopoDroid Manager %s - %s\n", TDVersion.string(), TDUtil.currentDate() );
+    pw.format("# created by %s %s - %s\n", TDVersion.APP_NAME_MANAGER, TDVersion.string(), TDUtil.currentDate() );
     pw.format("source\n");
     pw.format("  survey \"%s\"\n", mSurveyName );
     for ( TdmInput input : mInputs ) {
@@ -376,7 +417,7 @@ class TdmConfig extends TdmFile
       pw.format("    load \"%s\" -color %d\n", path, (input.getColor() & 0xffffff) );
     }
     for ( TdmEquate equate : mEquates ) {
-      TDLog.v("EQUATE >" + equate.stationsString() + "<" );
+      // TDLog.v("EQUATE >" + equate.stationsString() + "<" );
       pw.format("    equate");
       for ( String st : equate.mStations ) pw.format(" \"%s\"", st );
       pw.format("\n");
@@ -435,19 +476,21 @@ class TdmConfig extends TdmFile
                 // TDLog.v("vals[" + k + "]: <" + vals[k] );
                 if ( vals[k].length() > 0 ) {
                   String surveyname = vals[k];
-                  int color = TglColor.getSurveyColor(); // random color
-                  for ( ++k; k<vals.length; ++k ) {
-                    if ( vals[k].length() > 0 ) {
-                      if ( vals[k].equals("-color") ) {
-                        ++k;
-                        if ( k < vals.length ) {
-                          color = 0xff000000 | Integer.parseInt( vals[k] );
+                  if ( TopoDroidApp.hasSurveyName( surveyname ) ) {
+                    int color = TglColor.getSurveyColor(); // random color
+                    for ( ++k; k<vals.length; ++k ) {
+                      if ( vals[k].length() > 0 ) {
+                        if ( vals[k].equals("-color") ) {
+                          ++k;
+                          if ( k < vals.length ) {
+                            color = 0xff000000 | Integer.parseInt( vals[k] );
+                          }
                         }
+                        // break;
                       }
-                      // break;
                     }
+                    insertInput( surveyname, color );
                   }
-                  insertInput( surveyname, color );
                   break;
                 }
               }    
@@ -459,10 +502,16 @@ class TdmConfig extends TdmFile
               TdmEquate equate = new TdmEquate();
               for (int k=1; k<vals.length; ++k ) {
                 if ( vals[k].length() > 0 ) {
-                  equate.addStation( vals[k] );
+                  int qos = vals[k].indexOf("@");
+                  if ( qos > 0 ) {
+                    String surveyname = vals[k].substring( qos+1 );
+                    if ( TopoDroidApp.hasSurveyName( surveyname ) ) {
+                      equate.addStation( vals[k] );
+                    }
+                  }
                 }
               }
-              mEquates.add( equate );
+              if ( equate.size() > 1 ) mEquates.add( equate );
             }
           }
         }
@@ -487,7 +536,7 @@ class TdmConfig extends TdmFile
    */
   String exportTherion( boolean overwrite, PrintWriter bw ) throws IOException
   {
-    bw.format("# created by TopoDroid Manager %s - %s\n", TDVersion.string(), TDUtil.currentDate() );
+    bw.format("# created by %s %s - %s\n", TDVersion.APP_NAME_MANAGER, TDVersion.string(), TDUtil.currentDate() );
     bw.format("source\n");
     bw.format("  survey \"%s\"\n", mSurveyName );
     for ( TdmInput input : mInputs ) {
@@ -513,7 +562,7 @@ class TdmConfig extends TdmFile
    */
   String exportSurvex( boolean overwrite, PrintWriter bw ) throws IOException
   {
-    bw.format("; created by TopoDroid Manager %s - %s\n", TDVersion.string(), TDUtil.currentDate() );
+    bw.format("# created by %s %s - %s\n", TDVersion.APP_NAME_MANAGER, TDVersion.string(), TDUtil.currentDate() );
     // TODO EXPORT
     for ( TdmInput s : mInputs ) {
       String path = "../svx/" + s.getSurveyName() + ".svx";

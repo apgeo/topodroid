@@ -17,7 +17,6 @@ import com.topodroid.util.TDFile;
 import com.topodroid.util.TDsafUri;
 import com.topodroid.util.TDTag;
 import com.topodroid.util.TDColor;
-import com.topodroid.util.TDStatus;
 import com.topodroid.util.TDString;
 import com.topodroid.util.TDRequest;
 import com.topodroid.util.TDLocale;
@@ -26,12 +25,6 @@ import com.topodroid.util.TDVersion;
 // import com.topodroid.mag.Geodetic;
 import com.topodroid.math.TDVector;
 import com.topodroid.math.Point2D;
-// import com.topodroid.math.BezierCurve;
-// import com.topodroid.math.BezierInterpolator;
-// import com.topodroid.dln.DLNWall;
-// import com.topodroid.dln.DLNSide;
-// import com.topodroid.dln.DLNSite;
-// import com.topodroid.dln.DLNSideList;
 import com.topodroid.ui.MyButton;
 import com.topodroid.ui.MyHorizontalListView;
 import com.topodroid.ui.MyHorizontalButtonView;
@@ -46,6 +39,7 @@ import com.topodroid.prefs.TDPrefCat;
 import com.topodroid.types.PlotType;
 import com.topodroid.types.SymbolType;
 import com.topodroid.types.PointScale;
+import com.topodroid.types.TDStatus;
 
 import java.util.List;
 import java.util.Set;
@@ -154,7 +148,7 @@ public class SketchWindow extends ItemDrawer
                         R.drawable.iz_section_ok,    // 14
                         R.drawable.iz_section_no,    // 15
                         R.drawable.iz_open,          // 16
-                        R.drawable.iz_clear,         // 17
+                        R.drawable.iz_clear_blue,    // 17
                         R.drawable.iz_select_station,
                         R.drawable.iz_select_line,
                         R.drawable.iz_menu,
@@ -283,7 +277,7 @@ public class SketchWindow extends ItemDrawer
   // long getSID() { return TDInstance.sid; }
   // String getSurvey() { return TDInstance.survey; }
 
-  // private static BezierInterpolator mBezierInterpolator = new BezierInterpolator();
+  // private static com.topodroid.algo.bezier.BezierInterpolator mInterpolator = new Interpolator();
   private SketchSurface  mSketchSurface;
   // private DrawingAreaPath mCurrentAreaPath = null;
   // private SketchPath mFixedDrawingPath;
@@ -298,11 +292,6 @@ public class SketchWindow extends ItemDrawer
   // private boolean mIsNotMultitouch;
 
   // ERASE - EDIT mode and size
-
-  private int mEraseScale  = 1; // set in makeButtons
-  private int mSelectScale = 1;
-  private float mEraseSize  = TDSetting.mEraseness;
-  private float mSelectSize = TDSetting.mSelectness;
 
   private boolean mSelectStation;
 
@@ -700,7 +689,7 @@ public class SketchWindow extends ItemDrawer
     try {
       dos = TDFile.getTopoDroidFileOutputStream( filename );
       dos.write( 'V' ); // version
-      dos.writeInt( TDVersion.code() );
+      dos.writeInt( TDVersion.VERSION_TDR );
       dos.write( 'S' );
       dos.writeUTF( name );
       dos.writeInt( mVertical? 0 : 1 ); 
@@ -872,7 +861,7 @@ public class SketchWindow extends ItemDrawer
   void doClose()
   {
     // TDLog.v( "menu close ...");
-    super.onBackPressed();
+    super.onBackPressed(); // FIXME issue 167
   }
 
   // @note doSaveTdr( ) is already called by onPause
@@ -881,12 +870,12 @@ public class SketchWindow extends ItemDrawer
   {
     // if ( dismissPopups() != DISMISS_NONE ) return;
     if ( TDSetting.mSingleBack ) {
-      super.onBackPressed();
+      super.onBackPressed(); // FIXME issue 167
     } else if ( doubleBack ) {
       if ( doubleBackToast != null ) doubleBackToast.cancel();
       doubleBackToast = null;
       // TDLog.v( "double back pressed ...");
-      super.onBackPressed();
+      super.onBackPressed(); // FIXME issue 167
     } else {
       doubleBack = true;
       doubleBackToast = TDToast.makeToast( R.string.double_back );
@@ -966,15 +955,15 @@ public class SketchWindow extends ItemDrawer
     // TDLog.v("SKETCH erase scale " + mEraseScale );
     switch ( mEraseScale ) {
       case Drawing.SCALE_SMALL:
-        mEraseSize = 0.5f * TDSetting.mEraseness;
+        mEraseSize = 0.75f * mTouchSlop; // TDSetting.mEraseness;
         setButton5( BTN_ERASE_SIZE, mBMsmall );
         break;
       case Drawing.SCALE_MEDIUM:
-        mEraseSize = TDSetting.mEraseness;
+        mEraseSize = 1.5f * mTouchSlop; // TDSetting.mEraseness;
         setButton5( BTN_ERASE_SIZE, mBMmedium );
         break;
       case Drawing.SCALE_LARGE:
-        mEraseSize = 2.0f * TDSetting.mEraseness;
+        mEraseSize = 3.0f * mTouchSlop; // TDSetting.mEraseness;
         setButton5( BTN_ERASE_SIZE, mBMlarge );
         break;
     }
@@ -997,15 +986,15 @@ public class SketchWindow extends ItemDrawer
     // TDLog.v("SKETCH select scale " + mSelectScale );
     switch ( mSelectScale ) {
       case Drawing.SCALE_SMALL:
-        mSelectSize = 0.5f * TDSetting.mSelectness;
+        mSelectSize = 0.5f * mTouchSlop; // TDSetting.mSelectness;
         setButton3( BTN_SELECT_SIZE, mBMsmall );
         break;
       case Drawing.SCALE_MEDIUM:
-        mSelectSize = TDSetting.mSelectness;
+        mSelectSize = mTouchSlop; // TDSetting.mSelectness;
         setButton3( BTN_SELECT_SIZE, mBMmedium );
         break;
       case Drawing.SCALE_LARGE:
-        mSelectSize = 2.0f * TDSetting.mSelectness;
+        mSelectSize = 2.0f * mTouchSlop; // TDSetting.mSelectness;
         setButton3( BTN_SELECT_SIZE, mBMlarge );
         break;
     }
@@ -1172,7 +1161,7 @@ public class SketchWindow extends ItemDrawer
     // TDLog.v( "Microphone perm : " + audioCheck );
 
     mZoomBtnsCtrlOn = (TDSetting.mZoomCtrl > 1);  // do before setting content
-    mPointScale = PointScale.SCALE_M;
+    // mPointScale = PointScale.SCALE_M; // FIXME_SCALE
 
     // mIsNotMultitouch = ! TDandroid.checkMultitouch( this );
 
@@ -1314,21 +1303,21 @@ public class SketchWindow extends ItemDrawer
     path.moveTo( 0, 8 ); path.lineTo(  8, 0 ); path.lineTo( 0, -8 );
     path.moveTo( 8, 8 ); path.lineTo( 16, 0 ); path.lineTo( 8, -8 );
 
-    // mBtnRecentP[NR_RECENT].resetPaintPath( BrushManager.labelPaint, path, 2, 2 ); 
+    // mBtnRecentP[NR_RECENT].resetPaintPath( BrushManager.labelPaint, path, 2, 2, 1 ); 
     // mBtnRecentP[NR_RECENT].invalidate();
     // mBtnRecentP[NR_RECENT].setOnClickListener(
     //   new View.OnClickListener() {
     //     @Override public void onClick( View v ) { startItemPickerDialog( SymbolType.POINT ); }
     //   }
     // );
-    mBtnRecentL[NR_RECENT].resetPaintPath( BrushManager.labelPaint, path, 2, 2 );
+    mBtnRecentL[NR_RECENT].resetPaintPath( BrushManager.labelPaint, path, 2, 2, 1 );
     mBtnRecentL[NR_RECENT].invalidate();
     mBtnRecentL[NR_RECENT].setOnClickListener(
       new View.OnClickListener() {
         @Override public void onClick( View v ) { startItemPickerDialog( SymbolType.LINE ); }
       }
     );
-    // mBtnRecentA[NR_RECENT].resetPaintPath( BrushManager.labelPaint, path, 2, 2 );
+    // mBtnRecentA[NR_RECENT].resetPaintPath( BrushManager.labelPaint, path, 2, 2, 1 );
     // mBtnRecentA[NR_RECENT].invalidate();
     // mBtnRecentA[NR_RECENT].setOnClickListener(
     //   new View.OnClickListener() {
@@ -1738,7 +1727,7 @@ public class SketchWindow extends ItemDrawer
     mSave1X = x1;
     mSave1Y = y1;
   
-    if ( Math.abs( x_shift ) < TDSetting.mMinShift && Math.abs( y_shift ) < TDSetting.mMinShift ) {
+    if ( Math.abs( x_shift ) < mMinShift && Math.abs( y_shift ) < mMinShift ) {
       float zoom = mSketchSurface.getZoom();
       mOffset.x += x_shift / zoom;                // add shift to offset
       mOffset.y += y_shift / zoom; 
@@ -1753,7 +1742,7 @@ public class SketchWindow extends ItemDrawer
    */
   private void moveCanvas( float x_shift, float y_shift )
   {
-    if ( Math.abs( x_shift ) < TDSetting.mMinShift && Math.abs( y_shift ) < TDSetting.mMinShift ) {
+    if ( Math.abs( x_shift ) < mMinShift && Math.abs( y_shift ) < mMinShift ) {
       float zoom = mSketchSurface.getZoom();
       mOffset.x += x_shift / zoom;                // add shift to offset
       mOffset.y += y_shift / zoom; 
@@ -1936,8 +1925,8 @@ public class SketchWindow extends ItemDrawer
         mPointerDown = false;
         modified();
       } else if ( mMode == MODE_EDIT ) {
-        // TDLog.v("SKETCH touch up on edit at " + xc + " " + yc + " radius " + TDSetting.mPointingRadius );
-        if ( Math.abs(mStartX - xc) < TDSetting.mPointingRadius && Math.abs(mStartY - yc) < TDSetting.mPointingRadius ) {
+        // TDLog.v("SKETCH touch up on edit at " + xc + " " + yc + " radius " + mSelectSize );
+        if ( Math.abs(mStartX - xc) < mSelectSize && Math.abs(mStartY - yc) < mSelectSize ) {
           doSelectAt( xc, yc, mSelectSize );
         }
         // mEditMove = false;
@@ -2400,7 +2389,7 @@ public class SketchWindow extends ItemDrawer
   public boolean onKeyDown( int code, KeyEvent event )
   {
     switch ( code ) {
-      case KeyEvent.KEYCODE_BACK: // HARDWARE BACK (4)
+      case KeyEvent.KEYCODE_BACK: // HARDWARE BACK (4) issue 167
         onBackPressed();
         return true;
       case KeyEvent.KEYCODE_MENU:   // HARDWARE MENU (82)
@@ -2752,7 +2741,7 @@ public class SketchWindow extends ItemDrawer
       Symbol p = recents[k];
       if ( p == null || buttons[k] == null ) break;
       if ( p.isPoint() && p.isSection() ) continue;
-      buttons[kk].resetPaintPath( p.getPaint(), p.getPath(), mRecentDimX, mRecentDimY );
+      buttons[kk].resetPaintPath( p.getPaint(), p.getScaledPath(), mRecentDimX, mRecentDimY, 1 );
       buttons[kk].invalidate();
       ++kk;
     }
@@ -2770,7 +2759,7 @@ public class SketchWindow extends ItemDrawer
   //     Symbol p = recents[k];
   //     if ( p == null || buttons[kk] == null ) break;
   //     if ( p.isSection() ) continue;
-  //     buttons[kk].resetPaintPath( p.getPaint(), p.getPath(), mRecentDimX, mRecentDimY );
+  //     buttons[kk].resetPaintPath( p.getPaint(), p.getPath(), mRecentDimX, mRecentDimY, 1 );
   //     buttons[kk].invalidate();
   //     ++ kk;
   //   }

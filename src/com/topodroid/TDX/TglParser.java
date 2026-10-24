@@ -12,8 +12,11 @@
 package com.topodroid.TDX;
 
 import com.topodroid.util.TDLog;
+import com.topodroid.util.TDMath;
 import com.topodroid.util.TDString;
 // import com.topodroid.util.TDFile;
+// import com.topodroid.math.Triangle3D;
+import com.topodroid.math.Vector3D;
 import com.topodroid.c3out.ExportData;
 import com.topodroid.c3out.ExportKML;
 import com.topodroid.c3out.ExportCGAL;
@@ -23,13 +26,13 @@ import com.topodroid.c3out.ExportGPX;
 import com.topodroid.c3out.ExportSHP;
 import com.topodroid.c3out.ExportSTL;
 import com.topodroid.c3in.LoxBitmap;
-import com.topodroid.c3walls.bubble.BubbleComputer;
-import com.topodroid.c3walls.hull.HullComputer;
-import com.topodroid.c3walls.cw.CWTriangle;
-import com.topodroid.c3walls.cw.CWBorder;
-import com.topodroid.c3walls.cw.CWConvexHull;
-import com.topodroid.c3walls.cw.ConvexHullComputer;
-import com.topodroid.c3walls.pcrust.PowercrustComputer;
+import com.topodroid.algo.hull.HullComputer;
+import com.topodroid.algo.cw.CWTriangle;
+import com.topodroid.algo.cw.CWBorder;
+import com.topodroid.algo.cw.CWConvexHull;
+import com.topodroid.algo.cw.ConvexHullComputer;
+import com.topodroid.algo.pcrust.Powercrust;
+import com.topodroid.algo.pcrust.PowercrustComputer;
 import com.topodroid.dem.DEMsurface;
 
 // import java.io.File;
@@ -53,10 +56,14 @@ import java.util.ArrayList;
 import java.util.Stack;
 import java.util.regex.Pattern;
 import java.util.Locale;
+import java.util.TreeSet;
+import java.util.Iterator;
+// import java.util.HashTable;
 
 // import android.widget.Toast;
 
 import android.os.AsyncTask;
+import android.content.Context;
 
 // import android.net.Uri;
 
@@ -86,6 +93,7 @@ public class TglParser
 
   boolean do_render; // whether ready to render
   protected TopoGL mApp;
+  // protected Context mContext; use mApp as context
   // boolean has_temperature = false; // TEMPERATURE
 
   protected ArrayList< Cave3DSurvey >   surveys;
@@ -94,23 +102,24 @@ public class TglParser
   protected ArrayList< Cave3DShot >     shots;   // centerline shots
   protected ArrayList< Cave3DShot >     splays;  // splay shots
   protected ArrayList< Cave3DXSection > xsections = null;
+  protected ArrayList< String > mEquateTable = null;
 
   PowercrustComputer powercrustcomputer = null;
   ConvexHullComputer convexhullcomputer = null;
   HullComputer hullcomputer = null;
   TubeComputer tubecomputer = null;
-  BubbleComputer bubblecomputer = null;
-
-  
+  com.topodroid.algo.bubble.BubbleComputer bubblecomputer = null;
 
   // private ArrayList< CWConvexHull > walls   = null;
   // private ArrayList< CWBorder >     borders = null;
 
   protected DEMsurface mSurface;
   protected LoxBitmap  mBitmap = null;
-  public double mCaveLength = 0.0f;
-  public double mSurfaceLength = 0.0f;
+  protected double mCaveLength = 0.0f;
+  protected double mSurfaceLength = 0.0f;
+  protected double mDuplicateLength = 0.0f;
   protected String mName;     // survey base name
+  protected int mNrEquates = 0;
 
   // Cave3DStation mCenterStation = null;
   protected Cave3DStation mStartStation = null;
@@ -200,10 +209,11 @@ public class TglParser
   // public double getVmax() { return zmax; }
 
   public int getStationNumber()  { return (stations == null)?  0 : stations.size(); }
-  public int getShotNumber()     { return (shots == null)?     0 : shots.size(); }
+  public int getShotNumber()     { return (shots == null)?     0 : shots.size() - mNrEquates; }
   public int getSplayNumber()    { return (splays == null)?    0 : splays.size(); }
   public int getSurveyNumber()   { return (surveys == null)?   0 : surveys.size(); }
   public int getXSectionNumber() { return (xsections == null)? 0 : xsections.size(); }
+  public int getEquateNumber()   { return mNrEquates; }
 
   public ArrayList< Cave3DSurvey >   getSurveys()   { return surveys; }
   public ArrayList< Cave3DShot >     getShots()     { return shots; }
@@ -211,6 +221,39 @@ public class TglParser
   public ArrayList< Cave3DStation >  getStations()  { return stations; }
   public ArrayList< Cave3DFix >      getFixes()     { return fixes; }
   public ArrayList< Cave3DXSection > getXSections() { return xsections; }
+ 
+
+  /** @return the string of the stations equated to a given station
+   * @param station  input station qualified name (eg station@survey)
+   */
+  String getEquates( String station )
+  {
+    if ( station == null ) return null;
+    if ( mEquateTable.size() == 0 ) return null;
+    station = station.trim();
+    if ( station.isEmpty() ) return null;
+    // TDLog.v("Tgl parser getEquates for <" + station + ">" );
+    TreeSet< String > ret = null;
+    for ( String equate : mEquateTable ) {
+      if ( equate.startsWith( station ) || equate.contains( station ) ) {
+        if ( ret == null ) ret = new TreeSet< String >();
+        String[] stations = equate.split( " " );
+        for ( String st : stations ) {
+          String st1 = st.trim();
+          if ( st.length() > 0 && ! station.equals( st ) ) ret.add( st );
+        }
+      }
+    }
+    if ( ret == null || ret.size() == 0 ) return null;
+    StringBuilder sb = new StringBuilder();
+    sb.append( station );
+    Iterator<String> it = ret.iterator();
+    while ( it.hasNext() ) {
+      sb.append(" ").append( it.next() );
+    }
+    // TDLog.v("Tgl parser getEquates returns " + sb.toString() );
+    return sb.toString();
+  }
 
   /** @return an array with the splays at two stations
    * @param st    station (ignored if null)
@@ -314,7 +357,7 @@ public class TglParser
             double cln  = Math.abs(leg.cln) * 180.0 / Math.PI; // degrees
             if ( cln > 10.0 ) {
               double dz = leg.len * Math.sin( leg.cln );
-              if ( cln < 30.0 ) dz *= ( 30.0 - cln )/20.0;
+              if ( cln < 30.0 ) dz *= ( cln - 10.0 )/20.0;
               if ( s0 == leg.to_station ) dz = -dz; // if leg = s3--s0 reverse dz
               if ( dz < 0 ) {
                 dneg += dz;
@@ -403,6 +446,10 @@ public class TglParser
   /** @return the length of the surface midline
    */
   public double getSurfaceLength() { return mSurfaceLength; }
+
+  /** @return the length of the duplicate legs
+   */
+  public double getDuplicateLength() { return mDuplicateLength; }
 
   /** @return the array of the station coordinates 
    * for each station the array contains the X, Y, and Z coordinates
@@ -541,8 +588,7 @@ public class TglParser
         ret.add( shot );
       } else if ( shot.to_station == station ) {
         if ( reverse ) {
-          double b = shot.ber + Math.PI;
-          if ( b > 2*Math.PI ) b -= 2*Math.PI;
+          double b = TDMath.in2PI( shot.ber + Math.PI );
           // N.B. no cavway bits
           ret.add( new Cave3DShot( station, shot.from_station, shot.len, b, -shot.cln, shot.getFlag(), shot.mMillis, mColor) );
         } else {
@@ -570,16 +616,14 @@ public class TglParser
           ret.add( shot );
         } else {
           // TDLog.v( "add other shot " + shot.to + "-" + shot.from );
-          double b = shot.ber + Math.PI;
-          if ( b > 2*Math.PI ) b -= 2*Math.PI;
+          double b = TDMath.in2PI( shot.ber + Math.PI );
           // N.B. no cavway bits
           ret.add( new Cave3DShot( null, station, shot.len, b, -shot.cln, shot.getFlag(), shot.mMillis, mColor) ); // stations not important
         }
       } else if ( shot.to_station == station ) {
         if ( shot.from_station == other ) {
           // TDLog.v( "add reversed shot " + shot.to + "-" + shot.from );
-          double b = shot.ber + Math.PI;
-          if ( b > 2*Math.PI ) b -= 2*Math.PI;
+          double b = TDMath.in2PI( shot.ber + Math.PI );
           // N.B. no cavway bits
           ret.add( new Cave3DShot( null, station, shot.len, b, -shot.cln, shot.getFlag(), shot.mMillis, mColor) ); // stations not important
         } else {
@@ -605,8 +649,7 @@ public class TglParser
       } else if ( shot.to_station == station ) {
         if ( shot.from_station != other ) {
           // TDLog.v( "add reversed shot " + shot.to + "-" + shot.from );
-          double b = shot.ber + Math.PI;
-          if ( b > 2*Math.PI ) b -= 2*Math.PI;
+          double b = TDMath.in2PI( shot.ber + Math.PI );
           // N.B. no cavway bits
           ret.add( new Cave3DShot( null, station, shot.len, b, -shot.cln, shot.getFlag(), shot.mMillis, mColor) ); // stations not important
         } 
@@ -628,8 +671,7 @@ public class TglParser
         if ( shot.from_station == station ) {
           ret.add( shot );
         } else if ( shot.to_station == station ) {
-          double b = shot.ber + Math.PI;
-          if ( b > 2*Math.PI ) b -= 2*Math.PI;
+          double b = TDMath.in2PI( shot.ber + Math.PI );
           // N.B. no cavway bits
           ret.add( new Cave3DShot( station, null, shot.len, b, -shot.cln, shot.getFlag(), shot.mMillis, mColor ) ); // stations not important
         }
@@ -686,6 +728,7 @@ public class TglParser
     surveys   = new ArrayList< Cave3DSurvey >();
     stations  = new ArrayList< Cave3DStation >();
     xsections = new ArrayList< Cave3DXSection >();
+    mEquateTable = new ArrayList< String >();
   }
 
   /** compute the bounding box of the 3D model
@@ -760,7 +803,7 @@ public class TglParser
         dos.flush();
         dos.close();
       } catch ( IOException e ) {
-        TDLog.e( e.getMessage() );
+        TDLog.e( "Tgl parser " + e.getMessage() );
       }
     }
     return ret;
@@ -815,8 +858,8 @@ public class TglParser
             TDToast.makeWarn (R.string.powercrust_dxf_not_supported );
             return false;
           }
-        }                              // legs  splays          walls          version13
-        ret = dxf.exportASCII( osw, this, true, export.mSplays, export.mWalls, true ); // true = version13
+        }                              // legs  splays          walls          stations         version13
+        ret = dxf.exportASCII( osw, this, true, export.mSplays, export.mWalls, export.mStation, true ); // true = version13, stations HB
       // } else if ( type == ModelType.SHP_ASCII ) { // SHP
       //   ExportSHP shp = new ExportSHP();
       //   if ( export.mWalls ) {
@@ -855,7 +898,7 @@ public class TglParser
         osw.flush();
         osw.close();
       } catch ( IOException e ) {
-        TDLog.e( e.getMessage() );
+        TDLog.e( "Tgl parser " + e.getMessage() );
       }
     }
     return ret;
@@ -988,7 +1031,7 @@ public class TglParser
     }
     // TDLog.v("make bubble");
     if ( WALL_BUBBLE < WALL_MAX ) {
-      bubblecomputer = new BubbleComputer( this );
+      bubblecomputer = new com.topodroid.algo.bubble.BubbleComputer( this );
       if ( bubblecomputer != null ) {
         // TDLog.v("compute bubble");
         (new AsyncTask< Void, Void, Boolean >() {
@@ -1081,6 +1124,10 @@ public class TglParser
   {
     if ( shots == null ) return;
     if ( WALL_POWERCRUST < WALL_MAX /* && Cave3D.mWallPowercrust */ ) {
+      if ( ! Powercrust.hasLib ) {
+        TDToast.make( R.string.no_native_lib );
+        return;
+      }
       powercrustcomputer = new PowercrustComputer( this, stations, shots );
       (new AsyncTask<Void, Void, Boolean>() {
           public Boolean doInBackground( Void ... v ) {
@@ -1393,5 +1440,31 @@ public class TglParser
   //   has_temperature = true;
   //   return true;
   // }
+
+  /*
+  protected void logDuplicateShots()
+  {
+    int ns = shots.size();
+    for ( int k=0; k < ns; ++k ) {
+      Cave3DShot sk = shots.get( k );
+      String fk = sk.from;
+      String tk = sk.to;
+      for ( int h=k+1; h < ns; ++h ) {
+        Cave3DShot sh = shots.get( h );
+        String fh = sh.from;
+        String th = sh.to;
+        if ( fk.equals( fh ) ) {
+          if ( tk.equals( th ) ) {
+            TDLog.v("Duplicate 1 " + fk + " " + tk + " : " + sk.len + " " + sh.len );
+          }
+        } else if ( fk.equals( th ) ) {
+          if ( tk.equals( fh ) ) {
+            TDLog.v("Duplicate 2 " + fk + " " + tk + " : " + sk.len + " " + sh.len );
+          }
+        }
+      }
+    }
+  }
+  */
 
 }

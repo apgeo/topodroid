@@ -72,7 +72,7 @@ class SymbolEnableDialog extends MyDialog
   {
     super.onCreate( savedInstanceState );
 
-    initLayout(R.layout.symbol_enable_dialog, null );
+    initLayout(R.layout.symbol_enable_dialog, R.string.title_symbols );
     // getWindow().setLayout( LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT );
 
     mList = (ListView) findViewById(R.id.symbol_list);
@@ -233,6 +233,8 @@ class SymbolEnableDialog extends MyDialog
 
   // static SaveSymbols mSaveSymbols = null; // new SaveSymbols();
 
+  @SuppressWarnings("deprecated")
+  @Override
   public void onBackPressed()
   {
     SaveSymbols save = new SaveSymbols();

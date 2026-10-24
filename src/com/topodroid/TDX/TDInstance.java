@@ -46,7 +46,7 @@ public class TDInstance
   public static long sid   = -1;   // id of the current survey
   public static boolean isSurveyMutable = true;
   public static long cid   = -1;   // id of the current calib
-  public static String survey;   // current survey name
+  public static String survey = null;   // current survey name
   static String calib;    // current calib name
   static long secondLastShotId = 0L;
 
@@ -105,6 +105,10 @@ public class TDInstance
    */
   public static boolean isDeviceDiscoX() { return deviceA != null && deviceA.isDiscoX(); }
 
+  /** @return true if the primary device is set and is a JedEye
+   */
+  public static boolean isDeviceJedeye() { return deviceA != null && deviceA.isJedeye(); }
+
   /** @return true if the primary device is set and is of type BRIC (BRIC4 or BRIC5)
    */
   public static boolean isDeviceBric()   { return deviceA != null && deviceA.isBric(); }
@@ -149,7 +153,11 @@ public class TDInstance
   /** set primary bluetooth device
    * @param device bluetooth device
    */
-  public static void setDeviceA( Device device ) { deviceA = device; }
+  public static void setDeviceA( Device device )
+  {
+    deviceA = device;
+    mBleDevice = null; // MM addition - why this ?
+  }
 
   /** set secondary bluetooth device
    * @param device bluetooth device
@@ -170,7 +178,15 @@ public class TDInstance
   static void initBleDevice( )
   {
     BluetoothAdapter adapter = BluetoothAdapter.getDefaultAdapter();
-    mBleDevice = adapter.getRemoteDevice( TDInstance.deviceAddress() );
+    if ( adapter == null || TDInstance.deviceAddress() == null ) { // MM added
+      mBleDevice = null;
+      return;
+    }
+    try { // MM added try-catch
+      mBleDevice = adapter.getRemoteDevice( TDInstance.deviceAddress() );
+    } catch ( IllegalArgumentException | SecurityException e ) {
+      mBleDevice = null;
+    }
   }
 
   /** set the bluetooth LE device
@@ -189,7 +205,7 @@ public class TDInstance
   /** @return true if the primary device is LE
    * SIWEI_TIAN
    */
-  static boolean isDeviceBLE()    { return deviceA != null && ( deviceA.isBric() || deviceA.isSap() || deviceA.isDistoXBLE() || deviceA.isCavway() ); }
+  static boolean isDeviceBLE()    { return deviceA != null && ( deviceA.isBric() || deviceA.isSap() || deviceA.isDistoXBLE() || deviceA.isCavway() || deviceA.isJedeye() ); }
 
   public static boolean isDeviceCavway()   { return deviceA != null && deviceA.isCavway(); }
 
@@ -199,16 +215,23 @@ public class TDInstance
    * @param device   bluetooth device
    * SIWEI_TIAN
    */
-  private static boolean isDeviceBLE( Device device )    { return device != null && ( device.isBric() || device.isSap() || device.isDistoXBLE() || device.isCavway() ); }
+  private static boolean isDeviceBLE( Device device )    { return device != null && ( device.isBric() || device.isSap() || device.isDistoXBLE() || device.isCavway() || device.isJedeye() ); }
 
   /** @return true if the connection is set in continuous mode
    */
-  static boolean isContinuousMode() 
+  static public boolean isContinuousMode() 
   {
     if ( isDeviceXBLE() || isDeviceCavway() ) { // SIWEI
       return TDSetting.isConnectionModeContinuous();
     }
     return TDSetting.isConnectionModeContinuous() || isDeviceBLE();
+  }
+
+  /** @return true if there can be a device switch
+   */
+  public static boolean canSwitchDevice()
+  {
+    return TDSetting.isConnectionModeContinuous() || ( TDSetting.mSecondDistoX && deviceB != null );
   }
 
   /** @return true if the bluetooth device has remote control
@@ -242,17 +265,17 @@ public class TDInstance
   static String recentPlot = null;
   static long   recentPlotType = PlotType.PLOT_PLAN;
 
-  /** switch device
-   * @return true if successfully switched
-   */
-  static boolean switchDevice()
-  {
-    if ( deviceB == null ) return false;
-    Device tmp = deviceA;
-    deviceA = deviceB;
-    deviceB = tmp;
-    return true;
-  }
+  // /** switch device // MM dropped
+  //  * @return true if successfully switched
+  //  */
+  // static boolean switchDevice()
+  // {
+  //   if ( deviceB == null ) return false;
+  //   Device tmp = deviceA;
+  //   deviceA = deviceB;
+  //   deviceB = tmp;
+  //   return true;
+  // }
 
   /** @return a bundle containing TopoDroid status
    */
@@ -301,6 +324,15 @@ public class TDInstance
     }
     recentPlot = null;
     recentPlotType = PlotType.PLOT_PLAN;
+  }
+
+  /** @return true if the survey is immutable
+   */
+  static boolean isSurveyImmutable() 
+  {
+    boolean ret = ! isSurveyMutable;
+    if ( ret ) TDToast.makeWarn("Immutable survey");
+    return ret;
   }
 
   /** set the application context

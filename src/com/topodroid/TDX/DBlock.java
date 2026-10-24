@@ -20,6 +20,7 @@ import com.topodroid.prefs.TDSetting;
 import com.topodroid.types.LegType;
 import com.topodroid.types.BlockType;
 import com.topodroid.types.ExtendType;
+import com.topodroid.types.ShotType;
 import com.topodroid.dev.cavway.CavwayConst;
 
 
@@ -35,7 +36,6 @@ import android.graphics.Paint; // custom paint
 
 public class DBlock
 {
-
   private View mView;     // view of this dblock in the list
   // private int    mPos; // position in the list
   private int mVisible;   // whether this data is visible in the list: one of View.VISIBLE, View.GONE, View.INVISIBLE
@@ -64,14 +64,14 @@ public class DBlock
   private long mFlag;     
   private long mCavwayFlag = 0;
   // block type is a superset of the leg-type which is in the database table
-  private int  mBlockType;     // data type: BLANK, LEG, SEC_LEG, BACKLEG, SPLAY 
-  private int  mShotType;      // 0: DistoX, 1: manual, -1: DistoX backshot
+  private int  mBlockType;     // data type: 0=BLANK, 1=LEG, 2=SEC_LEG, 3=BLANK_LEG, 4=BACK_LEG, 5=BUNDER, 6=SPLAY, ... 
+  private int  mShotType;      // 0: DistoX, 1: manual, -1: DistoX backshot ... @see ShotType
   boolean mWithPhoto;
-  boolean mFailBacksplay;  // whether this splay failed to backsight the preceeding leg
+  private boolean mFailBacksplay;  // whether this splay failed to backsight the preceeding leg
 
   private boolean mMultiBad; // whether it disagree with siblings
-  private float mStretch;
-  private String mAddress; // DistoX address - used only in exports
+  private float mStretch;    // fractional part of the extend - FIXME_STRETCH
+  private String mAddress;   // DistoX address - used only in exports
   // boolean mWasRecent = false; // REVISE_RECENT
 
   long mRawMx = 0; // (M1x,M2x) in four bytes of a long: M1x.high M1x.low M2x.high M2x.low
@@ -94,8 +94,9 @@ public class DBlock
   static final long FLAG_NO_PLAN    =  8;
   static final long FLAG_NO_PROFILE = 16;
   static final long FLAG_NONE       = 24; // 16 | 8
-  static final long FLAG_BACKSHOT   = 32; // BACKSHOT
+  static final long FLAG_BACKSHOT   = 32; // BACKSHOT - backsight leg
   static final long FLAG_TAMPERED   = 64;
+  static final long FLAG_BACKSPLAY  =128; // 1 << 7 - backsight splay
 
   static final long FLAG_SURFACE_DUPLICATE_COMMENTED = 7; // FLAG_SURFACE | FLAG_DUPLICATE | FLAG_COMMENTED 
   static final long FLAG_SURFACE_DUPLICATE_COMMENTED_BACKSHOT = 39; // FLAG_SURFACE | FLAG_DUPLICATE | FLAG_COMMENTED | FLAG_BACKSHOT
@@ -144,8 +145,9 @@ public class DBlock
   public boolean isNoPlan()    { return (mFlag & FLAG_NO_PLAN)    == FLAG_NO_PLAN; }
   public boolean isNoProfile() { return (mFlag & FLAG_NO_PROFILE) == FLAG_NO_PROFILE; }
   public boolean isNone()      { return (mFlag & FLAG_NONE)       == FLAG_NONE; }
-  public boolean isBackshot()  { return (mFlag & FLAG_BACKSHOT)   == FLAG_BACKSHOT; } // BACKSHOT
+  public boolean isBackshot()  { return (mFlag & FLAG_BACKSHOT)   == FLAG_BACKSHOT; } // BACKSHOT LEG
   public boolean isTampered()  { return (mFlag & FLAG_TAMPERED)   == FLAG_TAMPERED; }
+  public boolean isBackSplay() { return (mFlag & FLAG_BACKSPLAY ) == FLAG_BACKSPLAY; } // BACKSIGHT SPLAY
 
   /** @return true if the cavway flag has the requested value
    * @param f   requested flag value
@@ -159,12 +161,27 @@ public class DBlock
   public static boolean isNoPlan(long flag)    { return (flag & FLAG_NO_PLAN)    == FLAG_NO_PLAN; }
   public static boolean isNoProfile(long flag) { return (flag & FLAG_NO_PROFILE) == FLAG_NO_PROFILE; }
   public static boolean isNone(long flag)      { return (flag & FLAG_NONE)       == FLAG_NONE; }
-  public static boolean isBackshot(long flag)  { return (flag & FLAG_BACKSHOT)   == FLAG_BACKSHOT; } // BACKSHOT
+  public static boolean isBackshot(long flag)  { return (flag & FLAG_BACKSHOT)   == FLAG_BACKSHOT; } // BACKSHOT LEG
   public static boolean isTampered(long flag)  { return (flag & FLAG_TAMPERED)   == FLAG_TAMPERED; }
+  public static boolean isBackSplay(long flag) { return (flag & FLAG_BACKSPLAY ) == FLAG_BACKSPLAY; } // BACKSIGHT SPLAY
 
   public void setTampered() { mFlag |= FLAG_TAMPERED; }
   public void clearTampered() { mFlag &= ~FLAG_TAMPERED; }
 
+  /** set the backsplay flag-bit
+   */
+  public void setBackSplay() { mFlag |= FLAG_BACKSPLAY; }
+
+  /** clear the backsplay flag-bit and set the backsight-check failure to false
+   */
+  public void clearBackSplay()
+  { 
+    mFlag &= ~FLAG_BACKSPLAY;
+    mFailBacksplay = false;
+  }
+
+  /** @return whether the shot failed the backsight-splay check
+   */
   public boolean failBacksplay()  { return mFailBacksplay; }
 
   void clearFlagDuplicateSurfaceCommented() { mFlag &= ~FLAG_SURFACE_DUPLICATE_COMMENTED; }
@@ -230,7 +247,11 @@ public class DBlock
 
   /** set the type "BLANK_LEG" - only if the type was BLANK
    */
-  void setTypeBlankLeg( ) { if ( mBlockType == BlockType.BLANK ) mBlockType = BlockType.BLANK_LEG; }
+  void setTypeBlankToLeg( ) { if ( mBlockType == BlockType.BLANK ) mBlockType = BlockType.BLANK_LEG; }
+
+  /** set the type MAIN_LEG
+   */
+  void setTypeLeg()  { mBlockType = BlockType.MAIN_LEG; }
 
   /** set the type SEC_LEG
    */
@@ -331,21 +352,22 @@ public class DBlock
 
   /** set the block type from the leg-type
    * @param leg_type    leg type
+   * @note keeping the distinction between leg-type (DB flag) and block-type is one of the LEGACY ISSUES
    */
   void setBlockTypeFromLegType( int leg_type )
   {
-     // switch ( leg_type ) {
-     //   case LegType.EXTRA:   mBlockType = BlockType.SEC_LEG;     break;
-     //   case LegType.XSPLAY:  mBlockType = BlockType.X_SPLAY;     break;
-     //   case LegType.BACK:    mBlockType = BlockType.BACK_LEG;    break;
-     //   case LegType.HSPLAY:  mBlockType = BlockType.H_SPLAY;     break;
-     //   case LegType.VSPLAY:  mBlockType = BlockType.V_SPLAY;     break;
-     //   case LegType.SCAN:    mBlockType = BlockType.SCAN;        break;
+     // switch ( leg_type ) { // @see LegType
+     //   case LegType.EXTRA:   mBlockType = BlockType.SEC_LEG;     break; // 1
+     //   case LegType.XSPLAY:  mBlockType = BlockType.X_SPLAY;     break; // 2
+     //   case LegType.BACK:    mBlockType = BlockType.BACK_LEG;    break; // 3
+     //   case LegType.HSPLAY:  mBlockType = BlockType.H_SPLAY;     break; // 4
+     //   case LegType.VSPLAY:  mBlockType = BlockType.V_SPLAY;     break; // 5
+     //   case LegType.SCAN:    mBlockType = BlockType.SCAN;        break; // 6
      //   case LegType.XSCAN:   mBlockType = BlockType.XSCAN;       break;
      //   case LegType.HSCAN:   mBlockType = BlockType.HSCAN;       break;
-     //   case LegType.VSCAN:   mBlockType = BlockType.VSCAN;       break;
-     //   // case LegType.BLUNDER: mBlockType = BlockType.BLUNDER; break;
-     //   default: // case LegTypeNORMAL:
+     //   case LegType.VSCAN:   mBlockType = BlockType.VSCAN;       break; // 9
+     //   // case LegType.BLUNDER: mBlockType = BlockType.BLUNDER; break;  // 10
+     //   default: // case LegTypeNORMAL: // 0
      //     if ( isSplay() ) {
      //       mBlockType = BlockType.SPLAY;
      //     } else if ( isLeg() ) {
@@ -360,7 +382,7 @@ public class DBlock
      
      if ( leg_type >= 0 && leg_type < BlockType.LegToBlock.length ) {
        mBlockType = BlockType.LegToBlock[ leg_type ];
-       if ( mBlockType == BlockType.BLANK ) {
+       if ( mBlockType == BlockType.BLANK ) { // @see BlockType
          if ( ! TDString.isNullOrEmpty( mFrom ) ) {
            if ( TDString.isNullOrEmpty( mTo ) ) {
              mBlockType = BlockType.SPLAY;
@@ -380,7 +402,7 @@ public class DBlock
    */
   int getColorByType() { 
     // TDLog.v( "Block " + mId + " block type " + mBlockType + " color " + BlockType.mTypeColor[ mBlockType ] );
-    return isTampered()? /* BlockType.mTypeColor[ mBlockType ] | */ 0xffff0000
+    return isTampered()? /* BlockType.mTypeColor[ mBlockType ] | */ 0xffff6666
                        : BlockType.mTypeColor[ mBlockType ];
   }
 
@@ -423,7 +445,9 @@ public class DBlock
   // void setStretch( float stretch ) { mStretch = stretch; } // UNUSED
   public float getStretch() { return mStretch; }
 
-  public float getStretchedExtend() { return mExtend + mStretch; } // UNUSED
+  // /** @return the float extend - UNUSED
+  //  */
+  // public float getStretchedExtend() { return mExtend + mStretch; }
 
   /** flip the block extend and stretch
    * @note called only by ShotWindow
@@ -654,29 +678,33 @@ public class DBlock
    */
   void setShotType( int type ) { mShotType = type; }
 
+  /** set the block comment
+   */
+  void setComment( String str ) { mComment = str; }
+
   /** @return the type of the shot: -1 DistoX-backsight, 0 DistoX, 1 manual
    */
   int  getShotType( ) { return mShotType; }
 
   /** @return true if the shot type is "DistoX"
    */
-  boolean isDistoX() { return mShotType <= 0; }
+  boolean isDistoX() { return mShotType <= 0; } // either ShotType.BACKSIGHT or ShotType.FORESIGHT
 
   /** @return true if the shot type is "DistoX - backsight" and the setting "backshot" is set
    */
-  boolean isDistoXBacksight() { return TDSetting.mDistoXBackshot && mShotType == -1; }
+  boolean isDistoXBacksight() { return TDSetting.mDistoXBackshot && mShotType == ShotType.BACKSIGHT; }
 
   /** @return true if the shot type is "DistoX - foresight"
    */
-  boolean isForesight() { return mShotType == 0; }
+  boolean isForesight() { return mShotType == ShotType.FORESIGHT; }
 
   /** @return true if the shot type is "DistoX - backsight"
    */
-  boolean isBacksight() { return mShotType == -1; }
+  boolean isBacksight() { return mShotType == ShotType.BACKSIGHT; }
 
   /** @return true if the shot type is "manual"
    */
-  boolean isManual() { return mShotType > 0; }
+  boolean isManual() { return mShotType == ShotType.MANUAL; } // was > 0
 
   /** set the block ID
    * @param shot_id     shot (block) ID
@@ -774,12 +802,11 @@ public class DBlock
    */
   private boolean checkRelativeDistance( DBlock b )
   {
-    float cc, sc, cb, sb;
     float alen = mLength;
-    cc = TDMath.cosd( mClino );
-    sc = TDMath.sind( mClino );
-    cb = TDMath.cosd( mBearing ); 
-    sb = TDMath.sind( mBearing ); 
+    float cc = TDMath.cosd( mClino );
+    float sc = TDMath.sind( mClino );
+    float cb = TDMath.cosd( mBearing ); 
+    float sb = TDMath.sind( mBearing ); 
     TDVector v1 = new TDVector( alen * cc * sb, alen * cc * cb, alen * sc );
     float blen = b.mLength;
     cc = TDMath.cosd( b.mClino );
@@ -797,10 +824,9 @@ public class DBlock
    */
   private boolean checkRelativeDistanceDiving( DBlock b )
   {
-    float cb, sb;
     float alen = mLength;
-    cb = TDMath.cosd( mBearing ); 
-    sb = TDMath.sind( mBearing ); 
+    float cb = TDMath.cosd( mBearing ); 
+    float sb = TDMath.sind( mBearing ); 
     TDVector v1 = new TDVector( alen * sb, alen * cb, mDepth );
     float blen = b.mLength;
     cb = TDMath.cosd( b.mBearing ); 
@@ -810,6 +836,48 @@ public class DBlock
     return ( d/alen + d/blen < TDSetting.mCloseDistance );
   }
 
+  /** @return true if the relative distance between this block and the another block is smaller that CloseDistance setting (normal mode)
+   * @param b  the other block
+   * @note blocks are in normal mode
+   */
+  private boolean checkRelativeAngle( DBlock b )
+  {
+    float cc = TDMath.cosd( mClino );
+    float sc = TDMath.sind( mClino );
+    float cb = TDMath.cosd( mBearing ); 
+    float sb = TDMath.sind( mBearing ); 
+    TDVector v1 = new TDVector( cc * sb, cc * cb, sc );
+    cc = TDMath.cosd( b.mClino );
+    sc = TDMath.sind( b.mClino );
+    cb = TDMath.cosd( b.mBearing ); 
+    sb = TDMath.sind( b.mBearing ); 
+    TDVector v2 = new TDVector( cc * sb, cc * cb, sc );
+    float d = (v1.minus(v2)).length();
+    return ( d < 2 * TDSetting.mCloseDistance );
+  }
+
+  /** @return true if the relative distance between this block and the another block is smaller that CloseDistance setting (diving mode)
+   * @param b  the other block
+   * @note blocks are in diving mode
+   */
+  private boolean checkRelativeAngleDiving( DBlock b )
+  {
+    float alen = mLength;
+    float cb = TDMath.cosd( mBearing ); 
+    float sb = TDMath.sind( mBearing ); 
+    float sc = mDepth / alen;
+    float cc = TDMath.sqrt( 1 - sc*sc );
+    TDVector v1 = new TDVector( cc * sb, cc * cb, sc );
+    float blen = b.mLength;
+    cb = TDMath.cosd( b.mBearing ); 
+    sb = TDMath.sind( b.mBearing ); 
+    sc = b.mDepth / blen;
+    cc = TDMath.sqrt( 1 - sc*sc );
+    TDVector v2 = new TDVector( cc * sb, cc * cb, sc );
+    float d = (v1.minus(v2)).length();
+    return ( d < 2 * TDSetting.mCloseDistance );
+  }
+
   /** @return true if this shot is within relative distance from another shot
    * @param b   the other shot
    */
@@ -817,6 +885,15 @@ public class DBlock
   {
     if ( b == null ) return false;
     return ( TDInstance.datamode == SurveyInfo.DATAMODE_DIVING )? checkRelativeDistanceDiving( b ) : checkRelativeDistance( b );
+  }
+
+  /** @return true if this shot is within relative direction angle from another shot
+   * @param b   the other shot
+   */
+  public boolean isRelativeAngle( DBlock b )
+  {
+    if ( b == null ) return false;
+    return ( TDInstance.datamode == SurveyInfo.DATAMODE_DIVING )? checkRelativeAngleDiving( b ) : checkRelativeAngle( b );
   }
 
   // -------------------------------------------------------------
@@ -938,7 +1015,7 @@ public class DBlock
   String bearingString()
   {
     if ( mShotType == -1 ) {
-    return String.format(Locale.US, "%.1f*", mBearing * TDSetting.mUnitAngle );
+      return String.format(Locale.US, "%.1f*", mBearing * TDSetting.mUnitAngle );
     }
     return String.format(Locale.US, "%.1f", mBearing * TDSetting.mUnitAngle );
   }
@@ -1061,25 +1138,33 @@ public class DBlock
   }
 
   /** check if this shot is a splay backsight check for a leg
-   * @param b  leg shot
+   * @param b    leg shot
+   * @param skip forse set fail to false (the shot may not  be a splay)
    */ 
-  void doBacksightSplayCheck( DBlock b ) 
+  boolean doBacksightSplayCheck( DBlock b, boolean skip ) 
   {
-    float cc, sc, cb, sb;
-    float alen = mLength;
-    cc = TDMath.cosd( mClino );
-    sc = TDMath.sind( mClino );
-    cb = TDMath.cosd( mBearing ); 
-    sb = TDMath.sind( mBearing ); 
-    TDVector v1 = new TDVector( alen * cc * sb, alen * cc * cb, alen * sc );
-    float blen = b.mLength;
-    cc =   TDMath.cosd( b.mClino );
-    sc = - TDMath.sind( b.mClino );
-    cb = - TDMath.cosd( b.mBearing ); 
-    sb = - TDMath.sind( b.mBearing ); 
-    TDVector v2 = new TDVector( blen * cc * sb, blen * cc * cb, blen * sc );
-    float d = (v1.minus(v2)).length();
-    mFailBacksplay = ( d/alen + d/blen > 2 * TDSetting.mCloseDistance );
+    // setBackSplay();
+    if ( ! TDSetting.mBacksightSplay ) {
+      mFailBacksplay = false;
+    } else if ( b != null ) {
+      float cc, sc, cb, sb;
+      float alen = mLength;
+      cc = TDMath.cosd( mClino );
+      sc = TDMath.sind( mClino );
+      cb = TDMath.cosd( mBearing ); 
+      sb = TDMath.sind( mBearing ); 
+      TDVector v1 = new TDVector( alen * cc * sb, alen * cc * cb, alen * sc );
+      float blen = b.mLength;
+      cc =   TDMath.cosd( b.mClino );
+      sc = - TDMath.sind( b.mClino );
+      cb = - TDMath.cosd( b.mBearing ); 
+      sb = - TDMath.sind( b.mBearing ); 
+      TDVector v2 = new TDVector( blen * cc * sb, blen * cc * cb, blen * sc );
+      float d = (v1.minus(v2)).length();
+      mFailBacksplay = ( d/alen + d/blen > 2 * TDSetting.mCloseDistance );
+      // TDLog.v("Backsight splay check: " + mId + " fail " + mFailBacksplay + " D " + (d/alen + d/blen) + " thrs " + 2*TDSetting.mCloseDistance ); 
+    }
+    return mFailBacksplay;
   }
 
   /** update AMD from another block
@@ -1091,7 +1176,16 @@ public class DBlock
     mMagnetic     = b.mMagnetic;
     mDip          = b.mDip;
   }
-    
+
+  // /** @return true if this block has same FROM and TO as the other block and bot stations are not empty
+  //  * @param b other block
+  //  */
+  // boolean hasSameFromTo( DBlock b ) 
+  // {
+  //   if ( TDString.isNullOrEmpty( mFrom ) ) return false;
+  //   if ( TDString.isNullOrEmpty( mTo   ) ) return false;
+  //   return mFrom.equals( b.mFrom ) && mTo.equals( b.mTo );
+  // }
 
 }
 

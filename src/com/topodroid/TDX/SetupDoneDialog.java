@@ -64,6 +64,7 @@ class SetupDoneDialog extends MyDialog
      dismiss();
    }
 
+  @SuppressWarnings("deprecated")
    @Override
    public void onBackPressed()
    {

@@ -11,6 +11,7 @@
  */
 package com.topodroid.util;
 
+import com.topodroid.prefs.TDSetting;
 import com.topodroid.TDX.TDInstance;
 import com.topodroid.TDX.TDPath;
 import com.topodroid.TDX.TDandroid;
@@ -54,9 +55,11 @@ import java.io.BufferedWriter;
 // import java.io.FilenameFilter;
 import java.io.FileWriter;
 import java.io.FileReader;
+import java.io.InputStream;
 import java.io.FileInputStream;
 import java.io.BufferedInputStream;
 import java.io.DataInputStream;
+import java.io.OutputStream;
 import java.io.FileOutputStream;
 import java.io.BufferedOutputStream;
 import java.io.DataOutputStream;
@@ -363,6 +366,10 @@ public class TDFile
    */
   public static File getDeviceDatabase() { return getPrivateFile( null, "device10.sqlite" ); }
 
+  /** @return the analytic database file, in the private folder
+   */
+  public static File getAnalyticDatabase() { return getPrivateFile( null, "analytic.sqlite" ); }
+
   /** @return the packet database file, in the private folder
    */
   public static File getPacketDatabase() { return getPrivateFile( null, "packet10.sqlite" ); }
@@ -665,6 +672,18 @@ public class TDFile
     return deleteFile( getTopoDroidFile( pathname ) ); // DistoXFile;
   }
 
+  /** delete a topodroid file and its backup files: only for tdr files
+   * @param pathname  tdr pathname
+   */
+  public static boolean deleteFileWithBackups( String pathname )
+  { 
+    deleteFile( getTopoDroidFile( pathname + ".bck" ) );
+    for ( int k = 0; k < TDSetting.mBackupNumber; ++k ) {
+      deleteFile( getTopoDroidFile( pathname + ".bck" + k ) );
+    }
+    return deleteFile( getTopoDroidFile( pathname ) ); // DistoXFile;
+  }
+
   /** delete a TopoDroid folder
    * @param dirname   full pathname of the folder to delete
    * @return true if the folder has been deleted
@@ -672,6 +691,41 @@ public class TDFile
   public static boolean deleteDir( String dirname ) 
   { 
     return deleteDir( getTopoDroidFile( dirname ) ); // DistoX-SAF
+  }
+
+  /** copy an existing file to a new file
+   * @param from_name  name of existing file
+   * @param to_name    name of new file
+   * @return true if success
+   */
+  public static boolean copyFile( String from_name, String to_name )
+  {
+    File f1 = getTopoDroidFile( from_name ); // DistoX-SAF
+    if ( ! f1.exists() ) {
+      TDLog.e("copy file: source does not exist");
+      return false;
+    }
+    File f2 = getTopoDroidFile( to_name );
+    if ( f2.exists() ) {
+      TDLog.e("copy file: target exists");
+      return false;
+    }
+    try (
+      InputStream in = new BufferedInputStream( new FileInputStream( f1 ) );
+      OutputStream out = new BufferedOutputStream( new FileOutputStream( f2 ) )
+    ) {
+      byte[] buffer = new byte[2048];
+      int lengthRead;
+      while ( ( lengthRead = in.read(buffer) ) > 0) {
+        out.write(buffer, 0, lengthRead);
+        out.flush();
+      }
+      return true;
+    } catch ( IOException e ) {
+      TDLog.e("file copy " + e.getMessage() );
+      if ( f2.exists() ) f2.delete();
+    }
+    return false;
   }
 
   /** rename a file

@@ -12,6 +12,8 @@
 package com.topodroid.TDX;
 
 import com.topodroid.util.TDLog;
+// import com.topodroid.math.Triangle3D;
+import com.topodroid.math.Vector3D;
 
 //  import android.util.FloatMath;
 
@@ -21,7 +23,7 @@ import java.util.ArrayList;
 
 class Cave3DDelaunay
 {
-  double eps = 0.02;
+  double eps = 0.001;
   int color; // DEBUG
 
   // normalized 3D vector

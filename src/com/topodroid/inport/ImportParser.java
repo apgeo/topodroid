@@ -15,6 +15,7 @@ package com.topodroid.inport;
 import com.topodroid.util.TDLog;
 import com.topodroid.util.TDString;
 import com.topodroid.util.TDUtil;
+import com.topodroid.util.TDMath;
 import com.topodroid.TDX.SurveyInfo;
 import com.topodroid.TDX.DataHelper;
 
@@ -42,6 +43,10 @@ class ImportParser
 
   protected ArrayList< ParserShot > shots;   // centerline shots
   protected ArrayList< ParserShot > splays;  // splay shots
+
+  protected boolean mPartial = false; // whether import was partial 
+  
+  boolean isPartial() { return mPartial; }
 
   /** @return the number of legs
    */
@@ -213,5 +218,13 @@ class ImportParser
   //   int ext = filename.lastIndexOf( '.' ); if ( ext < 0 ) ext = filename.length();
   //   return filename.substring( pos, ext );
   // }
+
+  protected float checkApplyDeclination( float ber, float decl ) 
+  {
+    if ( mApplyDeclination && decl < SurveyInfo.DECLINATION_MAX ) {
+      return TDMath.in360( ber + decl );
+    }
+    return TDMath.in360( ber );
+  }
 
 }

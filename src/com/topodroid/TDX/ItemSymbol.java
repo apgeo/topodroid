@@ -11,10 +11,10 @@
  */
 package com.topodroid.TDX;
 
-// import com.topodroid.util.TDLog;
+import com.topodroid.util.TDLog;
 // import com.topodroid.util.TDColor;
 import com.topodroid.ui.ItemButton;
-// import com.topodroid.types.SymbolType;
+import com.topodroid.types.SymbolType;
 import com.topodroid.prefs.TDSetting;
 
 // import java.util.ArrayList;
@@ -77,8 +77,8 @@ class ItemSymbol
       ll.addView( mCheckBox, lllp );
     // }
     lllp.setMargins(2,1,2,1);
-
-    mButton = new ItemButton( context, mSymbol.getPaint(), mSymbol.getScaledPath(), sx, sy, pad );
+    // mButton = new ItemButton( context, mSymbol.getButtonPaint(), mSymbol.getScaledOrientedPath(), sx, sy, pad ); // FIXME_ORIENTATION
+    mButton = new ItemButton( context, mSymbol.getButtonPaint(), mSymbol.getScaledPath(), sx, sy, pad, 1 ); // offset_x = 1
     ll.addView( mButton, lllp );
 
     // if ( mUseText ) {
@@ -138,17 +138,17 @@ class ItemSymbol
   //   mView.invalidate();
   // }
 
-  /** set the symbol orientation angle
-   * @param angle   orientation angle [degree]
-   */
-  void setAngle( float angle )
-  {
-    // TDLog.v( "item " + mType + "/" + mIndex + " " + mSymbol.getName() + " set angle " + angle );
-    if ( mSymbol.setAngle( angle ) ) {
-      mButton.resetPath( mSymbol.getScaledPath(), sx, sy );
-      mButton.invalidate();
-    }
-  }
+  // /** set the symbol orientation angle // FIXME_ORIENTATION
+  //  * @param angle   orientation angle [degree]
+  //  */
+  // void setAngle( float angle )
+  // {
+  //   if ( mSymbol.setAngle( angle ) ) {
+  //     TDLog.v( "item " + mType + "/" + mIndex + " " + mSymbol.getName() + " set angle " + angle );
+  //     mButton.resetPath( mSymbol.getScaledOrientedPath(), sx, sy );
+  //     mButton.invalidate();
+  //   }
+  // }
 
   /** set the click listener
    */

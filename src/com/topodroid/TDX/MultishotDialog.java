@@ -26,7 +26,6 @@ import android.os.Bundle;
 import android.text.InputType;
 
 import android.content.Context;
-// import android.inputmethodservice.KeyboardView;
 
 import android.widget.TextView;
 import android.widget.EditText;
@@ -89,7 +88,7 @@ class MultishotDialog extends MyDialog
   {
     super.onCreate(savedInstanceState);
 
-    initLayout( R.layout.multishot_dialog, null );
+    initLayout( R.layout.multishot_dialog, R.string.title_multishot );
 
     mETfrom    = (EditText) findViewById(R.id.shot_from );
     mETto      = (EditText) findViewById(R.id.shot_to );
@@ -103,7 +102,6 @@ class MultishotDialog extends MyDialog
     // mETfrom.setOnLongClickListener( this );
     // mETto.setOnLongClickListener( this );
 
-    // mKeyboard = new MyKeyboard( mContext, (KeyboardView)findViewById( R.id.keyboardview ), R.xml.my_keyboard_base_sign, R.xml.my_keyboard_qwerty );
     mKeyboard = MyKeyboard.getMyKeyboard( mContext, findViewById( R.id.keyboardview ), R.xml.my_keyboard_base_sign, R.xml.my_keyboard_qwerty );
 
     if ( TDSetting.mKeyboard ) {
@@ -232,8 +230,8 @@ class MultishotDialog extends MyDialog
         EditText et_offset  = (EditText) findViewById(R.id.value_offset );
         String offset_str = TDUtil.getTextOrNull( et_offset );
         if ( offset_str  != null ) {
-          float offset = Float.parseFloat( offset_str );
-          mParent.addOffset( offset ); 
+          float offset = Float.parseFloat( offset_str ) / TDSetting.mUnitLength;
+          mParent.addOffset( offset );
         } else {
           // TODO et_offset.setError("bad offset value");
         }
@@ -276,6 +274,7 @@ class MultishotDialog extends MyDialog
     dismiss();
   }
 
+  @SuppressWarnings("deprecated")
   @Override
   public void onBackPressed()
   {

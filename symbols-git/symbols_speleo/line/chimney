@@ -3,6 +3,7 @@ symbol line
 name chimney
 name-bg комин
 name-cn 天井
+name-cs komín
 name-de Schlot
 name-es chimenea
 name-fa دودکش
@@ -17,6 +18,7 @@ name-ua камін
 th_name chimney
 group ceiling
 color 0xff99ff 0xff
+clippable both
 width 1
 dash 15 5
 effect

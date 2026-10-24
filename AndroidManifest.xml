@@ -3,8 +3,8 @@
     xmlns:tools="http://schemas.android.com/tools"
       package="com.topodroid.TDX"
       android:installLocation="auto"
-      android:versionCode="604027"
-      android:versionName="6.4.27"
+      android:versionCode="605034"
+      android:versionName="6.5.34"
     >
     <!-- android:debuggable="true" -->
     <!-- Android SDK dependencies:
@@ -39,11 +39,12 @@
          API-33 = Android 13    Tiramisu
          API-34 = Android 14    Upside Down Cake
          API-35 = Android 15 	Vanilla Ice Cream 
-	     API-36 = Android 16    Baklava
+         API-36 = Android 16    Baklava
+	     API-37 = Android 17    Cinnamon Bun
     -->
     <uses-sdk
        android:minSdkVersion="21"
-       android:targetSdkVersion="36"
+       android:targetSdkVersion="37"
        tools:ignore="GradleOverrides,OldTargetApi"
     />
     <!-- android:maxSdkVersion="29" min 21 -->
@@ -121,7 +122,13 @@
           android:supportsRtl="false"
 
           android:networkSecurityConfig="@xml/network_security_config"
-	  >
+          >
+          <!-- android:usesCleartextTraffic="true" -->
+
+          <!-- ONCE ALL ACTIVITIES ARE READY
+          android:enableOnBackInvokedCallback="true"
+          -->
+
           <!-- request legacy is not necessary on android-11 but it is ok to leave it in
 	  android:requestLegacyExternalStorage="true"
 	  android:preserveLegacyExternalStorage="true" DO NOT ADD THIS: it breaks the database 
@@ -148,7 +155,7 @@
           <!-- android:debuggable="false" -->
 
         <activity android:name=".MainWindow"
-	  android:theme="@style/Theme.NoFullScreen"
+	  android:theme="@style/Theme.NoFullScreenNoTitle"
           android:configChanges="orientation|screenSize"
           android:exported="true"
           >
@@ -172,37 +179,37 @@
         </activity>
 
         <activity android:name=".FixedActivity"
-	  android:theme="@style/Theme.NoFullScreen"
+	  android:theme="@style/Theme.NoFullScreenNoTitle"
           android:configChanges="orientation|screenSize"
           android:exported="false"
         />
 
         <activity android:name=".PlotReloadWindow" tools:ignore="Instantiatable"
-	  android:theme="@style/Theme.NoFullScreen"
+	  android:theme="@style/Theme.NoFullScreenNoTitle"
           android:configChanges="orientation|screenSize"
           android:exported="false"
         />
 
         <activity android:name=".GMActivity"
-	  android:theme="@style/Theme.NoFullScreen"
+	  android:theme="@style/Theme.NoFullScreenNoTitle"
           android:configChanges="orientation|screenSize"
           android:exported="false"
         />
 
         <activity android:name=".CalibActivity"
-	  android:theme="@style/Theme.NoFullScreen"
+	  android:theme="@style/Theme.NoFullScreenNoTitle"
           android:configChanges="orientation|screenSize"
           android:exported="false"
         />
 
         <activity android:name=".SurveyWindow"
-	  android:theme="@style/Theme.NoFullScreen"
+	  android:theme="@style/Theme.NoFullScreenNoTitle"
           android:configChanges="orientation|screenSize"
           android:exported="false"
         />
 
         <activity android:name=".ShotWindow"
-	  android:theme="@style/Theme.NoFullScreen"
+	  android:theme="@style/Theme.NoFullScreenNoTitle"
           android:configChanges="orientation|screenSize"
           android:exported="false"
           android:windowSoftInputMode="adjustPan" 
@@ -211,14 +218,14 @@
           <!-- android:windowSoftInputMode="adjustPan" for inline station editing -->
 
         <activity android:name=".SensorActivity"
-	  android:theme="@style/Theme.NoFullScreen"
+	  android:theme="@style/Theme.NoFullScreenNoTitle"
           android:configChanges="orientation|screenSize"
           android:windowSoftInputMode="stateHidden|adjustResize"
           android:exported="false"
         />
 
         <activity android:name=".DeviceActivity"
-	  android:theme="@style/Theme.NoFullScreen"
+	  android:theme="@style/Theme.NoFullScreenNoTitle"
           android:configChanges="orientation|screenSize"
           android:exported="false"
         />
@@ -236,10 +243,15 @@
         </activity -->
 
         <activity android:name=".DrawingWindow" tools:ignore="Instantiatable"
-	  android:theme="@style/Theme.NoFullScreen"
+	  android:theme="@style/Theme.NoFullScreenNoTitle"
           android:configChanges="orientation|screenSize"
           android:exported="true"
+          android:enableOnBackInvokedCallback="true"
           >
+          <!--
+          android:windowSoftInputMode="stateVisible"
+          android:windowSoftInputMode="adjustResize"
+          -->
           <intent-filter>
             <action android:name="android.intent.action.VIEW" />
             <category android:name="android.intent.category.DEFAULT" />
@@ -247,9 +259,10 @@
         </activity>
 
         <activity android:name=".OverviewWindow" tools:ignore="Instantiatable"
-	  android:theme="@style/Theme.NoFullScreen"
+	  android:theme="@style/Theme.NoFullScreenNoTitle"
           android:configChanges="orientation|screenSize"
           android:exported="true"
+          android:enableOnBackInvokedCallback="true"
           >
           <intent-filter>
             <action android:name="android.intent.action.VIEW" />
@@ -258,7 +271,7 @@
         </activity>
 
         <activity android:name=".SketchWindow" tools:ignore="Instantiatable"
-	  android:theme="@style/Theme.NoFullScreen"
+	  android:theme="@style/Theme.NoFullScreenNoTitle"
           android:configChanges="orientation|screenSize"
           android:exported="true"
           >
@@ -289,7 +302,7 @@
         </activity>
 
         <activity android:name=".CWDActivity"
-	  android:theme="@style/Theme.NoFullScreen"
+	  android:theme="@style/Theme.NoFullScreenNoTitle"
           android:configChanges="orientation|screenSize"
           android:exported="false"
           >
@@ -297,23 +310,23 @@
         </activity>
 
         <activity android:name=".BtAliasActivity"
-	  android:theme="@style/Theme.NoFullScreen"
+	  android:theme="@style/Theme.NoFullScreenNoTitle"
           android:configChanges="orientation|screenSize"
           android:exported="false"
           >
 	  <!-- android:screenOrientation="portrait" -->
         </activity>
 
-        <activity android:name=".PtCmapActivity"
-	  android:theme="@style/Theme.NoFullScreen"
+        <!-- activity android:name=".PtCmapActivity"
+	  android:theme="@style/Theme.NoFullScreenNoTitle"
           android:configChanges="orientation|screenSize"
           android:exported="false"
-          >
+          -->
 	  <!-- android:screenOrientation="portrait" -->
-        </activity>
+        <!-- /activity -->
 
         <activity android:name=".GraphPaperScaleActivity"
-	  android:theme="@style/Theme.NoFullScreen"
+	  android:theme="@style/Theme.NoFullScreenNoTitle"
           android:configChanges="orientation|screenSize"
           android:exported="false"
           >
@@ -321,23 +334,23 @@
         </activity>
 
         <activity android:name=".SensorListActivity"
-	  android:theme="@style/Theme.NoFullScreen"
+	  android:theme="@style/Theme.NoFullScreenNoTitle"
           android:configChanges="orientation|screenSize"
           android:exported="false"
         />
 
         <activity android:name="com.topodroid.tdm.TdManagerActivity"
-	  android:theme="@style/Theme.NoFullScreen"
+	  android:theme="@style/Theme.NoFullScreenNoTitle"
           android:configChanges="orientation|screenSize"
           android:exported="false"
         />
         <activity android:name="com.topodroid.tdm.TdmConfigActivity"
-	  android:theme="@style/Theme.NoFullScreen"
+	  android:theme="@style/Theme.NoFullScreenNoTitle"
           android:configChanges="orientation|screenSize"
           android:exported="false"
         />
         <activity android:name="com.topodroid.tdm.TdmViewActivity"
-	  android:theme="@style/Theme.NoFullScreen"
+	  android:theme="@style/Theme.NoFullScreenNoTitle"
           android:configChanges="orientation|screenSize"
           android:exported="false"
         />
@@ -367,7 +380,7 @@
         </service -->
 
       <activity android:name=".TopoGL"
-          android:theme="@style/Theme.NoFullScreen"
+          android:theme="@style/Theme.NoFullScreenNoTitle"
           android:configChanges="orientation|screenSize"
           android:exported="false"
         ><!--
@@ -387,7 +400,7 @@
       <!-- MyFileProvider used by zip-sharing -->
       <provider 
         android:name="com.topodroid.util.MyFileProvider" 
-        android:authorities="com.topodroid.fileprovider" 
+        android:authorities="com.topodroid.TDX.fileprovider" 
         android:exported="false" 
         android:grantUriPermissions="true"> 
         <meta-data 

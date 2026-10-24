@@ -61,7 +61,7 @@ public class ImportTRobotTask extends ImportTask
   {
     long sid = 0;
     try {
-      ParserTopoRobot parser = new ParserTopoRobot( isr, str[0], false ); // apply_declination = false
+      ParserTopoRobot parser = new ParserTopoRobot( isr, str[0], true ); // apply_declination = true
       if ( ! parser.isValid() ) return -2L;
       if ( mApp.get() == null ) return -1L;
       String survey = parser.mName;
@@ -87,7 +87,7 @@ public class ImportTRobotTask extends ImportTask
       app_data.insertImportShots( sid, id, splays );
 
       ParserTopoRobot.TRobotFix fix = parser.fix;
-      // runOnUiThread( new Runnable() {
+      // TDandrid.runOnMainThread( new Runnable() { public void run() {
         if ( fix != null ) {
           WorldMagneticModel wmm = new WorldMagneticModel( mApp.get() );
           double h_ell = wmm.geoidToEllipsoid( fix.lat, fix.lng, fix.alt ); 
@@ -106,7 +106,7 @@ public class ImportTRobotTask extends ImportTask
         } catch ( IOException e ) {
           TDLog.e("TR parser task error " + e.getMessage() );
         }
-      // } );
+      // } } );
 
     } catch ( ParserException e ) {
       // TDToast.makeBad( R.string.file_parse_fail );

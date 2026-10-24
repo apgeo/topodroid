@@ -13,6 +13,7 @@ package com.topodroid.TDX;
 
 import com.topodroid.util.TDLog;
 import com.topodroid.util.TDUtil;
+import com.topodroid.util.TDAnalytics;
 import com.topodroid.ui.MyCheckBox;
 import com.topodroid.ui.MyDialog;
 import com.topodroid.ui.MyStateBox;
@@ -62,6 +63,7 @@ class DrawingLineDialog extends MyDialog
   private MyCheckBox mBtnSharp;  // sharp reduce and rock are mutually exclusive
   private MyStateBox mBtnReduce;
   private MyCheckBox mBtnRock = null;
+  private MyCheckBox mBtnSegment = null;
   private MyCheckBox mBtnClose;
 
   private CheckBox mCBbase  = null; // canvas levels
@@ -94,6 +96,7 @@ class DrawingLineDialog extends MyDialog
   protected void onCreate(Bundle savedInstanceState) 
   {
     super.onCreate(savedInstanceState);
+    TopoDroidApp.updateAnalytic( TDAnalytics.PLOT_LINE );
 
     String title = String.format( resString( R.string.title_draw_line ), BrushManager.getLineName( mLine.mLineType ) );
     initLayout( R.layout.drawing_line_dialog, title );
@@ -155,6 +158,11 @@ class DrawingLineDialog extends MyDialog
       mBtnRock = new MyCheckBox( mContext, size, R.drawable.iz_rock_ok,  R.drawable.iz_rock_no  );
       layout3.addView( mBtnRock, lp );
       mBtnRock.setOnClickListener( this );
+      if ( mLine.size() > 2 ) {
+        mBtnSegment = new MyCheckBox( mContext, size, R.drawable.iz_segment_ok,  R.drawable.iz_segment_no  );
+        layout3.addView( mBtnSegment, lp );
+        mBtnSegment.setOnClickListener( this );
+      }
     }
     layout3.addView( mBtnClose, lp );
 
@@ -177,8 +185,8 @@ class DrawingLineDialog extends MyDialog
     // } else if ( mLine.mOutline == DrawingLinePath.OUTLINE_NONE ) {
     //   mBtnOutlineNone.setChecked( true );
     }
-    mReversed.setState( mLine.isReversed() );
-    mBtnClose.setState( mLine.isClosed() );
+    setState( mReversed, mLine.isReversed() );
+    setState( mBtnClose, mLine.isClosed() );
     // mBtnClose.setChecked( mLine.isPathClosed() );
     // TDLog.v("LineDialog is closed " +  mLine.isClosed() + " button " + mBtnClose.isChecked() );
 
@@ -255,7 +263,8 @@ class DrawingLineDialog extends MyDialog
     } else if ( b == mBtnSharp ) {
       if ( mBtnSharp.toggleState() ) {
 	mBtnReduce.setState( 0 );  // false
-        if ( mBtnRock != null ) mBtnRock.setState( false );
+        setState( mBtnRock, false );
+        setState( mBtnSegment, false );
       }
       return;
     } else if ( b == mBtnReduce ) {
@@ -263,14 +272,23 @@ class DrawingLineDialog extends MyDialog
       mBtnReduce.setState( reduce );
       // if ( mBtnReduce.toggleState() )
       if ( reduce > 0 ) {
-	mBtnSharp.setState( false );
-        if ( mBtnRock != null ) mBtnRock.setState( false );
+        setState( mBtnSharp, false );
+        setState( mBtnRock, false );
+        setState( mBtnSegment, false );
       }
       return;
     } else if ( mBtnRock != null && b == mBtnRock ) {
       if ( mBtnRock.toggleState() ) {
 	mBtnReduce.setState( 0 );
-        mBtnSharp.setState( false );
+        setState( mBtnSharp, false );
+        setState( mBtnSegment, false );
+      }
+      return;
+    } else if ( mBtnSegment != null && b == mBtnSegment ) {
+      if ( mBtnSegment.toggleState() ) {
+	mBtnReduce.setState( 0 );
+        setState( mBtnSharp, false );
+        setState( mBtnRock, false );
       }
       return;
     
@@ -291,19 +309,21 @@ class DrawingLineDialog extends MyDialog
       else if ( mBtnOutlineIn.isChecked() ) mLine.mOutline = DrawingLinePath.OUTLINE_IN;
       else /* if ( mBtnOutlineNone.isChecked() ) */ mLine.mOutline = DrawingLinePath.OUTLINE_NONE;
 
-      mLine.setReversed( mReversed.isChecked() );
+      mLine.setReversed( isChecked( mReversed ) );
 
       int reduce = mBtnReduce.getState();
-      if ( mBtnSharp.isChecked() ) {
+      if ( isChecked( mBtnSharp ) ) {
         mParent.sharpenLine( mLine );
       } else if ( reduce > 0 ) {
 	mParent.reduceLine( mLine, reduce );
-      } else if ( mBtnRock != null && mBtnRock.isChecked() ) {
+      } else if ( isChecked( mBtnRock ) ) {
         mParent.rockLine( mLine );
+      } else if ( isChecked( mBtnSegment ) ) {
+        mParent.straightLine( mLine );
       }
 
-      // TDLog.v("LineDialog closed " +  mBtnClose.isChecked() );
-      mLine.setClosed( mBtnClose.isChecked() );
+      // TDLog.v("LineDialog closed " +  isChecked( mBtnClose ) );
+      mLine.setClosed( isChecked( mBtnClose ) );
 
       if ( TDSetting.mWithLevels  > 0 ) setLevel();
  

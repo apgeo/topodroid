@@ -16,6 +16,7 @@ import com.topodroid.TDX.R;
 // import com.topodroid.TDX.TDInstance;
 import com.topodroid.TDX.TopoDroidApp;
 import com.topodroid.TDX.TopoDroidAlertDialog;
+import com.topodroid.TDX.TDandroid;
 // import com.topodroid.dev.DataType;
 import com.topodroid.dev.Device;
 // import com.topodroid.dev.ble.BleUtils;
@@ -99,7 +100,7 @@ public class CavwayInfoDialog extends MyDialog
     tv_calierr  = (TextView) findViewById( R.id.tv_calierr  );
 
     tv_address.setText( String.format( res.getString( R.string.device_address ), mDevice.getAddress() ) );
-    tv_code.setText( res.getString( R.string.gettingCavway_info ) );
+    tv_code.setText( res.getString( R.string.getting_info ) );
     // tv_firmware.setText( TDString.EMPTY );
     // tv_hardware.setText( TDString.EMPTY );
     // mParent.readXBLEInfo( this )
@@ -182,8 +183,9 @@ public class CavwayInfoDialog extends MyDialog
   // {
   //   if ( info == null ) return;
   //   if ( mDone ) return;
-  //   mParent.runOnUiThread( new Runnable() {
-  //     public void run() {
+  //   // mParent.runOnUiThread(
+  //   TDandroid.runOnMainThread(
+  //     new Runnable() public void run() {
   //       tv_code.setText(     info.mCode );
   //       tv_firmware.setText( info.mFirmware );
   //       tv_hardware.setText( info.mHardware );
@@ -211,4 +213,9 @@ public class CavwayInfoDialog extends MyDialog
     mDone = true;
     super.onBackPressed();
   }
+  
+  // @Override public void onDestroy() { super.onDestroy(); }
+  // @Override public boolean onKeyUp( int code, KeyEvent event ) {}
+  // @Override public boolean onKeyDown( int code, KeyEvent event ) {}
+
 }

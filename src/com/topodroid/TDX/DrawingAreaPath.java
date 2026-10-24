@@ -17,7 +17,7 @@ package com.topodroid.TDX;
 import com.topodroid.util.TDLog;
 import com.topodroid.util.TDMath;
 import com.topodroid.math.TDVector;
-// import com.topodroid.prefs.TDSetting;
+import com.topodroid.prefs.TDSetting;
 
 import com.topodroid.num.TDNum;
 
@@ -28,6 +28,8 @@ import android.graphics.Matrix;
 // import android.graphics.Bitmap;
 // import android.graphics.BitmapShader;
 import android.graphics.Shader;
+import android.graphics.PorterDuff;
+import android.graphics.PorterDuffXfermode;
 // import android.graphics.Shader.TileMode;
 
 import java.io.PrintWriter;
@@ -44,6 +46,10 @@ import java.util.Locale;
  */
 public class DrawingAreaPath extends DrawingPointLinePath
 {
+  // TDSKETCH
+  private static final PorterDuffXfermode XFERMODE_AREA_FILL           = new PorterDuffXfermode( PorterDuff.Mode.DST_OVER );
+  private static final PorterDuffXfermode XFERMODE_AREA_OVERLAP_DARKEN = new PorterDuffXfermode( PorterDuff.Mode.SRC_ATOP );
+
   // private static int area_id_cnt = 0;
   // private static String makeId()
   // {
@@ -54,10 +60,11 @@ public class DrawingAreaPath extends DrawingPointLinePath
 
   int mAreaType;
   int mAreaCnt;
-  double mOrientation;
-  public String mPrefix;      // border/area name prefix (= scrap name) // TH2EDIT package
+  double mOrientation;   // degrees
+  public String mPrefix; // border/area name prefix (= scrap name) // TH2EDIT package
   // boolean mVisible; // visible border in DrawingPointLinePath
-  private Shader mLocalShader = null;
+  private Shader mLocalShader = null; // area pattern
+  private float mPlotScale = 1.0f;
 
   // FIXME-COPYPATH
   // @Override
@@ -68,7 +75,13 @@ public class DrawingAreaPath extends DrawingPointLinePath
   //   return ret;
   // }
 
-  // this method is used only for TH2EDIT to prevent area index change
+  /** cstr used only for TH2EDIT to prevent area index change
+   * @param type   area type
+   * @param cnt    area index (counter)
+   * @param prefix ?
+   * @param visible whether the area border is visible
+   * @param scrap   index of the scrap of the area
+   */
   public DrawingAreaPath( int type, int cnt, String id, boolean visible, int scrap, boolean th2_edit ) // TH2EDIT
   {
     super( DrawingPath.DRAWING_PATH_AREA, visible, true, scrap );
@@ -81,7 +94,7 @@ public class DrawingAreaPath extends DrawingPointLinePath
         mAreaCnt = Integer.parseInt( id.substring( pos ) );
         mPrefix  = id.substring(0, pos);
       } catch ( NumberFormatException e ) {
-        TDLog.e( e.getMessage() );
+        TDLog.e( "Drawing area path: " + e.getMessage() );
       }
     }
     // TDLog.v("AREA " + id + " count " + mPrefix + " " + mAreaCnt );
@@ -94,12 +107,18 @@ public class DrawingAreaPath extends DrawingPointLinePath
     // if ( BrushManager.isAreaOrientable( mAreaType ) ) {
     //   mOrientation = BrushManager.getAreaOrientation( type );
     //   mLocalShader = BrushManager.cloneAreaShader( mAreaType );
-    //   resetPathPaint();
-    //   mPaint.setShader( mLocalShader );
+    //   resetScale( mScale );
     // }
     mLevel = BrushManager.getAreaLevel( type );
   }
 
+  /** cstr used by loadDataStream and DrawingWindow
+   * @param type   area type
+   * @param cnt    area index (counter)
+   * @param prefix ?
+   * @param visible whether the area border is visible
+   * @param scrap   index of the scrap of the area
+   */
   public DrawingAreaPath( int type, int cnt, String prefix, boolean visible, int scrap ) // TH2EDIT package
   {
     super( DrawingPath.DRAWING_PATH_AREA, visible, true, scrap );
@@ -115,39 +134,67 @@ public class DrawingAreaPath extends DrawingPointLinePath
     mOrientation = 0.0;
     if ( BrushManager.isAreaOrientable( mAreaType ) ) {
       // FIXME AREA_ORIENT 
-      mOrientation = BrushManager.getAreaOrientation( type );
-
+      // mOrientation = BrushManager.getAreaOrientation( type ); // FIXME_ORIENTATION
+      // TDLog.v("cstr set shader: scale " + mScale + " sf " + scaleFactor() );
       mLocalShader = BrushManager.cloneAreaShader( mAreaType );
-      resetPathPaint();
-      mPaint.setShader( mLocalShader );
+      // doShiftShaderBy( 0, 0, scaleFactor() );
+      resetScale( mScale );
     }
     mLevel = BrushManager.getAreaLevel( type );
   }
 
-  // @param id   string "area id" (mPrefix + mAreaCnt )
-  public DrawingAreaPath( int type, String id, boolean visible, int scrap ) // TH2EDIT package
+  // ----------------------------------------------------------------
+
+  @Override
+  void setScale( int scale )
   {
-    // visible = ?,   closed = true
-    super( DrawingPath.DRAWING_PATH_AREA, visible, true, scrap );
-    // TDLog.Log( TDLog.LOG_PLOT, "Drawing Area Path cstr type " + type + " id " + id );
-    mAreaType = type;
-    mAreaCnt = 1;
-    mPrefix  = "a";
-    try {
-      int pos = id.lastIndexOf("a") + 1;
-      mPrefix  = id.substring(0, pos);
-      mAreaCnt = Integer.parseInt( id.substring(pos) );
-      // TDLog.v("AREA id <" + id + "> prefix " + mPrefix + " count " + mAreaCnt );
-    } catch ( NumberFormatException e ) {
-      TDLog.e( "Drawing Area Path AreaCnt parse int error: " + id.substring(1) );
-    }
-    if ( BrushManager.hasArea( mAreaType ) ) {
-      setPathPaint( BrushManager.getAreaPaint( mAreaType ) );
-    // } else {
-    //   // TDLog.v("PAINT area (2) not in lib " + mAreaType );
-    }
-    mLevel = BrushManager.getAreaLevel( type );
+    // TDLog.v("AREA set scale: " + mScale + " -> " + scale );
+    if ( scale == mScale ) return;
+    resetScale( scale );
   }
+
+  private void resetScale( int scale )
+  {
+    mScale = scale;
+    if ( BrushManager.isAreaOrientable( mAreaType ) ) {
+      // TDLog.v("AREA reset scale: -> " + scale + " sf " + scaleFactor() );
+      doShiftShaderBy( 0, 0, mPlotScale * scaleFactor() );
+    } else {
+      int alpha = BrushManager.getAreaPaint( mAreaType ).getAlpha();
+      switch (scale) {
+        case -2: alpha = (int)(alpha/2); break;
+        case -1: alpha = (int)(alpha/1.4f); break;
+        case 1: alpha += (int)((255-alpha)/3); break;
+        case 2: alpha += (int)((255-alpha)/2); break;
+      }
+      mPaint.setAlpha( alpha );
+    }
+  }
+
+  // // @param id   string "area id" (mPrefix + mAreaCnt ) 
+  // private DrawingAreaPath( int type, String id, boolean visible, int scrap ) // UNUSED
+  // {
+  //   // visible = ?,   closed = true
+  //   super( DrawingPath.DRAWING_PATH_AREA, visible, true, scrap );
+  //   // TDLog.Log( TDLog.LOG_PLOT, "Drawing Area Path cstr type " + type + " id " + id );
+  //   mAreaType = type;
+  //   mAreaCnt = 1;
+  //   mPrefix  = "a";
+  //   try {
+  //     int pos = id.lastIndexOf("a") + 1;
+  //     mPrefix  = id.substring(0, pos);
+  //     mAreaCnt = Integer.parseInt( id.substring(pos) );
+  //     // TDLog.v("AREA id <" + id + "> prefix " + mPrefix + " count " + mAreaCnt );
+  //   } catch ( NumberFormatException e ) {
+  //     TDLog.e( "Drawing Area Path AreaCnt parse int error: " + id.substring(1) );
+  //   }
+  //   if ( BrushManager.hasArea( mAreaType ) ) {
+  //     setPathPaint( BrushManager.getAreaPaint( mAreaType ) );
+  //   // } else {
+  //   //   // TDLog.v("PAINT area (2) not in lib " + mAreaType );
+  //   }
+  //   mLevel = BrushManager.getAreaLevel( type );
+  // }
 
   /** factory: create a area path from the data stream
    * @param version serialize version
@@ -163,6 +210,7 @@ public class DrawingAreaPath extends DrawingPointLinePath
     float orientation;
     int level = DrawingLevel.LEVEL_DEFAULT;
     int scrap = 0;
+    int scale = 0;
     String thname, prefix;
     String group = null;
     String options = null;
@@ -175,24 +223,31 @@ public class DrawingAreaPath extends DrawingPointLinePath
       orientation = dis.readFloat( );
       if ( version >= 401090 ) level = dis.readInt();
       if ( version >= 401160 ) scrap = dis.readInt();
+      if ( version >= 604096 ) scale = dis.readInt();
+      if ( version >= 604098 ) options = dis.readUTF();
       int npt = dis.readInt( );
 
       
       // BrushManager.tryLoadMissingArea( thname ); // LOAD_MISSING
 
       type = BrushManager.getAreaIndexByThNameOrGroup( thname, group );
-      // TDLog.Log( TDLog.LOG_PLOT, "A: " + thname + " " + cnt + " " + visible + " " + orientation + " NP " + npt );
-      // TDLog.v( "Area: " + type + " " + thname + " " + cnt + " " + visible + " " + orientation + " NP " + npt );
+      // TDLog.v( "Area: " + type + " " + thname + " " + cnt + " " + visible + " orientation " + orientation + " NP " + npt );
       if ( type < 0 ) {
         // FIXME-MISSING if ( missingSymbols != null ) missingSymbols.addAreaFilename( thname );
         type = 0;
-        options = "-symbol " + thname;
+        if ( options == null ) {
+          options = "-symbol " + thname;
+        } else {
+          options = options + " -symbol " + thname;
+        }
       }
 
       DrawingAreaPath ret = new DrawingAreaPath( type, cnt, prefix, visible, scrap );
       ret.addOption( options ); // does nothing is options is null
       ret.mLevel       = level;
       ret.mOrientation = orientation;
+      // TDLog.v("load set scale " + scale );
+      ret.resetScale( scale );
       // setPathPaint( BrushManager.getAreaPaint( mAreaType ) );
 
       int has_cp;
@@ -223,7 +278,7 @@ public class DrawingAreaPath extends DrawingPointLinePath
           ret.addPoint( x0, y0 );
         }
       }
-      ret.retracePath();
+      ret.retracePath( );
       return  ( npt < 3 )? null : ret;
     } catch ( IOException e ) {
       TDLog.e( "AREA in error " + e.getMessage() );
@@ -280,6 +335,7 @@ public class DrawingAreaPath extends DrawingPointLinePath
     mAreaType = t;
     if ( BrushManager.hasArea( mAreaType ) ) {
       setPathPaint( BrushManager.getAreaPaint( mAreaType ) );
+      resetScale( mScale );
       // FIXME shader ?
     }
   }
@@ -330,50 +386,64 @@ public class DrawingAreaPath extends DrawingPointLinePath
     // TDLog.v( "Area path set orientation " + angle );
     if ( ! BrushManager.isAreaOrientable( mAreaType ) ) return;
     mOrientation = TDMath.in360( angle );
-    resetPathPaint();
+    resetScale( mScale );
+  }
+  
+  /** scale factors for the area pattern
+   */
+  private final static float[] mScaleFactor = { 0.5f, 0.7f, 1.0f, 1.7f, 3.0f };
+
+  /** @return the scale factor for the current area "size" (scale)
+   * @param scale   input scale (in [-2,2]
+   */
+  private float getScaleFactor( int scale )
+  {
+    if ( scale < -2 || scale > 2 ) return 1;
+    return mScaleFactor[ 2 + scale ];
   }
 
+  private float scaleFactor() { return  mScaleFactor[ 2 + mScale ]; }
+
+  /** shift the local shader taking into account the current area "size" (scale)
+   * @param dx  plot X translation
+   * @param dy  plot Y translation
+   * @param s   plot scale factor
+   */
   void shiftShaderBy( float dx, float dy, float s )
   {
-    if ( mLocalShader != null ) {
-      // TDLog.v( "shift shader by " + dx + " " + dy + " scale " + s + " orient " + mOrientation );
-      Matrix mat = new Matrix();
-      // shader.getLocalMatrix( mat ); // set shader matrix even if shader did not have one
-      mat.postRotate( (float)mOrientation );
-      mat.postTranslate( 4*dx, 4*dy );
-      mat.postScale( s/4, s/4 );
-      mLocalShader.setLocalMatrix( mat );
+    // if ( mLocalShader != null ) 
+    if ( BrushManager.isAreaOrientable( mAreaType ) ) {
+      mPlotScale = s; // save plot scale
+      float sf = scaleFactor( ); // AREA_SCALE
+      // TDLog.v("shiftShaderBy " + s + " sf " + sf + " CA " + ca + " SA " + sa );
+      doShiftShaderBy( dx/sf, dy/sf, s*sf );
     }
   }
-
-  private void resetPathPaint()
+   
+  /** shift the local shader
+   * @param dx  X translation
+   * @param dy  Y translation
+   * @param s   scale factor
+   * @note used only by shiftShaderBy
+   */
+  private void doShiftShaderBy( float dx, float dy, float s )
   {
-    // TDLog.v( "area path reset paint orientation " + mOrientation );
-    // Bitmap bitmap = BrushManager.getAreaBitmap( mAreaType );
-    // if ( bitmap != null )
-    if ( mLocalShader != null ) {
-      Matrix mat = new Matrix();
-      mat.postRotate( (float)mOrientation );
-      // int w = bitmap.getWidth();
-      // int h = bitmap.getHeight();
-      // Bitmap bitmap1 = Bitmap.createBitmap( bitmap, 0, 0, w, h, mat, true );
-      // Bitmap bitmap2 = Bitmap.createBitmap( bitmap1, w/4, h/4, w/2, h/2 );
-      // BitmapShader shader = new BitmapShader( bitmap2,
-      //   BrushManager.getAreaXMode( mAreaType ), BrushManager.getAreaYMode( mAreaType ) );
-      // mPaint.setShader( shader );
-      mLocalShader.setLocalMatrix( mat );
-    }
+    // TDLog.v( "do shift shader by " + dx + " " + dy + " scale " + s + " orient " + mOrientation );
+    Matrix mat = new Matrix();
+    // shader.getLocalMatrix( mat ); // set shader matrix even if shader did not have one
+    mat.postRotate( (float)mOrientation );
+    mat.postTranslate( 4*dx, 4*dy );
+    mat.postScale( s/4, s/4 );
+    mLocalShader = BrushManager.cloneAreaShader( mAreaType );
+    mLocalShader.setLocalMatrix( mat );
+    mPaint.setShader( mLocalShader );
   }
 
   @Override
   void drawPath( Path path, Canvas canvas )
   {
     if ( mPaint != null ) {
-      canvas.save();
-      canvas.clipPath( path );
-      canvas.drawPaint( mPaint );
-      if ( isVisible() ) canvas.drawPath( path, BrushManager.borderPaint ); // ??? NullPointerException reported here`
-      canvas.restore();
+      drawPath( path, canvas, mPaint );
     }
   }
 
@@ -381,13 +451,25 @@ public class DrawingAreaPath extends DrawingPointLinePath
   void drawPath( Path path, Canvas canvas, int xor_color )
   {
     if ( mPaint != null ) {
-      canvas.save();
-      canvas.clipPath( path );
-      canvas.drawPaint( xorPaint( mPaint, xor_color ) );
-      if ( isVisible() ) canvas.drawPath( path, BrushManager.borderPaint ); // ??? NullPointerException reported here`
-      canvas.restore();
+      Paint paint = xorPaint( mPaint, xor_color );
+      drawPath( path, canvas, paint );
     }
   }
+
+  private void drawPath( Path path, Canvas canvas, Paint paint )
+  {
+    canvas.save();
+    canvas.clipPath( path );
+    if ( TDSetting.mAreaOvrelapDarken ) { // TDSKETCH
+      canvas.drawPaint( makeAreaOverlapDarkenPaint( paint ) );
+      canvas.drawPaint( makeAreaFillPaint( paint ) );
+    } else {
+      canvas.drawPaint( paint );
+    }
+    if ( isVisible() ) canvas.drawPath( path, BrushManager.borderPaint ); // ??? NullPointerException reported here`
+    canvas.restore();
+  }
+
 
   @Override
   String toTherion( )
@@ -471,7 +553,7 @@ public class DrawingAreaPath extends DrawingPointLinePath
   }
 
   @Override
-  LinePoint next( LinePoint lp )
+  public LinePoint next( LinePoint lp )
   {
     if ( lp == null ) return null;
     if ( lp.mNext == null ) return mFirst;
@@ -479,7 +561,7 @@ public class DrawingAreaPath extends DrawingPointLinePath
   }
 
   @Override
-  LinePoint prev( LinePoint lp )
+  public LinePoint prev( LinePoint lp )
   {
     if ( lp == null ) return null;
     if ( lp.mPrev == null ) return mLast;
@@ -508,6 +590,10 @@ public class DrawingAreaPath extends DrawingPointLinePath
         dos.writeInt( mLevel );
       // if ( version >= 401160 )
         dos.writeInt( (scrap >= 0)? scrap : mScrap );
+      // if ( version >= 604096 )
+        dos.writeInt( mScale );
+      // if ( version >= 604098 )
+        dos.writeUTF( (mOptions != null)? mOptions : "" );
 
       int npt = size(); // number of line points
       dos.writeInt( npt );
@@ -557,6 +643,31 @@ public class DrawingAreaPath extends DrawingPointLinePath
     }
     mFirst.toCave3D( pw, type, V1, V2 );
     pw.format( Locale.US, "ENDAREA\n" );
+  }
+
+  private static Paint makeAreaOverlapDarkenPaint( Paint paint ) // TDSKETCH
+  {
+    Paint ret = new Paint( paint );
+    ret.setXfermode( XFERMODE_AREA_OVERLAP_DARKEN );
+    return ret;
+  }
+
+  private static Paint makeAreaFillPaint( Paint paint ) // TDSKETCH
+  {
+    Paint ret = new Paint( paint );
+    ret.setXfermode( XFERMODE_AREA_FILL );
+    return ret;
+  }
+
+  /** rotate the area-pattern 
+   * @param dt   rotation angle [degrees]
+   * @return true if the area-pattern can be rotated
+   */
+  boolean rotateBy( float dt )
+  {
+    if ( ! BrushManager.isAreaOrientable( mAreaType ) ) return false;
+    setOrientation( mOrientation + dt );
+    return false;
   }
 
 }

@@ -13,34 +13,53 @@ package com.topodroid.TDX;
 
 import com.topodroid.util.TDLog;
 import com.topodroid.util.TDUtil;
+import com.topodroid.util.TDFile;
+import com.topodroid.util.TDAnalytics;
 import com.topodroid.prefs.TDSetting;
 import com.topodroid.types.SymbolType;
 import com.topodroid.types.PointScale;
 
-import android.app.Activity;
+// import android.app.Activity;
+
+import android.os.Bundle;
 
 import android.graphics.pdf.PdfDocument.PageInfo;
 import android.graphics.RectF;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 
-import java.io.File;
-import java.io.FileOutputStream;
+import android.view.ViewConfiguration;
 
-abstract class ItemDrawer extends Activity
+// import android.window.OnBackInvokedDispatcher;
+// import android.window.OnBackInvokedCallback;
+// import androidx.annotation.RequiresApi;
+
+import java.io.DataOutputStream;
+
+abstract class ItemDrawer extends MyActivity
 {
-  static final int POINT_MAX = 32678;
+  static final int POINT_MAX = 32768;
   static final int PDF_MARGIN = 40;
-
-  protected Activity mActivity = null;
 
   int mCurrentPoint = -1;
   int mCurrentLine  = -1;
   int mCurrentArea  = -1;
-  protected int mPointScale;
+  protected int mSavedCurrentPoint = -1;
+
+  // protected int mPointScale;
   protected int mLinePointStep = 1;
 
   protected int mSymbol = SymbolType.LINE; // kind of symbol being drawn
+  protected int mSavedSymbol = SymbolType.UNDEF;
+
+  protected int mEraseScale  = 1;;
+  protected int mSelectScale = 1;;
+
+  protected float mMinShift;
+  protected float mPointingRadius;
+  protected float mEraseSize; //  = TDSetting.mEraseness;
+  protected float mSelectSize; // = TDSetting.mSelectness;
+  protected float mTouchSlop;
 
   // -----------------------------------------------------------
   static final int NR_RECENT = 6; // max is 6
@@ -50,16 +69,16 @@ abstract class ItemDrawer extends Activity
   static int[] mRecentPointAge = { 6, 5, 4, 3, 2, 1 };
   static int[] mRecentLineAge  = { 6, 5, 4, 3, 2, 1 };
   static int[] mRecentAreaAge  = { 6, 5, 4, 3, 2, 1 };
-  static Symbol[] mRecentTools = mRecentLine;
+  static Symbol[] mRecentTools = null;
   static float mRecentDimX;
   static float mRecentDimY;
 
-  void setPointScale( int scale )
-  {
-    if ( scale >= PointScale.SCALE_XS && scale <= PointScale.SCALE_XL ) mPointScale = scale;
-  }
+  // void setPointScale( int scale )
+  // {
+  //   if ( scale >= PointScale.SCALE_XS && scale <= PointScale.SCALE_XL ) mPointScale = scale;
+  // }
 
-  int getPointScale() { return mPointScale; }
+  int getPointScale() { return 0; /* mPointScale; */ }
 
   // --------------------------------------------------------------
   // MOST RECENT SYMBOLS
@@ -373,6 +392,8 @@ abstract class ItemDrawer extends Activity
     long millis = TDUtil.time();
     if ( millis < mScreenshotTime ) return;
     mScreenshotTime = millis + 1500;
+    TopoDroidApp.updateAnalytic( TDAnalytics.SCREENSHOT );
+    // TDLog.v("take screenshot");
     try {
       // create bitmap screen capture
       // View v1 = getWindow().getDecorView().getRootView();
@@ -380,28 +401,88 @@ abstract class ItemDrawer extends Activity
       // Bitmap bitmap = Bitmap.createBitmap(v1.getDrawingCache());
       // v1.setDrawingCacheEnabled(false);
 
+      Canvas canvas = null;
       Bitmap bitmap = Bitmap.createBitmap( (int)(TopoDroidApp.mDisplayWidth), (int)(TopoDroidApp.mDisplayHeight), Bitmap.Config.ARGB_4444 );
-      Canvas canvas = new Canvas( bitmap );
-      if ( drawing_surface.drawCanvas( canvas ) ) {
-        String now = TDUtil.currentDateTimeFull();
-        String path = TDPath.getOutFile( now + ".png" );
-        File imageFile = new File(path);
-        FileOutputStream outputStream = new FileOutputStream(imageFile);
-        int quality = 100;
-        // bitmap.compress(Bitmap.CompressFormat.JPEG, quality, outputStream);
-        bitmap.compress(Bitmap.CompressFormat.PNG, quality, outputStream);
-        outputStream.flush();
-        outputStream.close();
-        TDToast.make( String.format( getResources().getString( R.string.screenshot_saved ), path ) );
+      if ( bitmap == null ) {
+        TDLog.e("Screenshot: cannot get bitmap");
       } else {
-        TDLog.e( "failed drawing canvas" );
+        canvas = new Canvas( bitmap );
+      }
+      if ( canvas == null ) {
+        TDLog.e("Screenshot: cannot get canvas");
+      }
+      if ( canvas != null && drawing_surface.drawCanvas( canvas ) ) {
+        String now = TDUtil.currentDateTimePath();
+        String path = TDPath.getOutFile( now + ".png" );
+        DataOutputStream dos = TDFile.getTopoDroidFileOutputStream( path );
+        if ( dos != null ) {
+          int quality = 100;
+          // bitmap.compress(Bitmap.CompressFormat.JPEG, quality, outputStream);
+          bitmap.compress( Bitmap.CompressFormat.PNG, quality, dos );
+          dos.flush();
+          dos.close();
+          TDToast.make( String.format( getResources().getString( R.string.screenshot_saved ), path ) );
+        } else {
+          TDLog.e("Screenshot: cannot get output stream");
+        }
+      } else {
+        TDLog.e( "Screenshot: failed drawing canvas" );
+        TDToast.makeWarn( R.string.screenshot_failed );
       }
     } catch (Throwable e) {
       // Several error may come out with file handling or DOM
-      e.printStackTrace();
+      // e.printStackTrace();
+      TDLog.e("Screenshot: " + e.getMessage() );
       TDToast.makeWarn( R.string.screenshot_failed );
     }
   }
 
+  protected boolean saveTool()
+  {
+    if ( BrushManager.isPointEnabled(  SymbolLibrary.LABEL  ) ) {
+      TDLog.v("Save tool and set Symbol-point label");
+      mSavedSymbol = mSymbol;
+      mSavedCurrentPoint = mCurrentPoint;
+      mSymbol = SymbolType.POINT;
+      mCurrentPoint = 1;
+      setTheTitle();
+      return true;
+    }
+    return false;
+  }
 
+  protected void restoreTool()
+  {
+    mSymbol = mSavedSymbol;
+    mCurrentPoint = mSavedCurrentPoint;
+    mSavedCurrentPoint = -1;
+    mSavedSymbol = SymbolType.UNDEF;
+    setTheTitle();
+  }
+
+ 
+
+  @Override
+  public void onBackPressed()
+  {
+    TDLog.v("*** Item Drawer BACK pressed");
+    super.onBackPressed();
+  }
+
+// issue 170
+  @Override
+  protected void onCreate( Bundle savedInstanceState )
+  {
+    super.onCreate( savedInstanceState );
+
+    ViewConfiguration view_config = ViewConfiguration.get( this );
+    mTouchSlop = view_config.getScaledTouchSlop();
+    mEraseSize  = mTouchSlop * 1.5f; // TDSetting.mEraseness;
+    mSelectSize = mTouchSlop; // TDSetting.mSelectness;
+    mPointingRadius = mTouchSlop;
+    mMinShift   = mTouchSlop * 2.0f;
+  }
+
+  @Override protected void onDestroy() { super.onDestroy(); }
+  
 }

@@ -3,6 +3,7 @@ symbol line
 name floor-meander
 name-bg меандър_в_пода
 name-cn 地缝
+name-cs meandr_na_podlaze
 name-de Bodenmäander
 name-es meandro_desfondado
 name-fa طبقه_پر_پیچ_خم
@@ -17,6 +18,7 @@ name-ua меандр_в_підлозі
 th_name floor-meander
 group floor
 color 0xff00ff 0xff
+clippable both
 width 1
 dash 15 5
 effect

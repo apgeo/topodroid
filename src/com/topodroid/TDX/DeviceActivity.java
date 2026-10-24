@@ -120,7 +120,7 @@ import android.bluetooth.BluetoothClass;
 import android.bluetooth.le.ScanResult;
 import android.bluetooth.le.ScanRecord;
 
-public class DeviceActivity extends Activity
+public class DeviceActivity extends MyActivity
                             implements View.OnClickListener
                             , OnItemClickListener
                             , ICoeffDisplayer
@@ -285,16 +285,17 @@ public class DeviceActivity extends Activity
       mTvAddress.setTextColor( 0xffffffff );
       String str = currDeviceA().toString();
       // TDLog.v( "using <" + str + ">" );
-      mTvAddress.setText( String.format( getResources().getString( R.string.using ), currDeviceA().toString() ) );
+      mTvAddress.setText( String.format( getResources().getString( R.string.using_a ), currDeviceA().toString() ) );
       // setButtonRemote();
     } else {
       mTvAddress.setTextColor( 0xffff0000 );
       mTvAddress.setText( R.string.no_device_address );
     }
-    if ( TDSetting.mSecondDistoX ) {
+    if ( TDSetting.mSecondDistoX && TDSetting.isConnectionModeBatch() ) {
+      mTvAddressB.setVisibility( View.VISIBLE ); // MM
       if ( currDeviceB() != null ) { 
         mTvAddressB.setTextColor( 0xffffcc33 );
-        mTvAddressB.setText( String.format( getResources().getString( R.string.using ), currDeviceB().toString() ) );
+        mTvAddressB.setText( String.format( getResources().getString( R.string.using_b ), currDeviceB().toString() ) );
       } else {
         mTvAddressB.setText( "" );
       }
@@ -377,6 +378,9 @@ public class DeviceActivity extends Activity
         } else if ( Device.isCavwayX1( model ) ) {
           mApp_mDData.updateDeviceModel( device.getAddress(), Device.NAME_CAVWAY + "0000" );
           device.mType = model;
+        } else if ( Device.isJedeye( model ) ) {
+          mApp_mDData.updateDeviceModel( device.getAddress(), Device.NAME_JEDEYE + "0000" );
+          device.mType = model;
         }
       }
       updateList( false );
@@ -399,8 +403,9 @@ public class DeviceActivity extends Activity
   void doForgetDevice( Device device )
   {
     String address = device.getAddress();
-    TDLog.v("forget device " + address );
+    // TDLog.v("forget device " + address );
     mApp_mDData.forgetDevice( address );
+    if ( TDInstance.isSecondDeviceAddress( address ) ) mApp.setDeviceB( null );
     // forget device on Android
     Set<BluetoothDevice> bt_device_set = DeviceUtil.getBondedDevices(); // add bonded devices
     if ( bt_device_set != null && ! bt_device_set.isEmpty() ) {
@@ -411,7 +416,7 @@ public class DeviceActivity extends Activity
           try {
             Method method = bt_device.getClass().getMethod( "removeBond", (Class[]) null );
             method.invoke( bt_device, (Object[]) null );
-            TDLog.v("unpair device " + address + " done " );
+            // TDLog.v("unpair device " + address + " done " );
           } catch ( Exception e ) {
             TDToast.make( R.string.fail_forget_device );
             TDLog.e("unpair device " + address + " error " + e.getMessage() );
@@ -419,9 +424,9 @@ public class DeviceActivity extends Activity
           break;
         }
       }
-      if ( ! found ) {
-        TDLog.v("unpair device " + address + " not found");
-      }
+      // if ( ! found ) {
+      //   TDLog.v("unpair device " + address + " not found");
+      // }
     }
     boolean ret = removeDeviceFromList( device );
     Device curr_dev = currDeviceA();
@@ -563,9 +568,9 @@ public class DeviceActivity extends Activity
    */
   private void addDeviceToList( Device dev )
   {
-    TDLog.v("add device to list " + dev.toString() );
+    //nTDLog.v("add device to list " + dev.toString() );
     if ( isDeviceOnList( dev.getAddress() ) == null ) {
-      TDLog.v(" not on list ");
+      //nTDLog.v(" not on list ");
       mDeviceList.add( dev );
     }
   }
@@ -604,6 +609,7 @@ public class DeviceActivity extends Activity
     if ( bt_device_set != null && ! bt_device_set.isEmpty() ) {
       // TDLog.v("Bonded devices " + bt_device_set.size() );
       setTitle( R.string.title_device );
+      setTitleColor( TDColor.TITLE_NORMAL );
       for ( BluetoothDevice bt_device : bt_device_set ) {
         String addr = bt_device.getAddress();
         // TDLog.v("bonded device " + addr );
@@ -618,7 +624,7 @@ public class DeviceActivity extends Activity
     } else {
       // TDLog.v("No bonded devices" );
     }
-    List< Device > devices = mApp_mDData.getDevices(); // now add other devices stored in the database
+    List< Device > devices = mApp.knownDevices(); // now add other devices stored in the database
     // TDLog.v("DB devices " + devices.size() );
     for ( Device device : devices ) {
       // TDLog.v("DB device " + device.toString() );
@@ -626,7 +632,7 @@ public class DeviceActivity extends Activity
     }
 
     mDeviceListAdapter.clear();
-    TDLog.v("Nr devices " + mDeviceList.size() );
+    //nTDLog.v("Nr devices " + mDeviceList.size() );
     for ( Device dev : mDeviceList ) {
       mDeviceListAdapter.add( dev.toString() );
     }
@@ -644,7 +650,7 @@ public class DeviceActivity extends Activity
       TDLog.e("Cannot list device with null address"); // pretend it is already on the list
       return true;
     }
-    List< Device > devices = mApp_mDData.getDevices();
+    List< Device > devices = mApp.knownDevices();
     for ( Device device : devices ) {
       if ( address.equals( device.getAddress() ) ) {
         // TDLog.v("found device in DB " + address );
@@ -738,6 +744,9 @@ public class DeviceActivity extends Activity
           mApp_mDData.insertDevice( address, bt_name, name, null );
           dev = mApp_mDData.getDevice( address );
         } else if ( Device.isDiscoX( bt_name ) ) { // discox
+          mApp_mDData.insertDevice( address, bt_name, name, null );
+          dev = mApp_mDData.getDevice( address );
+        } else if ( Device.isJedeye( bt_name ) ) { // JedEye
           mApp_mDData.insertDevice( address, bt_name, name, null );
           dev = mApp_mDData.getDevice( address );
         }
@@ -1339,12 +1348,33 @@ public class DeviceActivity extends Activity
   // }
 
   @Override
+  protected void onDestroy()
+  { 
+    super.onDestroy();
+  }
+
+  @Override
+  public void onBackPressed()
+  {
+    super.onBackPressed();
+  }
+
+  /** handle key up event // alternative-169
+   * @param code  key code
+   * @param ev    key event
+   */
+  @Override
+  public boolean onKeyUp( int code, KeyEvent event ) { return backKeyUp( code, event ); }
+
+  @Override
   public boolean onKeyDown( int code, KeyEvent event )
   {
     switch ( code ) {
-      case KeyEvent.KEYCODE_BACK: // HARDWARE BACK (4)
-        super.onBackPressed();
-        return true;
+      // case KeyEvent.KEYCODE_BACK: // HARDWARE BACK (4)
+      //   onBackPressed(); // FIXME issue 167
+      //   return true;
+      case KeyEvent.KEYCODE_BACK: // HARDWARE BACK (4) // alternative-169
+        return backKeyDown( code, event );
       case KeyEvent.KEYCODE_MENU:   // HARDWARE MENU (82)
         UserManualActivity.showHelpPage( this, getResources().getString( HELP_PAGE ) );
         return true;
@@ -1407,7 +1437,7 @@ public class DeviceActivity extends Activity
     closeMenu();
     int p = 0;
     if ( p++ == pos ) { // CLOSE
-      super.onBackPressed();
+      super.onBackPressed(); // FIXME issue 167
     } else if ( p++ == pos ) { // BT_SCAN
       if ( mBTisScanning ) return;
       if ( TDandroid.BELOW_API_31 ) {
@@ -1524,13 +1554,15 @@ public class DeviceActivity extends Activity
         coeff[52+48] = zeroNL; coeff[52+49] = zeroNL; coeff[52+50] = zeroNL; coeff[52+51] = zeroNL;
       }
       byte[] cali_info = null;
+      //nTDLog.v("Device type " + TDInstance.deviceType() );
       if ( TDInstance.isDeviceCavway() ) {
+        // TDLog.v("Device is Cavway ");
         cali_info = new byte[16];
         cali_info[ 0 ] = (byte)0x55;
         cali_info[ 1 ] = (byte)0x01;
         for ( int k = 2; k < 16; ++ k ) cali_info[k] = (byte)0;
       }
-      mApp.uploadCalibCoeff( coeff, false, b, cali_info ); 
+      mApp.uploadCalibCoeff( this, coeff, false, b, cali_info );
     }
   }
 
@@ -1538,10 +1570,10 @@ public class DeviceActivity extends Activity
   public boolean onItemLongClick(AdapterView<?> parent, View view, int pos, long id)
   {
     CharSequence item = ((TextView) view).getText();
-    TDLog.v("on item long click " + pos + ": " + item.toString() );
+    // TDLog.v("on item long click " + pos + ": " + item.toString() );
     String item_str = mDeviceListAdapter.getItem(pos); // "model name addr"
     if ( item_str == null || item_str.equals("X000") ) {
-      TDLog.v("on item long click: pos " + pos + " item " + item_str );
+      // TDLog.v("on item long click: pos " + pos + " item " + item_str );
       return true;
     }
     String[] vals = item_str.split(" ", 3);
@@ -1549,8 +1581,8 @@ public class DeviceActivity extends Activity
     Device device = mApp_mDData.getDevice( address );
     if ( device != null ) {
       (new DeviceNameDialog( this, this, device )).show();
-    } else {
-      TDLog.v("on item long click: address " + address + " not in database" );
+    // } else {
+    //   TDLog.v("on item long click: address " + address + " not in database" );
     }
     return true;
   }
@@ -1560,12 +1592,14 @@ public class DeviceActivity extends Activity
    */
   void setSecondDevice( String address )
   {  
-    if ( currDeviceB() == null || ! address.equals( currDeviceB().getAddress() ) ) {
-      mApp.setDeviceB( address );
-      // mCurrDeviceB = TDInstance.getDeviceB();
-      mApp.disconnectRemoteDevice( true ); // new DataStopTask( mApp, null, null );
-      setState( false );
-    }
+    // if ( currDeviceB() == null || ! address.equals( currDeviceB().getAddress() ) ) {
+    //   mApp.setDeviceB( address );
+    //   // mCurrDeviceB = TDInstance.getDeviceB();
+    //   mApp.disconnectRemoteDevice( true ); // new DataStopTask( mApp, null, null );
+    //   setState( false );
+    // }
+    mApp.setDeviceB( address ); // MM
+    setState( false );
   }
 
   /** open a calibration
@@ -1676,6 +1710,20 @@ public class DeviceActivity extends Activity
   }
 
 
+  // ----------------------------------------------------------------
+  // TITLE BAR
+
+  @Override
+  public void setTitle( CharSequence t )
+  {
+    ((TextView)findViewById( R.id.device_title )).setText( t );
+  }
+
+  @Override
+  public void setTitleColor( int color )
+  {
+    ((TextView)findViewById( R.id.device_title )).setTextColor( color );
+  }
 
 }
 

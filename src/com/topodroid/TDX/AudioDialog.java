@@ -14,6 +14,7 @@ package com.topodroid.TDX;
 import com.topodroid.util.TDLog;
 import com.topodroid.util.TDFile;
 import com.topodroid.util.TDUtil;
+import com.topodroid.util.TDAnalytics;
 import com.topodroid.ui.MyStateBox;
 import com.topodroid.ui.MyDialog;
 import com.topodroid.ui.TDLayout;
@@ -86,6 +87,7 @@ class AudioDialog extends MyDialog
   AudioDialog( Context ctx, IAudioInserter parent, long audio_id, DBlock blk, long bid, long reftype )
   {
     super( ctx, null, R.string.AudioDialog ); // null app
+    TopoDroidApp.updateAnalytic( TDAnalytics.AUDIO );
 
     mParent   = parent;
     mAudioId  = audio_id;
@@ -114,9 +116,9 @@ class AudioDialog extends MyDialog
     LinearLayout.LayoutParams lp = TDLayout.getLayoutParams( 10, 10, 20, 20 );
 
     // mBtnDelete = (Button) findViewById( R.id.audio_delete );
-    // mBtnClose = (Button) findViewById( R.id.audio_close );
+    // mBtnClose = (Button) findViewById( R.id.button_cancel );
     // mBtnClose.setOnClickListener( this );
-    ( (Button) findViewById( R.id.audio_close ) ).setOnClickListener( this );
+    ( (Button) findViewById( R.id.button_cancel ) ).setOnClickListener( this );
     if ( mBlk != null ) {
       ( (TextView) findViewById( R.id.audio_id ) ).setText( String.format( resString( R.string.audio_id_shot ), mBlk.mFrom, mBlk.mTo ) );
     } else { 
@@ -166,7 +168,7 @@ class AudioDialog extends MyDialog
    */
   public void onClick(View v) 
   {
-    if ( v.getId() == R.id.audio_close ) {
+    if ( v.getId() == R.id.button_cancel ) {
       stopRecPlay( false );
       dismiss();
     }
@@ -254,12 +256,14 @@ class AudioDialog extends MyDialog
     dismiss();
   }
 
+  @SuppressWarnings("deprecated") // from API-33 use android.window.OnBackInvokedDispatcher to register android.window.OnBackInvokedCallback
   @Override
   public void onBackPressed()
   {
     stopRecPlay( false );
     if ( hadNoFile && hasFile ) deleteAudio();
-    super.onBackPressed();
+    // super.onBackPressed(); // issue 167
+    dismiss();
   }
 
   /** delete audio file

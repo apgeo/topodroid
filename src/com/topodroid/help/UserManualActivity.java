@@ -20,14 +20,17 @@ package com.topodroid.help;
 import com.topodroid.util.TDTag;
 import com.topodroid.util.TDLog;
 import com.topodroid.util.TDFile;
+import com.topodroid.util.TDAnalytics;
 import com.topodroid.prefs.TDPref;
 import com.topodroid.prefs.TDSetting;
-import com.topodroid.prefs.GeminiDialog;
-import com.topodroid.help.AIdialog;
+// import com.topodroid.prefs.GeminiDialog;
+// import com.topodroid.help.AIdialog;
+import com.topodroid.TDX.TopoDroidApp;
 import com.topodroid.TDX.TDandroid;
 // import com.topodroid.TDX.TDPath;
 import com.topodroid.TDX.TDToast;
 import com.topodroid.TDX.R;
+import com.topodroid.TDX.MyActivity;
 
 // import java.io.File;
 // import java.io.FileInputStream;
@@ -58,6 +61,9 @@ import android.widget.ArrayAdapter;
 
 import android.view.View;
 import android.view.View.OnClickListener;
+// import android.view.WindowInsets;
+
+import android.view.KeyEvent;
 
 import android.widget.AdapterView;
 import android.widget.AdapterView.OnItemClickListener;
@@ -66,7 +72,13 @@ import android.webkit.WebView;
 // import android.webkit.WebSettings;
 import android.webkit.WebViewClient;
 
-public class UserManualActivity extends Activity
+// import androidx.core.view.ViewCompat;
+// import androidx.core.view.WindowInsetsCompat;
+// import androidx.core.graphics.Insets;
+// import androidx.annotation.RequiresApi;
+
+
+public class UserManualActivity extends MyActivity
                                 implements OnItemClickListener
                                 , OnClickListener
                                 , IHelpViewer
@@ -76,6 +88,7 @@ public class UserManualActivity extends Activity
   private WebView mTV_text;
   private int mCloseOnBack = 0;
   private String mCurrentPage = null;
+  private boolean mOnContents = false;
 
   /** load a man page
    * @param view webview view - if null use the privale webview
@@ -83,8 +96,8 @@ public class UserManualActivity extends Activity
    */
   private void loadManPage( WebView view, String filename ) 
   {
-    TDLog.v("UserManual load manpage " + filename );
-    ++mCloseOnBack;
+    // ++mCloseOnBack; // FIXME no CLOSE_ON_ACK
+    TDLog.v("UserManual load manpage " + filename + " close on back " + mCloseOnBack );
     if ( view == null ) view = mTV_text;
     if ( ! ( TDSetting.mLocalManPages && TDFile.hasManFile( filename ) ) ) { // pagefile.exists()
       loadAssetPage( view, filename );
@@ -103,7 +116,7 @@ public class UserManualActivity extends Activity
    */
   private void loadAssetPage( WebView view, String filename )
   {
-    TDLog.v("UserManual load asset " + filename );
+    // TDLog.v("UserManual load asset " + filename );
     String page = "/android_asset/man/" + filename;
     view.loadUrl( "file://" + page );
   }
@@ -114,8 +127,8 @@ public class UserManualActivity extends Activity
    */
   private void load( WebView view, String filename ) 
   {
-    TDLog.v("UserManual load " + filename );
     ++mCloseOnBack;
+    TDLog.v("UserManual load " + filename + " close on back " + mCloseOnBack);
     // String filepath = TDPath.getManFile( filename );
     // view.loadUrl( filepath );
     // setWebViewSettings( mTVtext );
@@ -206,7 +219,7 @@ public class UserManualActivity extends Activity
 // -------------------------------------------------------------------
   // SlidingDrawer mDrawer;
   private ImageView     mImage;
-  private ImageView     mAI;
+  private ImageView     mAI = null;
   private ListView      mList;
 
   /** set the settings of the display view
@@ -231,71 +244,76 @@ public class UserManualActivity extends Activity
     view.getSettings().setSupportZoom( true ); 
   }
 
+  // @RequiresApi( 35 )
+  // private static class Api35
+  // {
+  //   static void makeInsets( View root )
+  //   {
+  //     // ViewCompat.setOnApplyWindowInsetsListener( root, (v, insets) ->
+  //     //   {
+  //     //     // Insets bars = insets.getInsets( WindowInsetsCompat.Type.systemBars() );
+  //     //     Insets bars = insets.getInsets( WindowInsetsCompat.Type.navigationBars() );
+  //     //     v.setPadding( bars.left, bars.top, bars.right, bars.bottom );
+  //     //     return insets;
+  //     //   }
+  //     // );
+  //     root.setOnApplyWindowInsetsListener( (v, insets) ->
+  //       {
+  //         int bottom_inset = insets.getSystemWindowInsetBottom();
+  //         v.setPadding( v.getPaddingLeft(), v.getPaddingTop(), v.getPaddingRight(), bottom_inset );
+  //         return insets;
+  //       }
+  //     );
+  //   }
+  // }
 
   @Override
   protected void onCreate(Bundle savedInstanceState) 
   {
     super.onCreate(savedInstanceState);
 
-    getWindow().getDecorView().setSystemUiVisibility( TDSetting.mUiVisibility );
+    setContentView( R.layout.user_manual_activity );
+    mTV_text   = (WebView) findViewById(R.id.manual_text );
+
+    if ( TDandroid.BELOW_API_35 || TDSetting.mHideNavBar ) {
+      getWindow().getDecorView().setSystemUiVisibility( TDSetting.mUiVisibility );
+      // alternative not full-screen
+    } else {
+      // getWindow().getDecorView().setSystemUiVisibility( View.SYSTEM_UI_FLAG_VISIBLE );
+      // View root = findViewById( R.id.user_manual_root );
+      // Api35.makeInsets( mTV_text );
+
+      View contentView = findViewById( R.id.manual_layout );
+
+      getWindow().getDecorView().setOnApplyWindowInsetsListener(
+        new View.OnApplyWindowInsetsListener()
+        {
+          @Override 
+          public android.view.WindowInsets onApplyWindowInsets( View v, android.view.WindowInsets insets )
+          {
+            contentView.setPadding( contentView.getPaddingLeft(), 
+                                    0, // insets.getSystemWindowInsetTop(), 
+                                    contentView.getPaddingRight(),
+                                    insets.getSystemWindowInsetBottom() // contentView.getPaddingBottom()
+                                  );
+            return insets;
+            // toolbar.getLayoutParams().height = 
+            //   v.getContext().getTheme().obtainStyledAttributes( new int[] { android.R.attr.actionBarSize } )
+            //    .getDimensionPixelSize( 0, 0 ) + insets.getSystemWindowInsetTop();
+            // return insets.consumeSystemWindowInsets();
+          }
+        } );
+    }
 
     TDandroid.setScreenOrientation( this );
 
-    mCloseOnBack = 0;
-    // get intent extra
-    String page = null;
-    Bundle extras = getIntent().getExtras();
-    if ( extras != null ) page = extras.getString( TDTag.TOPODROID_HELP_PAGE );
-    mCurrentPage = null;
-    if ( page == null ) {
-      page = "manual00.htm";
-      mCurrentPage = page;
-    } else if ( page.startsWith( "manual" ) && page.length() > 7 ) {
-      int nr = 10 * (page.charAt(6) - '0') + (page.charAt(7) - '0');
-      if ( nr < 16 ) mCurrentPage = page;
-    } else if ( page.startsWith("page_") ) {
-      mCurrentPage = page;
-    }
-
-    setContentView(R.layout.distox_manual_dialog);
-    mTV_text   = (WebView) findViewById(R.id.manual_text );
- 
-    setWebViewSettings( mTV_text );
-
-    mTV_text.setWebViewClient( new WebViewClient() {
-      @Override 
-      public boolean shouldOverrideUrlLoading( WebView view, String url ) {
-        ++mCloseOnBack;
-        // view.loadUrl( url );
-        // TDLog.v( "MAN Web client " + url );
-        load( view, url );
-        return false;
-      }
-
-      @Override
-      public void onReceivedError(WebView view, int errorCode, String description, String failingUrl)
-      {
-        TDLog.e( "UserMan load error " + errorCode + ": " + description + " url " + failingUrl );
-      }
-    } );
-
-    setTitle( R.string.title_manual );
-    load( mTV_text, page );
-
     boolean is_online = TDandroid.isOnline( this );
-    mAI  = (ImageView) findViewById( R.id.ai );
-    if ( is_online ) {
-      mAI.setOnClickListener( this );
-      // mAI.setImageResource( R.drawable.iz_ai );
-    } else {
-      // mAI.setVisibility( View.GONE );
-      mAI.setImageResource( R.drawable.iz_ai_no );
-    }
     mImage  = (ImageView) findViewById( R.id.handle );
     mImage.setOnClickListener( this );
     mList = (ListView) findViewById( R.id.content );
 
     ArrayAdapter< String > adapter = new ArrayAdapter<>(this, R.layout.message );
+    adapter.add( getResources().getString( R.string.char_cross ) );
     adapter.add( getResources().getString( R.string.man_preface ) );
     adapter.add( getResources().getString( R.string.man_intro ) );
     adapter.add( getResources().getString( R.string.man_main ) );
@@ -323,15 +341,48 @@ public class UserManualActivity extends Activity
     mList.setVisibility( View.GONE );
     mList.invalidate();
     mList.setOnItemClickListener( this );
-  }
 
-  /** lifecycle: activity destroy
-   */
-  @Override
-  public void onDestroy( )
-  {
-    super.onDestroy();
-    AIdialog.resetChat();
+    mCloseOnBack = 0;
+    TDLog.v("reset close on back " + mCloseOnBack );
+    // get intent extra
+    String page = null;
+    Bundle extras = getIntent().getExtras();
+    if ( extras != null ) page = extras.getString( TDTag.TOPODROID_HELP_PAGE );
+    mCurrentPage = null;
+    if ( page == null ) {
+      page = "manual00.htm";
+      mCurrentPage = page;
+    } else if ( page.startsWith( "manual" ) && page.length() > 7 ) {
+      int nr = 10 * (page.charAt(6) - '0') + (page.charAt(7) - '0');
+      if ( nr < 16 ) mCurrentPage = page;
+    } else if ( page.startsWith("page_") ) {
+      mCurrentPage = page;
+    }
+
+ 
+    setWebViewSettings( mTV_text );
+
+
+    mTV_text.setWebViewClient( new WebViewClient() {
+      @Override 
+      public boolean shouldOverrideUrlLoading( WebView view, String url ) {
+        // ++mCloseOnBack; // FIXME no CLOSE_ON_BACK
+        // TDLog.v( "MAN Web client " + url + " close on back " + mCloseOnBack );
+        load( view, url );
+        return false;
+      }
+
+      @Override
+      public void onReceivedError(WebView view, int errorCode, String description, String failingUrl)
+      {
+        TDLog.e( "UserMan load error " + errorCode + ": " + description + " url " + failingUrl );
+      }
+    } );
+
+    setTitle( R.string.title_manual );
+    load( mTV_text, page );
+
+    TopoDroidApp.updateAnalytic( TDAnalytics.MAN_PAGE );
   }
 
   /** react to a user tap
@@ -346,15 +397,17 @@ public class UserManualActivity extends Activity
     if ( b == mImage ) {
       if ( mList.getVisibility() == View.VISIBLE ) {
         mList.setVisibility( View.GONE );
+        mOnContents = false;
       } else {
         mList.setVisibility( View.VISIBLE );
+        mOnContents = true;;
       }
-    } else if ( b == mAI ) {
-      if ( TDSetting.mGeminiApiKey != null && ! TDSetting.mGeminiApiKey.isEmpty() ) {
-        showAIdialog();
-      } else { // start API key dialog
-        (new GeminiDialog( this, this, null )).show();
-      }
+    // } else if ( AIhelper.HAS_AI && mAI != null && b == mAI ) { // GEMINI
+    //   if ( TDSetting.mGeminiApiKey != null && ! TDSetting.mGeminiApiKey.isEmpty() ) {
+    //     showAIdialog();
+    //   } else { // start API key dialog
+    //     (new GeminiDialog( this, this, null )).show();
+    //   }
     }
   }
 
@@ -369,13 +422,17 @@ public class UserManualActivity extends Activity
   {
     // CharSequence item = ((TextView) view).getText();
     // TDLog.v( "click " + item + " pos " + pos);
+    mOnContents = false;
     mList.setVisibility( View.GONE );
     mCurrentPage = null;
-    if ( pos <= 17 ) {
+    if ( pos == 0 ) {
+      return;
+    } else if ( pos <= 18 ) {
       mCloseOnBack = 0;
-      mCurrentPage = String.format(Locale.US, "manual%02d.htm", pos );
+      TDLog.v("on click reset close on back " + mCloseOnBack );
+      mCurrentPage = String.format(Locale.US, "manual%02d.htm", pos-1 );
       load( mTV_text, mCurrentPage );
-    } else if ( pos == 18 && TDandroid.isOnline(this) ) { // website
+    } else if ( pos == 19 && TDandroid.isOnline(this) ) { // website
       viewUrl( WEBSITE );
     // } else if ( pos == 19 ) {
     //   if ( TDSetting.mGeminiApiKey != null && ! TDSetting.mGeminiApiKey.isEmpty() ) {
@@ -387,16 +444,6 @@ public class UserManualActivity extends Activity
       // getManualFromWeb();
       TDToast.makeBad( R.string.no_manual );
     }
-  }
-
-  /** react to a user tap on the BACK button
-   */
-  @Override
-  public void onBackPressed()
-  {
-    mCloseOnBack -= 2;
-    if ( mCloseOnBack <= 0 ) finish();
-    mTV_text.goBack();
   }
 
   // static void show Help Page( Context context, int class_string )
@@ -424,14 +471,16 @@ public class UserManualActivity extends Activity
     context.startActivity( intent );
   }
 
-  /** open the AI dialog
-   * @note IHelpViwer interface
-   */
-  public void showAIdialog()
-  {
-    TDToast.make( R.string.ai_internet );
-    (new HelpAIdialog( this, this, TDSetting.mGeminiApiKey, mCurrentPage )).show();
-  }
+  // /** open the AI dialog // GEMINI
+  //  * @note IHelpViwer interface
+  //  */
+  // public void showAIdialog()
+  // {
+  //   if ( AIhelper.HAS_AI ) {
+  //     TDToast.make( R.string.ai_internet );
+  //     (new HelpAIdialog( this, this, TDSetting.mGeminiApiKey, mCurrentPage )).show();
+  //   }
+  // }
 
   public void showManPage( String page )
   {
@@ -439,14 +488,15 @@ public class UserManualActivity extends Activity
     loadManPage( null, page );
   }
 
-  public void showInvalid( final TDPref pref, final String response )
-  {
-    this.runOnUiThread( new Runnable() { public void run() {
-      TDToast.makeWarn( response ); 
-      if ( pref != null ) pref.setButtonValue( "---" );
-      TDSetting.setGeminiApiKey( "" );
-    } } );
-  }
+  // public void showInvalid( final TDPref pref, final String response ) // GEMINI
+  // {
+  //   // this.runOnUiThread( 
+  //   TDandroid.runOnMainThread( new Runnable() { public void run() {
+  //     TDToast.makeWarn( response ); 
+  //     if ( pref != null ) pref.setButtonValue( "---" );
+  //     TDSetting.setGeminiApiKey( "" );
+  //   } } );
+  // }
   
 
   // /** react to a change in the configuration
@@ -458,7 +508,61 @@ public class UserManualActivity extends Activity
   //   super.onConfigurationChanged( new_cfg );
   // }
 
-  public void setAIbuttonEnabled( boolean enabled ) { /* nothing */ }
+  // public void setAIbuttonEnabled( boolean enabled ) { /* nothing */ } // GEMINI
+
+
+  /** lifecycle: activity destroy
+   */
+  @Override
+  public void onDestroy( )
+  {
+    // if ( AIhelper.HAS_AI ) AIdialog.resetChat(); // GEMINI
+    super.onDestroy();
+  }
+
+  /** react to a user tap on the BACK button
+   */
+  @Override
+  public void onBackPressed()
+  {
+    if ( mOnContents ) {
+      mList.setVisibility( View.GONE );
+      mOnContents = false;
+      return;
+    }
+    mCloseOnBack -= 1;
+    TDLog.v("on back pressed close on back " + mCloseOnBack );
+    if ( mCloseOnBack <= 0 ) {
+      finish();
+    } else {
+      mTV_text.goBack();
+    }
+  }
+
+  // /** handle key up event // alternative-169
+  //  * @param code  key code
+  //  * @param ev    key event
+  //  */
+  // @Override
+  // public boolean onKeyUp( int code, KeyEvent event )
+  // {
+  //   TDLog.v("Survey Window key up: code " + code );
+  //   return backKeyUp( code, event );
+  // }
+
+  // @Override
+  // public boolean onKeyDown( int code, KeyEvent event )
+  // {
+  //   if ( code == KeyEvent.KEYCODE_BACK ) {
+  //     //   if ( ! saveSurvey( true ) ) return true;
+  //     //   TopoDroidApp.mSurveyWindow = null;
+  //     //   super.onBackPressed(); // FIXME issue 167
+  //     //   return true;
+  //     // ----- alternative-169
+  //     return backKeyDown( code, event );
+  //   }
+  //   return false;
+  // }
 
 }
 

@@ -11,6 +11,8 @@
  */
 package com.topodroid.tdm;
 
+import com.topodroid.ui.TDGreenDot;
+
 import android.graphics.Paint;
 import android.graphics.Path;
 import android.graphics.Canvas;
@@ -26,7 +28,7 @@ class TdmViewStation
   float y;
   Path mPath;
   boolean mEquated;
-  double d;  // distance on selection
+  double d;  // distance on selection [pxl]
   boolean mChecked;
   CheckBox mCB;
   private float xoff; // equate: command offsets
@@ -165,7 +167,7 @@ class TdmViewStation
    * @param canvas  canvas
    * @param matrix  transform matrix
    * @param paint   paint
-   * @param zoom    zoom (?)
+   * @param zoom    inverse radius of the circle
    */
   void drawCircle( Canvas canvas, Matrix matrix, Paint paint, float zoom )
   {
@@ -175,5 +177,18 @@ class TdmViewStation
     path.transform( matrix );
     canvas.drawPath( path, paint );
   }
+
+  /** draw a dot at the station view 
+   * @param canvas  canvas
+   * @param matrix  transform matrix
+   * @param paint   paint
+   */
+  void drawDot( Canvas canvas, Matrix matrix, Paint paint, float radius )
+  {
+    TDGreenDot.draw( canvas, matrix, x, y, radius, paint );
+  }
+
+  // dump
+  String getName() { return ( mStation == null )? "null" : mStation.mName; }
   
 }

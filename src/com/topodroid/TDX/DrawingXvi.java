@@ -16,6 +16,7 @@ import com.topodroid.util.TDLog;
 import com.topodroid.util.TDFile;
 import com.topodroid.util.TDString;
 import com.topodroid.util.TDUtil;
+import com.topodroid.util.TDAnalytics;
 import com.topodroid.num.TDNum;
 // import com.topodroid.num.NumStation;
 import com.topodroid.prefs.TDSetting;
@@ -113,6 +114,7 @@ class DrawingXvi
 
   static void writeXvi( BufferedWriter out, TDNum num, DrawingCommandManager plot, long type )
   {
+    TopoDroidApp.updateAnalytic( TDAnalytics.EXPORT_XVI2 );
     String wall_group = BrushManager.getLineWallGroup( );
 
     // origin is always at (0,0)
@@ -324,6 +326,7 @@ class DrawingXvi
 
     if ( BrushManager.isPointSection( idx ) ) return;
     if ( BrushManager.isPointPicture( idx ) ) return;
+    // if ( BrushManager.isPointReference( idx ) ) return; // TDSKETCH
     if ( BrushManager.isPointLabel( idx ) ) {
       String label = point.getPointText().toUpperCase( Locale.getDefault() );
       int len = label.length();

@@ -1,13 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android" 
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+  android:id="@+id/root_view"
+  style="@style/root_view"
+  >
+  <TextView android:id="@+id/title"
+    style="@style/text_title"
+  />
+  <!-- ScrollView xmlns:android="http://schemas.android.com/apk/res/android" 
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    >
+    -->
 <LinearLayout
   style="@style/base_padding"
   android:layout_width="match_parent" 
   android:layout_height="wrap_content"
   android:orientation="vertical"
+    android:layout_below="@id/title"
   >
   <LinearLayout 
     style="@style/base_padding"
@@ -43,13 +51,26 @@
         android:layout_height="wrap_content" 
         android:text="@string/mode_latest"
         />
-        				  
-      <CheckBox android:id="@+id/cb_mode_station"
+
+      <LinearLayout
         android:layout_marginTop="@dimen/margintiny"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content" 
-        android:text="@string/mode_station"
-        />
+        android:orientation="horizontal"
+        >
+        <CheckBox android:id="@+id/cb_mode_station"
+          android:layout_width="wrap_content"
+          android:layout_height="wrap_content" 
+          android:text="@string/mode_station"
+          android:layout_marginEnd="@dimen/marginh"
+          />
+          				  
+        <!-- CheckBox android:id="@+id/cb_mode_elevation"
+          android:layout_width="wrap_content"
+          android:layout_height="wrap_content" 
+          android:text="@string/mode_elevation"
+          / -->
+      </LinearLayout>
         				  
       <CheckBox android:id="@+id/cb_mode_grid"
         android:layout_marginTop="@dimen/margintiny"
@@ -77,6 +98,12 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content" 
         android:text="@string/mode_fixed"
+        />
+      <CheckBox android:id="@+id/cb_mode_sections"
+        android:layout_marginTop="@dimen/margintiny"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content" 
+        android:text="@string/mode_sections"
         />
       <CheckBox android:id="@+id/cb_mode_scrap"
         android:layout_marginTop="@dimen/margintiny"
@@ -148,26 +175,23 @@
   </LinearLayout>
       				  
   <LinearLayout android:id="@+id/help"
-    android:layout_width="match_parent" 
-    android:layout_height="wrap_content"
-    android:orientation="horizontal" 
-    android:layout_marginTop="@dimen/marginvbig"
-    android:gravity="start"
+      style="@style/help_layout"
     >
     <Button android:id="@+id/button_help"
         style="@style/button_empty"
         android:text="@string/button_help"
+        android:layout_marginRight="@dimen/marginh"
+    />
+    <Button android:id="@+id/button_cancel"
+      style="@style/button_default"
+      android:text="@string/button_cancel"
+      android:layout_marginRight="@dimen/marginh"
     />
     <LinearLayout 
       android:layout_width="fill_parent" 
       android:layout_height="wrap_content"
       android:gravity="end"
       >
-      <Button android:id="@+id/button_back"
-        style="@style/button_default"
-        android:text="@string/button_cancel"
-        android:layout_marginEnd="@dimen/marginh"
-      />
       <Button android:id="@+id/button_ok"
         style="@style/button_default"
         android:text="@string/button_ok"
@@ -175,6 +199,7 @@
     </LinearLayout>
   </LinearLayout>
 
-</LinearLayout>
-</ScrollView>
+  </LinearLayout>
+  <!-- /ScrollView -->
 
+</RelativeLayout>

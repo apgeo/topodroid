@@ -13,17 +13,19 @@ package com.topodroid.prefs;
 
 import com.topodroid.util.TDString;
 import com.topodroid.util.TDLog;
+// import com.topodroid.help.AIhelper; // GEMINI
 import com.topodroid.TDX.TDInstance;
 import com.topodroid.TDX.TDLevel;
 import com.topodroid.TDX.R;
 
 import java.util.Locale;
 import java.util.List;
+import java.util.Arrays;
 import java.util.ArrayList;
 import java.util.regex.Pattern;
 import java.util.regex.Matcher;
 
-// import android.os.Environment;
+import android.os.Environment;
 
 class TDPrefKey
 {
@@ -151,6 +153,7 @@ class TDPrefKey
     new TDPrefKey( T,       UI,  "DISTOX_ORIENTATION",     R.string.pref_orientation_title,  R.string.pref_orientation_summary,   TDString.ZERO,  R.array.orientation, R.array.orientationValue ),
     new TDPrefKey( N,       GEN, "DISTOX_LOCALE",          R.string.pref_locale_title,       R.string.pref_locale_summary,        TDString.EMPTY, R.array.locale, R.array.localeValue ), 
     new TDPrefKey( A,       GEN, "DISTOX_LOCAL_MAN",       R.string.pref_local_help_title,   R.string.pref_local_help_summary,    TDString.ZERO, R.array.localUserMan, R.array.localUserManValue ),
+    new TDPrefKey( B, BOOL, GEN, "DISTOX_ANALYTICS",       R.string.pref_analytics_title,    R.string.pref_analytics_summary,     TRUE ),
     new TDPrefKey( B,       NON, "DISTOX_EXPORT_PREF",     R.string.pref_cat_import_export ),
     new TDPrefKey( B,       NON, "DISTOX_SURVEY_PREF",     R.string.pref_cat_survey      ),
     new TDPrefKey( B,       NON, "DISTOX_PLOT_PREF",       R.string.pref_cat_drawing     ),
@@ -178,7 +181,7 @@ class TDPrefKey
     new TDPrefKey( B, STR,  DT,  "DISTOX_INIT_STATION",     R.string.pref_init_station_title,     R.string.pref_init_station_summary,    TDString.ZERO ),
     new TDPrefKey( A, LONG, UI,  "DISTOX_THUMBNAIL",        R.string.pref_thumbnail_title,        R.string.pref_thumbnail_summary,       "200"         ),
     new TDPrefKey( B, BOOL, DR,  "DISTOX_FIXED_ORIGIN",     R.string.pref_fixed_origin_title,     R.string.pref_fixed_origin_summary,    FALSE         ),
-    new TDPrefKey( B, BOOL, DR,  "DISTOX_SHARED_XSECTIONS", R.string.pref_shared_xsections_title, R.string.pref_shared_xsections_summary, FALSE       ),
+    // new TDPrefKey( B, BOOL, DR,  "DISTOX_SHARED_XSECTIONS", R.string.pref_shared_xsections_title, R.string.pref_shared_xsections_summary, FALSE       ),
     new TDPrefKey( B,       NON, "DISTOX_SHOT_UNITS_SCREEN",R.string.pref_shot_units_title ), 
     new TDPrefKey( B,       NON, "DISTOX_SHOT_DATA_SCREEN", R.string.pref_shot_data_title  ),
     new TDPrefKey( N,       NON, "DISTOX_LOCATION_SCREEN",  R.string.pref_location_title   ), 
@@ -197,7 +200,7 @@ class TDPrefKey
    * whether to use plot cache
    */
   static TDPrefKey[] mPlot = {
-    new TDPrefKey( B, BOOL, UI,  "DISTOX_SIDE_DRAG",      R.string.pref_side_drag_title,     R.string.pref_side_drag_summary,     TRUE ),
+    // new TDPrefKey( B, BOOL, UI,  "DISTOX_SIDE_DRAG",      R.string.pref_side_drag_title,     R.string.pref_side_drag_summary,     TRUE ),
     new TDPrefKey( B,       UI,  "DISTOX_ZOOM_CTRL",      R.string.pref_zoom_controls_title, R.string.pref_zoom_controls_summary, TDString.ZERO, R.array.zoomCtrl, R.array.zoomCtrlValue ),
     new TDPrefKey( T, FLT,  UI,  "DISTOX_HTHRESHOLD",     R.string.pref_hthr_title,          R.string.pref_hthr_summary,          "70"          ),
     new TDPrefKey( A, BOOL, DT,  "DISTOX_CHECK_ATTACHED", R.string.pref_checkAttached_title, R.string.pref_checkAttached_summary, FALSE         ),
@@ -315,7 +318,7 @@ class TDPrefKey
    * whether to set L/R extend to LRUD splay shots (Compass, VTopo import)
    */
   static TDPrefKey[] mExportImport = {
-    new TDPrefKey( N, BTN,  XP, "DISTOX_PT_CMAP",      R.string.pref_pt_color_map_title, R.string.pref_pt_color_map_summary, TDString.EMPTY ),
+    // new TDPrefKey( N, BTN,  XP, "DISTOX_PT_CMAP",      R.string.pref_pt_color_map_title, R.string.pref_pt_color_map_summary, TDString.EMPTY ),
     new TDPrefKey( A, BOOL, XP, "DISTOX_SPLAY_EXTEND", R.string.pref_LRExtend_title,     R.string.pref_LRExtend_summary,     TRUE )
   };
 
@@ -412,6 +415,7 @@ class TDPrefKey
   static TDPrefKey[] mExportDat = {
     new TDPrefKey( N, BOOL, XP, "DISTOX_STATION_PREFIX", R.string.pref_station_prefix_title,R.string.pref_station_prefix_summary, FALSE ),
     new TDPrefKey( A, BOOL, XP, "DISTOX_COMPASS_SPLAYS", R.string.pref_compass_splays_title,R.string.pref_compass_splays_summary, TRUE  ),    
+    // new TDPrefKey( A,       XP, "DISTOX_COMPASS_SPLAY_MODE", R.string.pref_compass_splays_title,R.string.pref_compass_splays_summary, TDString.ONE, R.array.compassSplayMode, R.array.compassSplayModeValue  ),    
     new TDPrefKey( N, BOOL, XP, "DISTOX_SWAP_LR",        R.string.pref_swapLR_title,        R.string.pref_swapLR_summary,         FALSE )  
   };
 
@@ -491,7 +495,7 @@ class TDPrefKey
    */
   static TDPrefKey[] mData = {
     new TDPrefKey( B, FLT, DT, "DISTOX_CLOSE_DISTANCE",  R.string.pref_leg_title,            R.string.pref_leg_summary,            "0.05" ),        
-    new TDPrefKey( B, FLT, DT, "DISTOX_MAX_SHOT_LENGTH", R.string.pref_max_shot_title,       R.string.pref_max_shot_summary,       TDString.FIFTY ),
+    new TDPrefKey( B, FLT, DT, "DISTOX_MAX_SHOT_LENGTH", R.string.pref_max_shot_title,       R.string.pref_max_shot_summary,       TDString.FORTY ),
     new TDPrefKey( B, FLT, DT, "DISTOX_MIN_LEG_LENGTH",  R.string.pref_min_leg_title,        R.string.pref_min_leg_summary,        TDString.ZERO  ),
     new TDPrefKey( E,      DT, "DISTOX_LEG_SHOTS",       R.string.pref_leg_shots_title,      R.string.pref_leg_shots_summary,      TDString.THREE, R.array.legShots, R.array.legShotsValue ),
     new TDPrefKey( N, FLT, DR, "DISTOX_EXTEND_THR2",     R.string.pref_ethr_title,           R.string.pref_ethr_summary,           TDString.TEN  ),
@@ -559,11 +563,11 @@ class TDPrefKey
     new TDPrefKey( B, FLT,  UI, "DISTOX_FIXED_THICKNESS", R.string.pref_fixed_thickness_title,R.string.pref_fixed_thickness_summary,TDString.ONE ),
     new TDPrefKey( B, FLT,  UI, "DISTOX_STATION_SIZE",    R.string.pref_station_size_title,   R.string.pref_station_size_summary,   TDString.TWENTY ),
     new TDPrefKey( N, FLT,  UI, "DISTOX_DOT_RADIUS",      R.string.pref_dot_radius_title,     R.string.pref_dot_radius_message,     TDString.FIVE ), 
-    new TDPrefKey( B, LONG, UI, "DISTOX_CLOSENESS",       R.string.pref_closeness_title,      R.string.pref_closeness_message,      TDString.TWENTYFOUR ),
-    new TDPrefKey( B, LONG, UI, "DISTOX_ERASENESS",       R.string.pref_eraseness_title,      R.string.pref_eraseness_message,      "36" ),
-    new TDPrefKey( E, LONG, UI, "DISTOX_MIN_SHIFT",       R.string.pref_min_shift_title,      R.string.pref_min_shift_message,      TDString.SIXTY ),
-    new TDPrefKey( E, LONG, UI, "DISTOX_POINTING",        R.string.pref_pointing_title,       R.string.pref_pointing_message,       TDString.TWENTYFOUR ),
     new TDPrefKey( T, LONG, UI, "DISTOX_SPLAY_ALPHA",     R.string.pref_splay_alpha_title,    R.string.pref_splay_alpha_summary,    "80" )
+    // new TDPrefKey( B, LONG, UI, "DISTOX_CLOSENESS",       R.string.pref_closeness_title,      R.string.pref_closeness_message,      TDString.TWENTYFOUR ),
+    // new TDPrefKey( B, LONG, UI, "DISTOX_ERASENESS",       R.string.pref_eraseness_title,      R.string.pref_eraseness_message,      "36" ),
+    // new TDPrefKey( E, LONG, UI, "DISTOX_MIN_SHIFT",       R.string.pref_min_shift_title,      R.string.pref_min_shift_message,      TDString.SIXTY ),
+    // new TDPrefKey( E, LONG, UI, "DISTOX_POINTING",        R.string.pref_pointing_title,       R.string.pref_pointing_message,       TDString.TWENTYFOUR )
   };
 
   /** lines settings
@@ -579,12 +583,13 @@ class TDPrefKey
    * @note 7 keys repeated
    */
   static TDPrefKey[] mLine = {
+    new TDPrefKey( N, BOOL, UI, "DISTOX_UNSCALED_LINES",  R.string.pref_unscaled_lines_title,  R.string.pref_unscaled_lines_summary, FALSE ),
     new TDPrefKey( N, FLT,  UI, "DISTOX_LINE_THICKNESS",  R.string.pref_line_thickness_title, R.string.pref_line_thickness_summary,  TDString.ONE ),
     new TDPrefKey( N,       DR, "DISTOX_LINE_STYLE",      R.string.pref_linestyle_title,      R.string.pref_linestyle_summary,       TDString.TWO, R.array.lineStyle, R.array.lineStyleValue ),
     new TDPrefKey( N, LONG, DR, "DISTOX_LINE_SEGMENT",    R.string.pref_segment_title,        R.string.pref_segment_message,         TDString.TEN ),
     new TDPrefKey( N, BOOL, DR, "DISTOX_LINE_CLOSE",      R.string.pref_line_close_title,     R.string.pref_line_close_summary,      TRUE ),
     new TDPrefKey( A, FLT,  DR, "DISTOX_ARROW_LENGTH",    R.string.pref_arrow_length_title,   R.string.pref_arrow_length_message,    "8"  ),
-    new TDPrefKey( A, BOOL, UI, "DISTOX_AUTO_SECTION_PT", R.string.pref_auto_section_pt_title,R.string.pref_auto_section_pt_summary, TRUE ),
+    // new TDPrefKey( A, BOOL, UI, "DISTOX_AUTO_SECTION_PT", R.string.pref_auto_section_pt_title,R.string.pref_auto_section_pt_summary, TRUE ),
     new TDPrefKey( N, BOOL, UI, "DISTOX_AREA_BORDER",     R.string.pref_area_border_title,    R.string.pref_area_border_summary,     TRUE ),
     new TDPrefKey( N, FLT,  DR, "DISTOX_LINE_UNITS",      R.string.pref_line_units_title,     R.string.pref_line_units_summary,      "1.4" ),
     new TDPrefKey( A, LONG, UI, "DISTOX_SLOPE_LSIDE",     R.string.pref_slope_lside_title,    R.string.pref_slope_lside_summary,     "20" )
@@ -603,7 +608,7 @@ class TDPrefKey
     new TDPrefKey( B, FLT,  DR, "DISTOX_DRAWING_UNIT",     R.string.pref_drawing_unit_title,     R.string.pref_drawing_unit_summary,   "1.2" ),
     new TDPrefKey( B, FLT,  UI, "DISTOX_LABEL_SIZE",       R.string.pref_label_size_title,       R.string.pref_label_size_summary,     TDString.TWENTYFOUR ),
     new TDPrefKey( N, BOOL, UI, "DISTOX_SCALABLE_LABEL",   R.string.pref_scalable_label_title,   R.string.pref_scalable_label_summary, FALSE ),
-    new TDPrefKey( N, LONG, DR, "DISTOX_XSECTION_OFFSET",  R.string.pref_xsection_offset_title,  R.string.pref_xsection_offset_summary,"20" )
+    new TDPrefKey( N, LONG, DR, "DISTOX_XSECTION_OFFSET",  R.string.pref_xsection_offset_title,  R.string.pref_xsection_offset_summary,"80" )
   };
   
   // static TDPrefKey() mWals = {
@@ -627,23 +632,23 @@ class TDPrefKey
     new TDPrefKey( B, FLT,  UI, "DISTOX_LABEL_SIZE",      R.string.pref_label_size_title,      R.string.pref_label_size_summary,      TDString.TWENTYFOUR ),
     new TDPrefKey( N, FLT,  UI, "DISTOX_LINE_THICKNESS",  R.string.pref_line_thickness_title,  R.string.pref_line_thickness_summary,  TDString.ONE ),
     new TDPrefKey( N,       DR, "DISTOX_LINE_STYLE",      R.string.pref_linestyle_title,       R.string.pref_linestyle_summary,       TDString.TWO, R.array.lineStyle, R.array.lineStyleValue ),
-    new TDPrefKey( N, LONG, DR, "DISTOX_LINE_CLOSE",      R.string.pref_line_close_title,      R.string.pref_line_close_summary,      TRUE ),
-    new TDPrefKey( N, BOOL, DR, "DISTOX_LINE_SEGMENT",    R.string.pref_segment_title,         R.string.pref_segment_message,         TDString.TEN ),
+    new TDPrefKey( N, LONG, DR, "DISTOX_LINE_SEGMENT",    R.string.pref_segment_title,         R.string.pref_segment_message,         TDString.TEN ),
+    new TDPrefKey( N, BOOL, DR, "DISTOX_LINE_CLOSE",      R.string.pref_line_close_title,      R.string.pref_line_close_summary,      TRUE ),
     new TDPrefKey( A, FLT,  UI, "DISTOX_ARROW_LENGTH",    R.string.pref_arrow_length_title,    R.string.pref_arrow_length_message,    "8" ),
-    new TDPrefKey( A, BOOL, DR, "DISTOX_AUTO_SECTION_PT", R.string.pref_auto_section_pt_title, R.string.pref_auto_section_pt_summary, FALSE ),
+    // new TDPrefKey( A, BOOL, DR, "DISTOX_AUTO_SECTION_PT", R.string.pref_auto_section_pt_title, R.string.pref_auto_section_pt_summary, FALSE ),
     new TDPrefKey( N, BOOL, UI, "DISTOX_AREA_BORDER",     R.string.pref_area_border_title,     R.string.pref_area_border_summary,     TRUE )
   };
 
-  /** eraser settings
+  /** eraser settings // EMPTY
    * "select" radius // "select" radius // "select" radius
    * "erase" radius // "erase" radius
    * "size" of a "point touch" (max distance between down and up)
    * @note all keys repeated
    */
   static TDPrefKey[] mErase = {
-    new TDPrefKey( B, LONG,  UI, "DISTOX_CLOSENESS",  R.string.pref_closeness_title, R.string.pref_closeness_message,TDString.TWENTYFOUR ),
-    new TDPrefKey( B, LONG,  UI, "DISTOX_ERASENESS",  R.string.pref_eraseness_title, R.string.pref_eraseness_message,"36" ),
-    new TDPrefKey( E, LONG,  UI, "DISTOX_POINTING",   R.string.pref_pointing_title,  R.string.pref_pointing_message, TDString.TWENTYFOUR )
+  //   new TDPrefKey( B, LONG,  UI, "DISTOX_CLOSENESS",  R.string.pref_closeness_title, R.string.pref_closeness_message,TDString.TWENTYFOUR ),
+  //   new TDPrefKey( B, LONG,  UI, "DISTOX_ERASENESS",  R.string.pref_eraseness_title, R.string.pref_eraseness_message,"36" ),
+  //   new TDPrefKey( E, LONG,  UI, "DISTOX_POINTING",   R.string.pref_pointing_title,  R.string.pref_pointing_message, TDString.TWENTYFOUR )
   };
 
   /** edit settings
@@ -655,9 +660,9 @@ class TDPrefKey
    */ 
   static TDPrefKey[] mEdit = {
     new TDPrefKey( N, FLT,  UI, "DISTOX_DOT_RADIUS",  R.string.pref_dot_radius_title, R.string.pref_dot_radius_message, TDString.FIVE ),
-    new TDPrefKey( B, LONG, UI, "DISTOX_CLOSENESS",   R.string.pref_closeness_title,  R.string.pref_closeness_message,  TDString.TWENTYFOUR ),
-    new TDPrefKey( E, LONG, UI, "DISTOX_MIN_SHIFT",   R.string.pref_min_shift_title,  R.string.pref_min_shift_message,  TDString.SIXTY ),
-    new TDPrefKey( E, LONG, UI, "DISTOX_POINTING",    R.string.pref_pointing_title,   R.string.pref_pointing_message,   TDString.TWENTYFOUR )
+    // new TDPrefKey( B, LONG, UI, "DISTOX_CLOSENESS",   R.string.pref_closeness_title,  R.string.pref_closeness_message,  TDString.TWENTYFOUR ),
+    // new TDPrefKey( E, LONG, UI, "DISTOX_MIN_SHIFT",   R.string.pref_min_shift_title,  R.string.pref_min_shift_message,  TDString.SIXTY ),
+    // new TDPrefKey( E, LONG, UI, "DISTOX_POINTING",    R.string.pref_pointing_title,   R.string.pref_pointing_message,   TDString.TWENTYFOUR )
   };
 
   /** additional line settings
@@ -681,6 +686,7 @@ class TDPrefKey
     new TDPrefKey( A, BOOL, UI, "DISTOX_LINE_SNAP",        R.string.pref_linesnap_title,        R.string.pref_linesnap_summary,         FALSE ),
     new TDPrefKey( A, BOOL, UI, "DISTOX_LINE_CURVE",       R.string.pref_linecurve_title,       R.string.pref_linecurve_summary,        FALSE ),
     new TDPrefKey( A, BOOL, UI, "DISTOX_LINE_STRAIGHT",    R.string.pref_linestraight_title,    R.string.pref_linestraight_summary,     FALSE ),
+    new TDPrefKey( T, BOOL, UI, "DISTOX_LINE_CLIP",        R.string.pref_lineclip_title,        R.string.pref_lineclip_summary,         FALSE ),
     new TDPrefKey( T, BOOL, UI, "DISTOX_PATH_MULTISELECT", R.string.pref_path_multiselect_title,R.string.pref_path_multiselect_summary, FALSE ),
     new TDPrefKey( T, LONG, DR, "DISTOX_LINE_ENDS",        R.string.pref_line_ends_title,       R.string.pref_line_ends_summary,        TDString.ZERO )
   };
@@ -722,7 +728,8 @@ class TDPrefKey
     new TDPrefKey( E, LONG, XT, "DISTOX_BEEP_LENGTH",        R.string.pref_beep_length_title,         R.string.pref_beep_length_summary,         "100" ),
     new TDPrefKey( T, BOOL, DT, "DISTOX_BLUNDER_SHOT",       R.string.pref_blunder_shot_title,        R.string.pref_blunder_shot_summary,        FALSE ),
     new TDPrefKey( T, BOOL, DT, "DISTOX_SPLAY_STATION",      R.string.pref_splay_station_title,       R.string.pref_splay_station_summary,       TRUE  ),
-    new TDPrefKey( T, BOOL, DT, "DISTOX_SPLAY_GROUP",        R.string.pref_splay_group_title,         R.string.pref_splay_group_summary,         FALSE )
+    new TDPrefKey( T, BOOL, DT, "DISTOX_SPLAY_GROUP",        R.string.pref_splay_group_title,         R.string.pref_splay_group_summary,         FALSE ),
+    new TDPrefKey( T, BOOL, DT, "DISTOX_RESET_IDS",          R.string.pref_reset_ids_title,           R.string.pref_reset_ids_summary,           FALSE )
   };
 
   /** additional plot settings
@@ -790,7 +797,7 @@ class TDPrefKey
     new TDPrefKey( A, LONG, D3, "CAVE3D_STATION_TEXT_SIZE",  R.string.cpref_station_text_size_title, R.string.cpref_station_text_size_summary, "20" ),
     new TDPrefKey( A, FLT,  D3, "CAVE3D_SELECTION_RADIUS",   R.string.cpref_selection_radius_title,  R.string.cpref_selection_radius_summary,  "50" ),
     new TDPrefKey( N, BOOL, D3, "CAVE3D_MEASURE_DIALOG",     R.string.cpref_measure_dialog_title,    R.string.cpref_measure_dialog_summary,    FALSE ),
-    new TDPrefKey( N, BOOL, D3, "CAVE3D_STATION_TOAST",      R.string.cpref_station_toast_title,     R.string.cpref_station_toast_summary,     FALSE ),
+    // new TDPrefKey( N, BOOL, D3, "CAVE3D_STATION_TOAST",      R.string.cpref_station_toast_title,     R.string.cpref_station_toast_summary,     FALSE ),
     new TDPrefKey( N, BOOL, D3, "CAVE3D_GRID_ABOVE",         R.string.cpref_grid_above_title,        R.string.cpref_grid_above_summary,        FALSE ),
     new TDPrefKey( A, LONG, D3, "CAVE3D_GRID_EXTENT",        R.string.cpref_grid_extent_title,       R.string.cpref_grid_extent_summary,       "10"  ),
     new TDPrefKey( N, BOOL, D3, "DISTOX_NAMES_VISIBILITY",   R.string.cpref_names_visibility_title,  R.string.cpref_names_visibility_summary,  FALSE ),
@@ -805,8 +812,8 @@ class TDPrefKey
     new TDPrefKey( N, FLT,  D3, "CAVE3D_DEM_BUFFER",   R.string.cpref_dem_buffer_title,  R.string.cpref_dem_buffer_summary,  "200" ),
     new TDPrefKey( N, LONG, D3, "CAVE3D_DEM_MAXSIZE",  R.string.cpref_dem_maxsize_title, R.string.cpref_dem_maxsize_summary, "400" ),
     new TDPrefKey( N,       D3, "CAVE3D_DEM_REDUCE",   R.string.cpref_dem_reduce_title,  R.string.cpref_dem_reduce_summary,  "1", R.array.demReduce, R.array.demReduceValue ),
-    new TDPrefKey( N, STR,  D3, "CAVE3D_TEXTURE_ROOT", R.string.cpref_texture_root_title,R.string.cpref_texture_root_summary,"/sdcard/" )
-    // new TDPrefKey( N, STR,  D3, "CAVE3D_TEXTURE_ROOT", R.string.cpref_texture_root_title,R.string.cpref_texture_root_summary, Environment.getExternalStorageDirectory.getPath() );
+    // new TDPrefKey( N, STR,  D3, "CAVE3D_TEXTURE_ROOT", R.string.cpref_texture_root_title,R.string.cpref_texture_root_summary, "/sdcard/" )
+    new TDPrefKey( N, STR,  D3, "CAVE3D_TEXTURE_ROOT", R.string.cpref_texture_root_title,R.string.cpref_texture_root_summary, Environment.getExternalStorageDirectory().getPath() + "/" )
   };
 
   /** 3D walls settings
@@ -840,7 +847,7 @@ class TDPrefKey
     new TDPrefKey( T, BOOL, GEN, "DISTOX_BULK_EXPORT",   R.string.pref_bulk_export_title,   R.string.pref_bulk_export_summary,   FALSE ),
     new TDPrefKey( T, BOOL, BT,  "DISTOX_PACKET_LOGGER", R.string.pref_packet_logger_title, R.string.pref_packet_logger_summary, FALSE ),
     new TDPrefKey( T, BOOL, XT,  "DISTOX_TH2_EDIT",      R.string.pref_th2_edit_title,      R.string.pref_th2_edit_summary,      FALSE ),
-    new TDPrefKey( E, BTN,  GEN, "DISTOX_GEMINI",        R.string.pref_gemini_title,        R.string.pref_gemini_summary,        TDString.EMPTY ),
+    // new TDPrefKey( E, BTN,  GEN, "DISTOX_GEMINI",        R.string.pref_gemini_title,        R.string.pref_gemini_summary,        TDString.EMPTY ),
     new TDPrefKey( A,       NON, "DISTOX_GEEK_SHOT",     R.string.pref_cat_survey        ),
     new TDPrefKey( T,       NON, "DISTOX_GEEK_SPLAY",    R.string.pref_cat_splay         ),           
     new TDPrefKey( A,       NON, "DISTOX_GEEK_PLOT",     R.string.pref_cat_drawing       ),
@@ -892,6 +899,9 @@ class TDPrefKey
     new TDPrefKey( A, LONG, BT,  "DISTOX_WAIT_LASER",       R.string.pref_wait_laser_title,       R.string.pref_wait_laser_summary,       "2000" ),
     new TDPrefKey( A, LONG, BT,  "DISTOX_WAIT_SHOT",        R.string.pref_wait_shot_title,        R.string.pref_wait_shot_summary,        "2000" ),
     new TDPrefKey( T, BOOL, GEN, "DISTOX_FIRMWARE_SANITY",  R.string.pref_firmware_sanity_title,  R.string.pref_firmware_sanity_summary,  TRUE ),
+    new TDPrefKey( A, FLT,  BT,  "DISTOX_CVWY_ABS",         R.string.pref_cvwy_abs_title,         R.string.pref_cvwy_abs_summary,         "1" ),
+    new TDPrefKey( A, FLT,  BT,  "DISTOX_CVWY_DIP",         R.string.pref_cvwy_dip_title,         R.string.pref_cvwy_dip_summary,         "1" ),
+    new TDPrefKey( A, FLT,  BT,  "DISTOX_CVWY_ANGLE",       R.string.pref_cvwy_angle_title,       R.string.pref_cvwy_angle_summary,       "0.3" ),
     new TDPrefKey( T,       BT,  "DISTOX_BRIC_MODE",        R.string.pref_bric_mode_title,        R.string.pref_bric_mode_summary,        TDString.THREE, R.array.bricMode, R.array.bricModeValue ),
     new TDPrefKey( N, BOOL, BT,  "DISTOX_BRIC_ZERO_LENGTH", R.string.pref_bric_zero_length_title, R.string.pref_bric_zero_length_summary, FALSE ),
     new TDPrefKey( T, BOOL, BT,  "DISTOX_BRIC_INDEX_IS_ID", R.string.pref_bric_index_is_id_title, R.string.pref_bric_index_is_id_summary, FALSE ),
@@ -926,7 +936,7 @@ class TDPrefKey
     mLine,
     mPoint,   // 12
     mDraw,
-    mErase,
+    mErase,    // EMPTY
     mEdit,     // 15
     mCave3D,
     mDem3D,
@@ -961,15 +971,26 @@ class TDPrefKey
   static {
     int cat = 0;
     for ( TDPrefKey[] keyset : mKeySet ) {
-      if ( keyset == null ) break;
-      for ( TDPrefKey k : keyset ) {
-        k.cat = cat;
+      if ( keyset != null ) {
+        for ( TDPrefKey k : keyset ) {
+          k.cat = cat;
+        }
       }
       ++ cat;
     }
+    // if ( ! AIhelper.HAS_AI ) { // GEMINI
+    //   int len = mGeek.length; 
+    //   for ( int i = 0; i < len; ++i ) {
+    //     TDPrefKey k = mGeek[ i ];
+    //     if ( k != null && k.key.equals( "DISTOX_GEMINI" ) ) {
+    //       for ( ; i+1 < len; ++i ) mGeek[ i ] = mGeek[ i+1 ];
+    //       mGeek = Arrays.copyOf( mGeek, len-1 );
+    //     }
+    //   }
+    // }
     if ( TDLevel.isDebugBuild() ) {
       for ( TDPrefKey k : mGeek ) {
-        if ( k.key.equals( "DISTOX_WITH_DEBUG" ) ) k.level = T;
+        if ( k != null && k.key.equals( "DISTOX_WITH_DEBUG" ) ) k.level = T;
       }
     }
   }
@@ -1014,7 +1035,7 @@ class TDPrefKey
     for ( TDPrefKey[] keyset : mKeySet ) {
       if ( keyset == null ) continue;
       for ( TDPrefKey k : keyset ) {
-        if ( k.key.equals( kay ) ) return k;
+        if ( k != null && k.key.equals( kay ) ) return k;
       }
     }
     return null;
@@ -1028,7 +1049,7 @@ class TDPrefKey
   //   for ( TDPrefKey[] keyset : mKeySet ) {
   //     if ( keyset == null ) continue;
   //     for ( TDPrefKey k : keyset ) {
-  //       if ( k.key.equals( kay ) ) return keyset;
+  //       if ( k != null && k.key.equals( kay ) ) return keyset;
   //     }
   //   }
   //   return null;
@@ -1042,7 +1063,7 @@ class TDPrefKey
   //   for ( TDPrefKey[] keyset : mKeySet ) {
   //     if ( keyset == null ) continue;
   //     for ( TDPrefKey k : keyset ) {
-  //       if ( k.key.equals( kay ) ) return k.group;
+  //       if ( k != null && k.key.equals( kay ) ) return k.group;
   //     }
   //   }
   //   return -1;
@@ -1058,7 +1079,7 @@ class TDPrefKey
     for ( TDPrefKey[] keyset : mKeySet ) {
       if ( keyset == null ) continue;
       for ( TDPrefKey k : keyset ) {
-        if ( k.key.equals( kay ) ) {
+        if ( k != null && k.key.equals( kay ) ) {
           return ( flag & (1<<k.group) ) != 0;
         }
       }
@@ -1088,7 +1109,8 @@ class TDPrefKey
    */
   static boolean repeatedKey( int j, int k ) 
   {
-    return ( j ==  0 && k == 7 ) // DISTOX_GEMINI is not exported
+    return false
+        // || ( j == 19 && k == 7 ) // DISTOX_GEMINI is not exported
         || ( j ==  3 && k > 5 )  // mCalib : not repeated but not to export
         || ( j == 11 && k < 7 )  // mLine
         || ( j == 12 && k < 3 )  // mPoint

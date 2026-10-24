@@ -18,6 +18,7 @@ package com.topodroid.TDX;
 import com.topodroid.util.TDLog;
 import com.topodroid.util.TDString;
 import com.topodroid.util.TDUtil;
+import com.topodroid.util.TDAnalytics;
 import com.topodroid.ui.MyKeyboard;
 import com.topodroid.ui.MyDialog;
 import com.topodroid.prefs.TDSetting;
@@ -36,7 +37,6 @@ import android.content.res.Configuration;
 
 import android.view.View;
 // import android.view.View.OnClickListener;
-// import android.inputmethodservice.KeyboardView;
 
 // import android.widget.ArrayAdapter;
 import android.widget.ListView;
@@ -90,6 +90,7 @@ class CurrentStationDialog extends MyDialog
   CurrentStationDialog( Context context, ShotWindow parent, TopoDroidApp app, String station, int pos )
   {
     super( context, app, R.string.CurrentStationDialog );
+    TopoDroidApp.updateAnalytic( TDAnalytics.STATION );
     mParent  = parent;
     mStationName = ( station == null )? mApp.getCurrentOrLastStation() : station ;
     mPos = pos;
@@ -170,7 +171,6 @@ class CurrentStationDialog extends MyDialog
     // mBtnCancel.setOnClickListener( this );
     ( (Button) findViewById(R.id.button_cancel) ).setOnClickListener( this );
 
-    // mKeyboard = new MyKeyboard( mContext, (KeyboardView)findViewById( R.id.keyboardview ), R.xml.my_keyboard_base_sign, R.xml.my_keyboard_qwerty );
     mKeyboard = MyKeyboard.getMyKeyboard( mContext, findViewById( R.id.keyboardview ), R.xml.my_keyboard_base_sign, R.xml.my_keyboard_qwerty );
 
     if ( TDSetting.mKeyboard ) {
@@ -441,6 +441,7 @@ class CurrentStationDialog extends MyDialog
   }
     
 
+  @SuppressWarnings("deprecated") // from API-33 use android.window.OnBackInvokedDispatcher to register android.window.OnBackInvokedCallback
   @Override
   public void onBackPressed()
   {

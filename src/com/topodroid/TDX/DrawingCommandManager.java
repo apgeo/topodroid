@@ -60,12 +60,13 @@ public class DrawingCommandManager
   static private volatile int mDisplayMode = DisplayMode.DISPLAY_PLOT; // this display mode is shared among command managers
   private RectF mBBox;
   boolean mIsExtended = false;
+  private Paint mTopSideDragPaint = BrushManager.sideDragPaint; // paint for the top side-drag corners
 
   private DrawingMeasureStartPath mFirstReference;
   private DrawingMeasureEndPath   mSecondReference;
 
-  private DrawingPath mNorthLine;
-  private DrawingScaleReference      mScaleRef; /*[AR] this is the instance of scale reference line*/
+  private DrawingPath mNorthLine;    // North arrow line
+  private DrawingScaleReference      mScaleRef; /* [AR] this is the instance of scale reference line */
   private List< DrawingPath >        mGridStack1;
   private List< DrawingPath >        mGridStack10;
   private List< DrawingPath >        mGridStack100;
@@ -76,7 +77,6 @@ public class DrawingCommandManager
   // private List< DrawingFixedName >   mFixeds;      // survey stations
 
   private List< DrawingLinePath >    mPlotOutline; // scrap outline
-  private List< DrawingOutlinePath > mXSectionOutlines;  // xsections outlines
 
   // buffer references
   private List< DrawingPath >        mTmpGridStack1   = null;
@@ -86,7 +86,6 @@ public class DrawingCommandManager
   private List< DrawingSplayPath >   mTmpSplaysStack  = null;
   private List< DrawingStationName > mTmpStations     = null;    // survey stations
   // private List< DrawingLinePath >    mTmpPlotOutline; // scrap outline
-  // private List< DrawingOutlinePath > mTmpXSectionOutlines;  // xsections outlines
 
   float mOffx = 0;
   float mOffy = 0;
@@ -105,7 +104,7 @@ public class DrawingCommandManager
   private boolean mDisplayPoints;
 
   private Matrix  mMatrix;
-  private float   mScale; // current zoom: value of 1 pl in scene space
+  private float   mScale; // current zoom: value of 1 pxl in scene space
   private boolean mLandscape = false;
   private String  mPlotName;
 
@@ -133,7 +132,6 @@ public class DrawingCommandManager
     mSplaysStack  = Collections.synchronizedList(new ArrayList< DrawingSplayPath >());
     mStations     = Collections.synchronizedList(new ArrayList< DrawingStationName >());
     mPlotOutline  = Collections.synchronizedList(new ArrayList< DrawingLinePath >());
-    mXSectionOutlines = Collections.synchronizedList(new ArrayList< DrawingOutlinePath >());
 
     mPlotName     = plot_name;
     mScraps       = Collections.synchronizedList(new ArrayList< Scrap >());
@@ -158,11 +156,31 @@ public class DrawingCommandManager
   /** set the mode of display
    * @param mode  ...
    */
-  static void setDisplayMode( int mode ) { mDisplayMode = mode; }
+  static void setDisplayMode( int mode )
+  {
+    mDisplayMode = mode;
+    // TDLog.v("Display Mode set " + String.format( "%x", mDisplayMode ) );
+  }
 
   /** @return the mode of display
    */
-  static int getDisplayMode( ) { return mDisplayMode; }
+  static int getDisplayMode( ) 
+  { 
+    // TDLog.v("Display Mode get " + String.format( "%x", mDisplayMode ) );
+    return mDisplayMode;
+  }
+
+  /** for stations display toggle between names and elevations
+   */
+  static void toggleStationsRefs() 
+  { 
+    if ( ( mDisplayMode & DisplayMode.DISPLAY_ELEVATION ) == 0 ) {
+      mDisplayMode |= DisplayMode.DISPLAY_ELEVATION;
+    } else {
+      mDisplayMode &= ~DisplayMode.DISPLAY_ELEVATION;
+    }
+  }
+
 
   // FIXED_ZOOM
   /** set whether the zoom is fixed
@@ -227,9 +245,10 @@ public class DrawingCommandManager
   /** set the current scrap
    * @param nr   order-number of the scrap in the list (neg: first, more than size: last)
    */
-  private void setCurrentScrapByNr( int nr )
+  private void setCurrentScrapByNr( boolean th2_edit, int nr )
   {
-    if ( mMode >= 3 ) return;
+    // TDLog.v("set current scrap: " + nr + " mode " + mMode + " size " + mScraps.size() );
+    if ( mMode >= 3 && ! th2_edit ) return;
     int size = mScraps.size();
     if ( size == 0 ) return;
     if ( nr >= size ) { nr = 0; } 
@@ -266,37 +285,39 @@ public class DrawingCommandManager
   }
 
   /** change current scrap
-   * @param force  ...
-   * @param k   advance step (in the list)
+   * @param th2_edit whether is th2 edit
+   * @param k   advance step (in the list) - 0: no change
    * @return the cuurent scrap index
    */
-  int toggleScrapIndex( boolean force, int k ) // TH2EDIT no force
+  int toggleScrapIndex( boolean th2_edit, int k ) // TH2EDIT no force
   { 
-    if ( force || mMode < 3 ) { // TH2EDIT no force
-      if ( isMultiselection() ) { // implicit multiselection store
-        mSavedScrap = mCurrentScrap;
-        // TDLog.v("set saved scrap " + mSavedScrap.mScrapIdx );
+    if ( k != 0 ) {
+      if ( th2_edit || mMode < 3 ) { // TH2EDIT no force
+        if ( isMultiselection() ) { // implicit multiselection store
+          mSavedScrap = mCurrentScrap;
+          // TDLog.v("set saved scrap " + mSavedScrap.mScrapIdx );
+        }
+        int nr = getScrapNr( mCurrentScrap.mScrapIdx ) + k;
+        // TDLog.v("toggle scrap (" + k + ") to nr " + nr + " (current index " + mCurrentScrap.mScrapIdx + ")" );
+        setCurrentScrapByNr( th2_edit, nr );
       }
-      int nr = getScrapNr( mCurrentScrap.mScrapIdx ) + k;
-      // TDLog.v("toggle scrap nr " + nr + " (current index " + mCurrentScrap.mScrapIdx + ")" );
-      setCurrentScrapByNr( nr );
     }
     return mCurrentScrap.mScrapIdx;
   }
 
   /** delete the current scrap
-   * @param force  ...
+   * @param th2_edit  ...
    * @return true if the scrap has been deleted
    */
-  boolean deleteCurrentScrap( boolean force ) // TH2EDIT no force
+  boolean deleteCurrentScrap( boolean th2_edit ) // TH2EDIT no force
   { 
-    if ( ( ! force ) && mMode >= 3 ) return false; // TH2EDIT no force
+    if ( ( ! th2_edit ) && mMode >= 3 ) return false; // TH2EDIT no force
     if ( mScraps.size() <= 1 ) return false;
     int idx = mCurrentScrap.mScrapIdx;
     for ( Scrap s : mScraps ) {
       if ( s.mScrapIdx == idx ) {
         mScraps.remove( s );
-        setCurrentScrapByNr( 0 );
+        setCurrentScrapByNr( th2_edit, 0 );
         return true;
       }    
     }
@@ -304,12 +325,12 @@ public class DrawingCommandManager
   }
   
   /** get a new scrap index
-   * @param force  ...
+   * @param th2_edit  ...
    * @return the new scrap index
    */
-  int newScrapIndex( boolean force )  // TH2EDIT no force
+  int newScrapIndex( boolean th2_edit )  // TH2EDIT no force
   { 
-    if ( force || mMode < 3 ) { // TH2EDIT no force
+    if ( th2_edit || mMode < 3 ) { // TH2EDIT no force
       if ( isMultiselection() ) { // implicit multiselection store
         mSavedScrap = mCurrentScrap;
         // TDLog.v("set saved scrap " + mSavedScrap.mScrapIdx );
@@ -582,34 +603,36 @@ public class DrawingCommandManager
    */ 
   private void drawSideDrag( Canvas canvas )
   {
-    Path path = new Path();
     float xl = TopoDroidApp.mBorderLeft;
     float xr = TopoDroidApp.mBorderRight;
     float ww = TopoDroidApp.mDisplayWidth;
     float hh = TopoDroidApp.mDisplayHeight;
     float h8 = TopoDroidApp.mBorderTop;    // hh / 8;
     float h7 = TopoDroidApp.mBorderBottom; // hh - h8;
-    path.moveTo(  0,  0);
-    path.lineTo( xl,  0);
-    path.lineTo( xl, h8);
-    path.lineTo(  0, h8);
-    path.lineTo(  0,  0);
-    path.moveTo(  0, h7);
-    path.lineTo( xl, h7);
-    path.lineTo( xl, hh);
-    path.lineTo(  0, hh);
-    path.lineTo(  0, h7);
-    path.moveTo( xr,  0);
-    path.lineTo( ww,  0);
-    path.lineTo( ww, h8);
-    path.lineTo( xr, h8);
-    path.lineTo( xr,  0);
-    path.moveTo( xr, h7);
-    path.lineTo( ww, h7);
-    path.lineTo( ww, hh);
-    path.lineTo( xr, hh);
-    path.lineTo( xr, h7);
-    canvas.drawPath( path, BrushManager.sideDragPaint );
+    Path pathT = new Path();
+    pathT.moveTo(  0,  0); // top-left
+    pathT.lineTo( xl,  0);
+    pathT.lineTo( xl, h8);
+    pathT.lineTo(  0, h8);
+    pathT.lineTo(  0,  0);
+    pathT.moveTo( xr,  0); // top-right
+    pathT.lineTo( ww,  0);
+    pathT.lineTo( ww, h8);
+    pathT.lineTo( xr, h8);
+    pathT.lineTo( xr,  0);
+    canvas.drawPath( pathT, mTopSideDragPaint );
+    Path pathB = new Path();
+    pathB.moveTo(  0, h7); // bottom-left
+    pathB.lineTo( xl, h7);
+    pathB.lineTo( xl, hh);
+    pathB.lineTo(  0, hh);
+    pathB.lineTo(  0, h7);
+    pathB.moveTo( xr, h7); // bottom-right
+    pathB.lineTo( ww, h7);
+    pathB.lineTo( ww, hh);
+    pathB.lineTo( xr, hh);
+    pathB.lineTo( xr, h7);
+    canvas.drawPath( pathB, BrushManager.sideDragPaint );
   }
 
   // ------------------------------------------------------------
@@ -665,9 +688,9 @@ public class DrawingCommandManager
    */
   private void flipXAxes( List< DrawingPath > paths )
   {
-    final float z = 1/mScale;
+    // final float z = 1/mScale;
     for ( DrawingPath path : paths ) {
-      path.flipXAxis( z );
+      path.flipXAxis( );
     }
   }
 
@@ -676,9 +699,9 @@ public class DrawingCommandManager
    */
   private void flipSplayXAxes( List< DrawingSplayPath > paths )
   {
-    final float z = 1/mScale;
+    // final float z = 1/mScale;
     for ( DrawingSplayPath path : paths ) {
-      ((DrawingPath)path).flipXAxis( z ); // IS THIS OK ???
+      ((DrawingPath)path).flipXAxis( ); // IS THIS OK ???
     }
   }
 
@@ -687,11 +710,11 @@ public class DrawingCommandManager
    * @param flip_scrap  whether to flip only current scrap
    * @note from ICanvasCommand
    */
-  public void flipXAxis( float z, boolean flip_scrap )
+  public void flipXAxis( /* float z, */ boolean flip_scrap )
   {
     synchronized( TDPath.mGridsLock ) {
       flipXAxes( mGridStack1 );
-      if ( mNorthLine != null ) mNorthLine.flipXAxis(z);
+      if ( mNorthLine != null ) mNorthLine.flipXAxis( );
       flipXAxes( mGridStack10 );
       flipXAxes( mGridStack100 );
     }
@@ -701,17 +724,16 @@ public class DrawingCommandManager
     }
     // FIXME 
     synchronized( mSyncOutline ) { mPlotOutline.clear(); }
-    synchronized( TDPath.mXSectionsLock ) { mXSectionOutlines.clear(); }
  
     synchronized( TDPath.mStationsLock ) {
-      for ( DrawingStationName st : mStations ) st.flipXAxis(z);
-      // for ( DrawingFixedName   fx : mFixeds )   fx.flipXAxis(z);
+      for ( DrawingStationName st : mStations ) st.flipXAxis( );
+      // for ( DrawingFixedName   fx : mFixeds )   fx.flipXAxis( );
     }
     synchronized( mSyncScrap ) {
       if ( flip_scrap ) {
-        if ( mCurrentScrap != null ) mCurrentScrap.flipXAxis( z );
+        if ( mCurrentScrap != null ) mCurrentScrap.flipXAxis( );
       } else {
-        for ( Scrap scrap : mScraps ) scrap.flipXAxis( z );
+        for ( Scrap scrap : mScraps ) scrap.flipXAxis( );
       }
     }
   }
@@ -792,14 +814,15 @@ public class DrawingCommandManager
   }
 
 
-  /** add the scalebar
+  /** add the scalebar reference
    * @param decl   declination [degrees]
    * @note this is the only place DrawingScaleReference is instantiated
    */
   void addScaleRef( float decl ) // boolean with_azimuth
   {
     DrawingScaleReference scale_ref = new DrawingScaleReference( BrushManager.referencePaint, 
-      new Point(20,-(int)(20+40*Float.parseFloat( TDInstance.getResources().getString( R.string.dimmy ) ) )),
+      // new Point(20,-(int)(20+80*Float.parseFloat( TDInstance.getResources().getString( R.string.dimmy ) ) )),
+      new Point(20,(int)(20+80*Float.parseFloat( TDInstance.getResources().getString( R.string.dimmy ) ) )),
       0.33f,
       decl ); // with_azimuth
     synchronized ( TDPath.mGridsLock ) { mScaleRef = scale_ref; }
@@ -823,6 +846,7 @@ public class DrawingCommandManager
       synchronized( mSyncScrap ) {
         for ( Scrap scrap : mScraps ) scrap.clearSelected();
       }
+      sideDragHighlight( false );
    }
   }
 
@@ -857,7 +881,6 @@ public class DrawingCommandManager
       
     }
     synchronized( mSyncOutline )            { mPlotOutline.clear(); }
-    synchronized( TDPath.mXSectionsLock   ) { mXSectionOutlines.clear(); }
     synchronized( TDPath.mStationsLock )    { mStations.clear(); }
     // synchronized( TDPath.mFixedsLock   )    { mFixeds.clear(); }
     syncClearSelected();
@@ -884,11 +907,9 @@ public class DrawingCommandManager
     mTmpStations     = Collections.synchronizedList(new ArrayList< DrawingStationName >());
 
     // mTmpPlotOutline  = Collections.synchronizedList(new ArrayList< DrawingLinePath >());
-    // mTmpXSectionOutlines = Collections.synchronizedList(new ArrayList< DrawingOutlinePath >());
     // mFixeds       = Collections.synchronizedList(new ArrayList< DrawingFixedName >());
 
     synchronized( mSyncOutline )            { mPlotOutline.clear(); }
-    synchronized( TDPath.mXSectionsLock   ) { mXSectionOutlines.clear(); }
     // synchronized( TDPath.mFixedsLock   )    { mTmpFixeds.clear(); }
 
     syncClearSelected();
@@ -905,6 +926,7 @@ public class DrawingCommandManager
    */
   void commitReferences()
   {
+    // TDLog.v("commit refs: grids " + mTmpGridStack1.size() + " " + mTmpGridStack10.size() + " " + mTmpGridStack100.size() + " legs " + mTmpLegsStack.size() + " stations " + mTmpStations.size() );
     synchronized( TDPath.mGridsLock ) {
       mGridStack1   = mTmpGridStack1;
       mGridStack10  = mTmpGridStack10;
@@ -1259,6 +1281,11 @@ public class DrawingCommandManager
    */
   void closePointLine( DrawingPointLinePath line ) { mCurrentScrap.closePointLine( line ); }
 
+  /** make the line a segment
+   * @param line   line
+   */
+  void straightPointLine( DrawingPointLinePath line ) { mCurrentScrap.straightPointLine( line ); }
+
   // ----------------------------------------------------------
 
   // FIXME LEGS_SPLAYS
@@ -1396,7 +1423,7 @@ public class DrawingCommandManager
   //   }
   // }
  
-  /** set the north line
+  /** set the north arrow line
    * @param path  new north line 
    * @note used only by H-Sections
    */
@@ -1660,7 +1687,7 @@ public class DrawingCommandManager
    */
   boolean getLineToContinue( DrawingLinePath lp, LinePoint lp1, LinePoint lp2,  int type, float zoom, float size ) 
   {
-    return mCurrentScrap.getLineToContinue( lp, lp1, lp2, type, zoom, size );
+    return mCurrentScrap.tryToContinueLine( lp, lp1, lp2, type, zoom, size );
   }
 
   /** get the line to continue
@@ -1692,6 +1719,9 @@ public class DrawingCommandManager
    * @param zoom   used for scalebar and selection points (use negative zoom for pdf print)
    * @param station_splay ??? whether to draw splays as dots
    * @param inverted_colors   whether colors must be inverted
+   * 
+   * small zoom = small drawing on the screen = larger scale
+   * mScale is approximately the inverse of zoom 
    */
   void executeAll( Canvas canvas, float zoom, DrawingStationSplay station_splay, boolean inverted_colors )
   {
@@ -1710,9 +1740,12 @@ public class DrawingCommandManager
     boolean splays   = (mDisplayMode & DisplayMode.DISPLAY_SPLAY   ) != 0;
     boolean latest   = ( (mDisplayMode & DisplayMode.DISPLAY_LATEST  ) != 0 ) && TDSetting.mShotRecent;
     boolean stations = (mDisplayMode & DisplayMode.DISPLAY_STATION ) != 0;
+    boolean elevation = (mDisplayMode & DisplayMode.DISPLAY_ELEVATION ) != 0;
     boolean grids    = (mDisplayMode & DisplayMode.DISPLAY_GRID    ) != 0;
     boolean outline  = (mDisplayMode & DisplayMode.DISPLAY_OUTLINE ) != 0;
     boolean scaleRef = (mDisplayMode & DisplayMode.DISPLAY_SCALEBAR ) != 0;
+    boolean sections = (mDisplayMode & DisplayMode.DISPLAY_SECTIONS ) != 0;
+    DrawingPointPath.setDrawOutline( sections );
 
     boolean spoints   = false;
     boolean slines    = false;
@@ -1900,15 +1933,6 @@ public class DrawingCommandManager
           for (DrawingLinePath path : mPlotOutline ) path.draw( canvas, mm, null /* bbox */ );
         }
       }
-      if ( mXSectionOutlines != null && mXSectionOutlines.size() > 0 ) {
-        synchronized( TDPath.mXSectionsLock )  {
-          for ( DrawingOutlinePath path : mXSectionOutlines ) {
-            if ( path.isScrapId( mCurrentScrap.mScrapIdx ) ) {
-              path.mPath.draw( canvas, mm, null /* bbox */ );
-            }
-          }
-        }
-      }
     }
  
     if ( stations ) {
@@ -1917,7 +1941,7 @@ public class DrawingCommandManager
           if ( inverted_colors ) {
             for ( DrawingStationName st : mStations ) st.draw( canvas, mm, bbox, 1 );
           } else {
-            for ( DrawingStationName st : mStations ) st.draw( canvas, mm, bbox );
+            for ( DrawingStationName st : mStations ) st.draw( canvas, mm, bbox, elevation );
           }
         }
       }
@@ -1940,9 +1964,9 @@ public class DrawingCommandManager
       } else {
         synchronized( mSyncScrap ) {
           if ( inverted_colors ) {
-            for ( Scrap scrap : mScraps ) scrap.drawAll( canvas, mm, scale, bbox, 1 );
+            for ( Scrap scrap : mScraps ) scrap.drawAll( canvas, mm, scale, zoom/2, bbox, sections, 1 );
           } else {
-            for ( Scrap scrap : mScraps ) scrap.drawAll( canvas, mm, scale, bbox );
+            for ( Scrap scrap : mScraps ) scrap.drawAll( canvas, mm, scale, zoom/2, bbox, sections  );
           }
         }
       }
@@ -1954,9 +1978,9 @@ public class DrawingCommandManager
             scrap.drawGreyOutline( canvas, mm, bbox );
           }
           if ( inverted_colors ) {
-            mCurrentScrap.drawAll( canvas, mm, scale, bbox, 1 );
+            mCurrentScrap.drawAll( canvas, mm, scale, zoom/2, bbox, sections, 1 );
           } else { 
-            mCurrentScrap.drawAll( canvas, mm, scale, bbox );
+            mCurrentScrap.drawAll( canvas, mm, scale, zoom/2, bbox, sections );
           }
         }
         if ( sidebars && mDisplayPoints ) {
@@ -2093,6 +2117,7 @@ public class DrawingCommandManager
   SelectionSet getItemsAt( float x, float y, float zoom, int mode, float size, DrawingStationSplay station_splay )
   {
     float radius = TDSetting.mCloseCutoff + size/zoom; // TDSetting.mSelectness / zoom;
+
     boolean legs   = (mDisplayMode & DisplayMode.DISPLAY_LEG) != 0;
     boolean splays = (mDisplayMode & DisplayMode.DISPLAY_SPLAY ) != 0;
     // boolean latest = (mDisplayMode & DisplayMode.DISPLAY_LATEST ) != 0;
@@ -2101,7 +2126,8 @@ public class DrawingCommandManager
     return mCurrentScrap.getItemsAt( x, y, radius, mode, legs, splays, stations, station_splay, mSelectionFixed ); // FIXME-HIDE
   }
     
-  void addItemAt( float x, float y, float zoom, float size ) { 
+  void addItemAt( float x, float y, float zoom, float size )
+  { 
     float radius = TDSetting.mCloseCutoff + size/zoom; // TDSetting.mSelectness / zoom;
     mCurrentScrap.addItemAt( x, y, radius );
   }
@@ -2163,7 +2189,7 @@ public class DrawingCommandManager
   void rotateHotItem( float dy ) { mCurrentScrap.rotateHotItem( dy ); }
 
   // void shiftHotItem( float dx, float dy, float range ) 
-  void shiftHotItem( float dx, float dy ) { mCurrentScrap.shiftHotItem( dx, dy, mXSectionOutlines ); }
+  void shiftHotItem( float dx, float dy ) { mCurrentScrap.shiftHotItem( dx, dy ); }
 
   SelectionPoint nextHotItem() { return mCurrentScrap.nextHotItem(); }
   SelectionPoint prevHotItem() { return mCurrentScrap.prevHotItem(); }
@@ -2257,18 +2283,19 @@ public class DrawingCommandManager
   /** assign xsections to station names
    * @param xsections   set of xsections
    * @param type   type of the plot
-   * @note this is not efficient: the station names should be stored in a tree (key = name) for log-time search
+   * @note this is not efficient: the station names should be stored in a hashmap (key = name) for log-time search
    */
   void setStationXSections( List< PlotInfo > xsections, long type )
   {
-    for ( DrawingStationName st : mStations ) {
-      String name = st.getName();
-      // TDLog.v( "Station <" + name + ">" );
-      for ( PlotInfo plot : xsections ) {
-        if ( name.equals( plot.start ) ) {
-          st.setXSection( plot.azimuth, plot.clino, type );
-          break;
-        }
+    // TDLog.v("Drawing Cmd Manager: " + mPlotName + " type " + type + " set station xsections " + xsections.size() );
+    // for ( PlotInfo pi : xsections ) TDLog.v(" xsection " + pi.name + " start " + pi.start );
+    for ( PlotInfo plot : xsections ) {
+      DrawingStationName st = getStation( plot.start );
+      if ( st != null ) {
+        // TDLog.v("  set xsection " + plot.name + " at " + plot.start );
+        st.setXSection( plot.azimuth, plot.clino, type );
+      } else {
+        TDLog.e("station xsection " + plot.name + " at " + plot.start + " without station");
       }
     }
   }
@@ -2281,6 +2308,13 @@ public class DrawingCommandManager
     return mCurrentScrap.findSectionPoint( scrap_name );
   }
 
+  // not used
+  DrawingLinePath findSectionLine( String scrap_name )
+  {
+    return mCurrentScrap.findSectionLine( scrap_name );
+  }
+
+
   /** compute the area of the xsection
    * @return the computed area
    */
@@ -2292,6 +2326,7 @@ public class DrawingCommandManager
    */
   void linkSections( String name ) 
   { 
+    // TDLog.v("Drawing Cmd Manager: link sections " + name );
     // mCurrentScrap.linkSections( mStations, name );
     for ( Scrap scrap : mScraps ) {
       scrap.linkSections( mStations, name );
@@ -2321,52 +2356,21 @@ public class DrawingCommandManager
   //   }
   // }
 
-  /** clear te set of xsection outlines
+  /** @return the list of outlines shifted by (dx,dy)
+   * @param dx  X shift
+   * @param dy  Y shift
+   * @note used for XSection manager only
    */
-  void clearXSectionsOutline() { synchronized( TDPath.mXSectionsLock ) { mXSectionOutlines.clear(); } }
-
-  /** @return true if the specified scrap is contained in the xsection outlines
-   * @param name   scrap name
-   */
-  boolean hasXSectionOutline( String name ) 
-  { 
-    if ( TDUtil.isEmpty(mXSectionOutlines) ) return false;
-    synchronized( TDPath.mXSectionsLock )  {
-      for ( DrawingOutlinePath path : mXSectionOutlines ) {
-        if ( path.isScrapName( name ) ) return true;
-      }
-    }
-    return false;
-  }
-
-  /** add an outline path to the set of xsection outlines
-   * @param path    xsection outline path
-   */
-  void addXSectionOutlinePath( DrawingOutlinePath path )
+  List<DrawingLinePath> getSectionOutline( float dx, float dy )
   {
-    synchronized( TDPath.mXSectionsLock ) {
-      mXSectionOutlines.add( path );
+    ArrayList<DrawingLinePath> ret = new ArrayList<>();
+    // TDLog.v("get section outline - scraps " + mScraps.size() );
+    for ( Scrap scrap : mScraps ) {
+      scrap.addOutline( ret, dx, dy );
     }
-    // TDLog.v("sections outline " + mXSectionOutlines.size() );
+    return ret;
   }
-
-  /** remove a xsection outline from the set of xsection outlines
-   * @param name   name of the xsection outline to remove
-   */
-  void clearXSectionOutline( String name )
-  {
-    List< DrawingOutlinePath > xsection_outlines = Collections.synchronizedList(new ArrayList< DrawingOutlinePath >());
-    synchronized( TDPath.mXSectionsLock ) {
-      for ( DrawingOutlinePath path : mXSectionOutlines  ) {
-        if ( ! path.isScrapName( name ) ) {
-          TDLog.v("clear XSection outline: retain " + name );
-          xsection_outlines.add( path );
-        }
-      }
-      mXSectionOutlines.clear(); // not necessary
-    }
-    mXSectionOutlines = xsection_outlines;
-  }
+    
 
   // -----------------------------------------------------------------------
 
@@ -2527,5 +2531,29 @@ public class DrawingCommandManager
     return ret;
   }
 
+  /** recover the symbols types
+   */
+  void recoverSymbols() 
+  {
+    for ( Scrap scrap : mScraps ) scrap.recoverSymbols(); 
+  }
   
+  /** @return true if there is a sectioon-point at a given scrap name
+   * @param name   xsection scrap name
+   */
+  boolean hasSectionPointWithScrapName( String name ) { return (mCurrentScrap == null)? false : mCurrentScrap.hasSectionPointWithScrapName( name ); }
+
+  /** clip a line to the scrap outline
+   * @param line  line to clip
+   * @param clip_mode  clipping mode
+   */
+  void clipLine( DrawingLinePath line, int clip_mode ) { if ( mCurrentScrap != null ) mCurrentScrap.clipLine( line, clip_mode ); }
+
+  /** clip an area to the scrap outline
+   * @param area  area to clip
+   */
+  void clipArea( DrawingAreaPath area ) { if ( mCurrentScrap != null ) mCurrentScrap.clipArea( area ); }
+
+  void sideDragHighlight( boolean highlight ) { mTopSideDragPaint = highlight? BrushManager.sideDragPaintHighlight : BrushManager.sideDragPaint; }
+
 }

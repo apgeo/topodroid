@@ -17,10 +17,13 @@ import com.topodroid.util.TDLog;
 import com.topodroid.util.TDio;
 import com.topodroid.util.TDString;
 import com.topodroid.util.TDUtil;
+import com.topodroid.util.TDAnalytics;
 import com.topodroid.prefs.TDSetting;
-import com.topodroid.TDX.TDAzimuth;
 import com.topodroid.types.ExtendType;
 import com.topodroid.types.LegType;
+import com.topodroid.TDX.TDAzimuth;
+import com.topodroid.TDX.TopoDroidApp;
+import com.topodroid.TDX.SurveyInfo;
 
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -28,12 +31,13 @@ import java.io.BufferedReader;
 // import java.util.ArrayList;
 // import java.util.Stack;
 import java.util.Locale;
-// import java.util.regex.Pattern;
+import java.util.regex.Pattern;
 
 class ParserCompass extends ImportParser
 {
   private boolean mLrud;
   private boolean mLegFirst;
+  private static final Pattern mPatternSS = Pattern.compile( ".+ss\\d+$" );
 
   /** Compass parser
    * @param filename name of the file to parse
@@ -42,17 +46,22 @@ class ParserCompass extends ImportParser
   ParserCompass( InputStreamReader isr, String filename, boolean apply_declination, boolean lrud, boolean leg_first ) throws ParserException
   {
     super( apply_declination );
-    // TDLog.v( "Parser Compass <" + filename + ">" );
+    TopoDroidApp.updateAnalytic( TDAnalytics.IMPORT_DAT );
+    if ( mApplyDeclination ) mDeclination = 0.0f;
+    TDLog.v( "Parser Compass <" + filename + "> apply-declination " + apply_declination );
     // mName = survey name is read from the file
     mLrud     = lrud;
     mLegFirst = leg_first;
     readFile( isr, filename );
     checkValid();
+    if ( mApplyDeclination && mDeclination < SurveyInfo.DECLINATION_MAX ) {
+      mDeclination = 0.0f; // set declination to 0 because it has been already applied
+    }
   }
 
-  private boolean isDuplicate( String flag ) { return  ( flag != null && flag.indexOf('l') >= 0 ); }
+  private boolean isDuplicate( String flag ) { return  ( flag != null && flag.indexOf('L') >= 0 ); }
 
-  private boolean isSurface( String flag ) { return ( flag != null && flag.indexOf('x') >= 0 ); }
+  private boolean isSurface( String flag ) { return ( flag != null && flag.indexOf('X') >= 0 ); }
 
   // compass has no flag for backshot, therefore this is always false
   private boolean isBackshot( String flag ) { return false; }
@@ -60,6 +69,7 @@ class ParserCompass extends ImportParser
   /** read input file
    * @param isr input stream reader
    * @param filename input filename
+   * @note if the declination is set it is added to the azimuths
    */
   private void readFile( InputStreamReader isr, String filename ) throws ParserException
   {
@@ -104,6 +114,7 @@ class ParserCompass extends ImportParser
         } else if ( line.startsWith("DECLINATION") ) {
           String[] vals = splitLine(line); // line.split( "\\s+" );
           mDeclination = Float.parseFloat( vals[1] );
+          TDLog.v("Declination " + mDeclination );
         } else if ( line.length() > 8 ) {
           String[] vals = splitLine(line); // line.split( "\\s+" );
           int k = 0;
@@ -114,6 +125,7 @@ class ParserCompass extends ImportParser
 
             mFrom = vals[k]; ++k;
             mTo   = vals[k]; ++k;
+            if ( mTo.startsWith(")") || mTo.endsWith(")") || mPatternSS.matcher( mTo ).matches() ) mTo=TDString.EMPTY;
             try {
               mLength  = Float.parseFloat(vals[k]) * TDUtil.FT2M; ++k;
               mBearing = Float.parseFloat(vals[k]); ++k;
@@ -162,7 +174,7 @@ class ParserCompass extends ImportParser
                     }
                   }
                 }
-                mBearing = TDMath.in360( mBearing );
+                mBearing = checkApplyDeclination( mBearing, mDeclination );
 
                 // got shot+LRUD
                 int extend = 0;

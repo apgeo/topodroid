@@ -49,6 +49,7 @@ class ExportPlotToFile extends AsyncTask<Void,Void,Boolean>
   private final FixedInfo mFixedInfo;  // for c3d
   private final PlotInfo  mPlotInfo;
   private Uri mUri = null;
+  private boolean mShared = false;
 
   /** constructor
    * @param app     TopoDroid app
@@ -64,10 +65,11 @@ class ExportPlotToFile extends AsyncTask<Void,Void,Boolean>
    * @param ext     extension, used to decide how to export the plot data
    * @param toast   whether to toast
    * @param station georeference station
+   * @param shared  whether to share export
    */
   ExportPlotToFile( TopoDroidApp app, Context context, Uri uri, SurveyInfo info, PlotInfo plot, FixedInfo fixed,
                     TDNum num, DrawingCommandManager command,
-                    long type, String name, String ext, boolean toast, GeoReference station )
+                    long type, String name, String ext, boolean toast, GeoReference station, boolean shared )
   {
     // TDLog.v("EXPORT plot to file cstr. Type: " + type + " fullname: " + name + " ext: " + ext );
     // FIXME assert( ext != null );
@@ -84,6 +86,7 @@ class ExportPlotToFile extends AsyncTask<Void,Void,Boolean>
     mExt       = ext;
     mToast     = toast;
     mStation   = station;
+    mShared    = shared;
   }
 
   /** execute in background
@@ -160,6 +163,7 @@ class ExportPlotToFile extends AsyncTask<Void,Void,Boolean>
       }
       return ret;
     } catch (Exception e) {
+      TDLog.e("EXPORT plot to file failed: " + e);
       e.printStackTrace();
     } finally {
       if ( pfd != null ) {
@@ -184,7 +188,7 @@ class ExportPlotToFile extends AsyncTask<Void,Void,Boolean>
         TDToast.makeBad( R.string.saving_file_failed );
       }
     }
-    if ( bool && TDSetting.mExportPlotShare && mApp != null ) {
+    if ( bool && mShared /* TDSetting.mExportPlotShare */ && mApp != null ) {
       String filename = mFullName + "." + mExt;
       String mimetype = TDConst.getMimeFromExtension( mExt );
       // TDLog.v("sharing PLOT file " + filename + " mime " + mimetype );
@@ -192,6 +196,7 @@ class ExportPlotToFile extends AsyncTask<Void,Void,Boolean>
         mApp.shareFile( filename, mimetype, 2 ); // 2 DrawingActivity
       }
     }
+    // TDSetting.mExportPlotShare = false; // reset the share flag
   }
 }
 

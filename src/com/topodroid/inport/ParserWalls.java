@@ -17,7 +17,9 @@ import com.topodroid.util.TDLog;
 import com.topodroid.util.TDio;
 import com.topodroid.util.TDString;
 import com.topodroid.util.TDUtil;
+import com.topodroid.util.TDAnalytics;
 // import com.topodroid.prefs.TDSetting;
+import com.topodroid.TDX.TopoDroidApp;
 
 // import com.topodroid.TDX.FixedInfo;
 // import com.topodroid.TDX.CurrentStation;
@@ -74,9 +76,12 @@ class ParserWalls extends ImportParser
   ParserWalls( InputStreamReader isr, String name, boolean apply_declination ) throws ParserException
   {
     super( apply_declination );
+    TopoDroidApp.updateAnalytic( TDAnalytics.IMPORT_SRV );
+    if ( mApplyDeclination ) mDeclination = 0.0f;
     mFixes = new ArrayList< WallsFix >();
-    readFile( isr, name, "" );
+    mPartial = readFile( isr, name, "" );
     checkValid();
+    if ( mApplyDeclination ) mDeclination = 0.0f;
   }
 
   /** @return true if the given value represents a "non-exist" (starts with two '-')
@@ -97,8 +102,9 @@ class ParserWalls extends ImportParser
    *              FB FROM station bisector - replaced by F
    *              TB TO station bisector - replaced by T
    */
-  private void readFile( InputStreamReader isr, String filename, String basepath ) throws ParserException
+  private boolean readFile( InputStreamReader isr, String filename, String basepath ) throws ParserException
   {
+    boolean partial = false;
     // String path = basepath;   // survey pathname(s)
 
     // int jFrom    = 0; // index of FROM station
@@ -141,7 +147,7 @@ class ParserWalls extends ImportParser
       int j = mName.lastIndexOf(".");
       if ( j >= 0 ) mName = mName.substring( 0, j );
 
-      // System.out.println("readFile dir " + dirname + " filename " + filename );
+      // System.out.println("Read File dir " + dirname + " filename " + filename );
       // TDLog.Log( TDLog.LOG_IO, "import read Walls file <" + filename + ">" );
 
       BufferedReader br = TDio.getBufferedReader( isr, filename );
@@ -182,8 +188,9 @@ class ParserWalls extends ImportParser
                   }
                 } else if ( vals[k].toLowerCase( locale ).startsWith("decl=") ) {
                   mDeclination = Float.parseFloat( vals[k].substring(5) );
-                } 
-                // TODO continue
+                } else { // TODO continue
+                  partial = true;
+                }
               }
             } else if ( cmd.equals("#prefix") ) {
               if ( sz > 1 ) prefix = vals[1];
@@ -209,13 +216,17 @@ class ParserWalls extends ImportParser
               // "#note"
               // "#flag"
               // "#symbol"
+              TDLog.v("SVR ignored " + cmd );
+              partial = true;
             } else if ( sz >= 4 ) {
-              try {
-                from = prefix + vals[0];
-                to   = (vals[1].equals("-")) ? "" : prefix + vals[1];
-                len  = Float.parseFloat( vals[jLength] ) * ul;
-                ber  = Float.parseFloat( vals[jCompass] );
-                cln  = (sz == 4 )? 0 : Float.parseFloat( vals[jClino] );
+              from = prefix + vals[0];
+              to   = (vals[1].equals("-")) ? "" : prefix + vals[1];
+              len  = ParserUtil.parseFloat( vals[jLength], Float.NaN );
+              ber  = ParserUtil.parseFloat( vals[jCompass], Float.NaN );
+              cln  = (sz == 4 )? 0 : ParserUtil.parseFloat( vals[jClino], Float.NaN );
+              if ( ! ( Float.isNaN( len ) || Float.isNaN( ber ) || Float.isNaN( cln ) ) ) {
+                len *= ul;
+                ber = checkApplyDeclination( ber, mDeclination );
                 if ( sz > 5 ) {
                   // TDLog.v("LRUD str <" + vals[5] + ">" );
                   String[] lrud = vals[5].substring(1, vals[5].length()-1).split(",");
@@ -225,8 +236,9 @@ class ParserWalls extends ImportParser
                   }
                 }
                 shots.add( new ParserShot( from, to, len, ber, cln, 0.0f, extend, LegType.NORMAL ) );
-              } catch ( NumberFormatException e ) {
-                TDLog.e( "walls parser error: data " + line );
+              } else {
+                TDLog.e( "SRV data " + line );
+                partial = true;
               }
             } else if ( sz >= 2 ) { // station and LRUD 
               String[] lrud = vals[1].substring(1, vals[1].length()-1).split(",");
@@ -236,7 +248,13 @@ class ParserWalls extends ImportParser
                   handleLRUD( station, false, ber, lrud, jLeft, jRight, jUp, jDown, ul );
                 } else if ( to != null && to.equals(station) ) {
                   handleLRUD( station, true, ber, lrud, jLeft, jRight, jUp, jDown, ul );
+                } else {
+                  TDLog.v("SRV lrud error");
+                  partial = true;
                 }
+              } else {
+                TDLog.v("SRV lrud incomplete");
+                partial = true;
               }
             }
           }
@@ -252,6 +270,7 @@ class ParserWalls extends ImportParser
       mDate = TDUtil.currentDate();
     }
     // TDLog.v( "Parser Walls shots "+ shots.size() + " splays "+ splays.size() +" fixes "+  mFixes.size() );
+    return partial;
   }
 
   static final int extend_unset = 5;

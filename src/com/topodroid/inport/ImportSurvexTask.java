@@ -43,12 +43,13 @@ public class ImportSurvexTask extends ImportTask
   {
     long sid = 0;
     try {
-      ParserSurvex parser = new ParserSurvex( isr, str[0], false ); // apply_declination = false
+      ParserSurvex parser = new ParserSurvex( isr, str[0], true ); // apply_declination = true
       if ( ! parser.isValid() ) return -2L;
       if ( mApp.get() == null ) return -1L;
       if ( hasSurveyName( parser.mName ) ) {
         return -1L;
       }
+      mPartial = parser.isPartial();
 
       sid = mApp.get().setSurveyFromName( parser.mName, SurveyInfo.DATAMODE_NORMAL, false, true );
 

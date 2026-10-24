@@ -16,6 +16,7 @@ import com.topodroid.util.TDLog;
 import com.topodroid.util.TDColor;
 import com.topodroid.util.TDLocale;
 import com.topodroid.util.TDUtil;
+import com.topodroid.util.TDAnalytics;
 import com.topodroid.math.TDMatrix;
 import com.topodroid.math.TDVector;
 import com.topodroid.ui.MyButton;
@@ -59,12 +60,13 @@ import java.util.ArrayList;
 import android.app.Activity;
 import android.os.Bundle;
 
-// import android.content.Context;
+import android.content.Context;
 import android.content.Intent;
 import android.content.res.Resources;
 import android.content.res.Configuration;
 import android.content.DialogInterface;
 
+import android.widget.TextView;
 import android.widget.ArrayAdapter;
 // import android.widget.TextView;
 import android.widget.ListView;
@@ -79,7 +81,7 @@ import android.widget.AdapterView.OnItemClickListener;
 
 import android.graphics.drawable.BitmapDrawable;
 
-public class GMActivity extends Activity
+public class GMActivity extends MyActivity
                         implements ILister
                         , ICoeffDisplayer
                         , OnClickListener
@@ -273,7 +275,8 @@ public class GMActivity extends Activity
    * @return nr of iterations (neg. error)
    */
   private int doComputeCalib( List< CBlock > list )
-  {    
+  {
+    TopoDroidApp.updateAnalytic( TDAnalytics.CAL_COMP );
     long cid = TDInstance.cid;
     int algo = mTwoSensors ? CalibInfo.ALGO_LINEAR : mAlgo;
     switch ( algo ) {
@@ -375,7 +378,7 @@ public class GMActivity extends Activity
         }
         a1 /= nk;
         a2 = TDMath.sqrt(a2/nk - a1*a1);
-        TDLog.v("Delta orientation average " + a1 + " stddev " + a2 + " max " + am + " N " + nk );
+        // TDLog.v("Delta orientation average " + a1 + " stddev " + a2 + " max " + am + " N " + nk );
         mDeltaDirAve = a1;
         mDeltaDirStd = a2;
         mDeltaDirMax = am;
@@ -413,6 +416,7 @@ public class GMActivity extends Activity
    */
   public void validateCalibration( String name )
   {
+    TopoDroidApp.updateAnalytic( TDAnalytics.CAL_VAL );
     String address = TDInstance.deviceAddress();
     if ( address == null ) return;
     long cid = mApp_mDData.getCalibCID( name, address );
@@ -506,6 +510,7 @@ public class GMActivity extends Activity
     err1 *= TDMath.RAD2DEG;
     err2 *= TDMath.RAD2DEG;
     errmax *= TDMath.RAD2DEG;
+    TDLog.v("Validate errs " + err1 + " " + err2 + " max " + errmax );
     new CalibValidateResultDialog( this, errors0, errors1, errors,
                                    ave0, std0, ave1, std1, err1, err2, errmax, name, TDInstance.calib ).show();
   }
@@ -1212,6 +1217,7 @@ public class GMActivity extends Activity
         ListerHandler handler = new ListerHandler( this ); // FIXME_LISTER
         // new DataDownloadTask( mApp, handler, this, DataType.DATA_CALIB ).execute();
 
+        TDLog.v("GM window toggle downloading");
         boolean downloading = mApp.mDataDownloader.toggleDownloading();
         // TDLog.v("GM downloading " + downloading );
         // mApp.notifyListerStatus( handler, downloading ? ConnectionState.CONN_WAITING : ConnectionState.CONN_DISCONNECTED );
@@ -1363,14 +1369,16 @@ public class GMActivity extends Activity
     }
 
     if ( warning != null ) {
-      TopoDroidAlertDialog.makeAlert( this, getResources(), warning,
+      final Context context = this;
+      TopoDroidAlertDialog.makeAlert( context, getResources(), warning,
         new DialogInterface.OnClickListener() {
           @Override public void onClick( DialogInterface d, int btn ) {
-            mApp.uploadCalibCoeff( coeff, mode, b, cali_info );
+            mApp.uploadCalibCoeff( context, coeff, mode, b, cali_info );
           }
         } );
     } else {
-      mApp.uploadCalibCoeff( coeff, mode, b, cali_info );
+      mApp.uploadCalibCoeff( this, coeff, mode, b, cali_info );
+
     }
   }
 
@@ -1457,12 +1465,6 @@ public class GMActivity extends Activity
     // TDLog.v( "GM Activity stop");
   }
 
-  @Override
-  public synchronized void onDestroy() 
-  {
-    super.onDestroy();
-    // TDLog.v( "GM Activity destroy");
-  }
 
   // ------------------------------------------------------------------
 
@@ -1509,18 +1511,37 @@ public class GMActivity extends Activity
     updateDisplay( );
   }
 
+  @Override public void onBackPressed() { super.onBackPressed(); }
+
+  @Override protected void onDestroy()
+  {
+    // TDLog.v( "GM Activity destroy");
+    super.onDestroy();
+  }
+
+  /** handle BACK key up event // alternative-169
+   * @param code  key code
+   * @param ev    key event
+   */
+  @Override public boolean onKeyUp(  int code, KeyEvent event )
+  {
+    TDLog.v("GM Window key up: code " + code );
+    return backKeyUp( code, event );
+  }
+
   /** handle key DOWN event
    * @param code   key-event code
    * @param event  key event
    * @return true if event has been consumed
    */
-  @Override
-  public boolean onKeyDown( int code, KeyEvent event )
+  @Override public boolean onKeyDown( int code, KeyEvent event )
   {
     switch ( code ) {
-      case KeyEvent.KEYCODE_BACK: // HARDWARE BACK (4)
-        super.onBackPressed();
-        return true;
+      // case KeyEvent.KEYCODE_BACK: // HARDWARE BACK (4)
+      //   onBackPressed(); // FIXME issue 167
+      //   return true;
+      case KeyEvent.KEYCODE_BACK: // alternative-169
+        return backKeyDown( code, event );
       case KeyEvent.KEYCODE_MENU:   // HARDWARE MENU (82)
         UserManualActivity.showHelpPage( this, getResources().getString( HELP_PAGE ));
         return true;
@@ -1572,7 +1593,7 @@ public class GMActivity extends Activity
     closeMenu();
     int p = 0;
     if ( p++ == pos ) { // CLOSE
-      super.onBackPressed();
+      super.onBackPressed(); // FIXME issue 167
     } else if ( p++ == pos ) { // DISPLAY
       mBlkStatus = 1 - mBlkStatus;       // 0 --> 1;  1 --> 0
       setMenuAdapter( getResources() );
@@ -1621,4 +1642,18 @@ public class GMActivity extends Activity
   // {
   // }
 
+  // ----------------------------------------------------------------
+  // TITLE BAR
+
+  @Override
+  public void setTitle( CharSequence t )
+  {
+    ((TextView)findViewById( R.id.gm_title )).setText( t );
+  }
+
+  @Override
+  public void setTitleColor( int color )
+  {
+    ((TextView)findViewById( R.id.gm_title )).setTextColor( color );
+  }
 }

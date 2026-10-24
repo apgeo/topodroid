@@ -3,6 +3,7 @@ symbol line
 name arrow
 name-bg стрелка
 name-cn 箭头
+name-cs šipka
 name-de Pfeil
 name-es flecha
 name-fa پیکان
@@ -19,13 +20,13 @@ style straight x0
 color 0xcccccc 0xff
 width 1
 effect
-  moveTo 0 0
+  moveTo  0 0
   lineTo 15 0
   lineTo 15 7
   lineTo 20 0
   lineTo 20 -1
   lineTo 15 -8
   lineTo 15 -1
-  lineTo 0 -1
+  lineTo  0 -1
 endeffect
 endsymbol

@@ -24,9 +24,15 @@ public class TDVersion
 {
   public static int TARGET_SDK = 0;
 
+  public static final String APP_NAME = "TopoDroid";
+  public static final String APP_NAME_MANAGER = APP_NAME + "Manager";
+
   // symbol version of installed symbols is stored in the database
   // symbol version of the current  symbols is in the app
-  public static final String SYMBOL_VERSION = "44";
+  public static final String SYMBOL_VERSION = "49";
+
+  // version of TopoDroid where TDR format was changed last  
+  public static final int VERSION_TDR = 604098;
 
   // increase to install last version of DistoX2 firmware
   public static final String FIRMWARE_VERSION = "28";
@@ -38,6 +44,8 @@ public class TDVersion
 
   public static final int DEVICE_DATABASE_VERSION = 32; // FIXME ROLL_DIFFERENCE BT_ALIAS
   // public static final int DEVICE_DATABASE_VERSION_MIN = 21; // was 14
+
+  public static final int ANALYTIC_DATABASE_VERSION = 1;
 
   public static final int PACKET_DATABASE_VERSION = 1;
   public static final int PACKET_DATABASE_VERSION_MIN = 1; // was 14

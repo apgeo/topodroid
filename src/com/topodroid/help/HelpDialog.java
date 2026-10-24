@@ -13,7 +13,7 @@ package com.topodroid.help;
 
 import com.topodroid.util.TDLog;
 import com.topodroid.ui.MyDialog;
-import com.topodroid.prefs.GeminiDialog;
+// import com.topodroid.prefs.GeminiDialog; // GEMINI
 import com.topodroid.prefs.TDSetting;
 import com.topodroid.prefs.TDPref;
 import com.topodroid.TDX.TDandroid;
@@ -53,7 +53,7 @@ public class HelpDialog extends MyDialog
   private final String mPage;
 
   private Button mBtnManual;
-  private Button mBtnAI;
+  private Button mBtnAI = null;
 
   // TODO list of help entries
   /** cstr
@@ -90,13 +90,6 @@ public class HelpDialog extends MyDialog
     mBtnManual = (Button) findViewById( R.id.button_manual );
     mBtnManual.setOnClickListener( this );
     mBtnManual.setOnLongClickListener( this );
-    mBtnAI = (Button) findViewById( R.id.button_ai );
-    if ( TDandroid.isOnline( mContext ) ) {
-      TDLog.v("Help dialog: is online" );
-      mBtnAI.setOnClickListener( this );
-    } else {
-      mBtnAI.setBackgroundResource( R.drawable.iz_ai_no );
-    }
 
     mList = (ListView) findViewById(R.id.help_list);
     // mList.setOnItemClickListener( this );
@@ -136,16 +129,6 @@ public class HelpDialog extends MyDialog
     dismiss();
     if ( v.getId() == R.id.button_manual ) {
       showManPage( mPage );
-    } else if ( v.getId() == R.id.button_ai ) {
-      if ( TDandroid.isOnline( mContext ) ) {
-        if ( TDSetting.mGeminiApiKey != null && ! TDSetting.mGeminiApiKey.isEmpty() ) {
-          showAIdialog();
-        } else {
-          (new GeminiDialog( mContext, this, null )).show();
-        }
-      } else {
-        TDToast.make( R.string.ai_no_internet );
-      }
     }
   }
 
@@ -155,19 +138,20 @@ public class HelpDialog extends MyDialog
     UserManualActivity.showHelpPage( mContext, page );
   }
 
-  public void showAIdialog()
-  {
-    (new HelpAIdialog( mContext, this, TDSetting.mGeminiApiKey, mPage )).show();
-  }
+  // public void showAIdialog() // GEMINI
+  // {
+  //   (new HelpAIdialog( mContext, this, TDSetting.mGeminiApiKey, mPage )).show();
+  // }
 
-  public void showInvalid( final TDPref pref, final String response )
-  {
-    mParent.runOnUiThread( new Runnable() { public void run() {
-      TDToast.makeWarn( response ); 
-      if ( pref != null ) pref.setButtonValue( "---" );
-      TDSetting.setGeminiApiKey( "" );
-    } } );
-  }
+  // public void showInvalid( final TDPref pref, final String response ) // GEMINI
+  // {
+  //   // mParent.runOnUiThread(
+  //   TDandroid.runOnMainThread( new Runnable() { public void run() {
+  //     TDToast.makeWarn( response ); 
+  //     if ( pref != null ) pref.setButtonValue( "---" );
+  //     TDSetting.setGeminiApiKey( "" );
+  //   } } );
+  // }
   
 
   /** react to a user long tap - only the taps on "man book" are taken
@@ -182,17 +166,8 @@ public class HelpDialog extends MyDialog
     return true;
   }
 
-  public void setAIbuttonEnabled( boolean enabled )
-  {
-    TDLog.v("Help AI dialog - set button enable " + enabled );
-    if ( enabled ) {
-      mBtnAI.setBackgroundResource( R.drawable.iz_ai );
-      mBtnAI.setOnClickListener( this );
-    } else {
-      mBtnAI.setBackgroundResource( R.drawable.iz_ai_no );
-      mBtnAI.setOnClickListener( null );
-    }
-  }
+  // @note calls are already conditioned to HAS_AI true
+  // public void setAIbuttonEnabled( boolean enabled ) { } // GEMINI
 
 }
 

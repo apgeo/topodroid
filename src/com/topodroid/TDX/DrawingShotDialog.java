@@ -15,6 +15,7 @@ import com.topodroid.util.TDLog;
 import com.topodroid.util.TDUtil;
 import com.topodroid.util.TDString;
 import com.topodroid.util.TDColor;
+import com.topodroid.util.TDAnalytics;
 import com.topodroid.ui.MyKeyboard;
 import com.topodroid.ui.MyCheckBox;
 import com.topodroid.ui.MyButton;
@@ -45,7 +46,6 @@ import android.widget.SeekBar;
 import android.widget.SeekBar.OnSeekBarChangeListener;
 
 // import android.text.InputType;
-// import android.inputmethodservice.KeyboardView;
 
 class DrawingShotDialog extends MyDialog
                         implements View.OnClickListener
@@ -88,7 +88,7 @@ class DrawingShotDialog extends MyDialog
   private DrawingPath mPath;
   private int mFlag; // can barrier/hidden FROM and TO
   private int mIntExtend; // used to set the progress in the Stretch Bar
-  private float mStretch; // FIXME_STRETCH use a slider
+  private float mStretch; // fractional part of the extend - FIXME_STRETCH use a slider
 
   // 0x01 can barrier FROM
   // 0x02 can hidden  FROM
@@ -113,6 +113,7 @@ class DrawingShotDialog extends MyDialog
     mFlag    = flag;
     mIntExtend = mBlock.getReducedIntExtend();
     mStretch = mBlock.getStretch();
+    TopoDroidApp.updateAnalytic( TDAnalytics.PLOT_SHOT );
   }
 
   @Override
@@ -127,7 +128,7 @@ class DrawingShotDialog extends MyDialog
     mETcomment = (EditText) findViewById(R.id.shot_comment );
     TextView tv_type    = (TextView) findViewById(R.id.shot_type ); // 20230118 local var "tv_type"
     // TextView tv_mark    = (TextView) findViewById(R.id.shot_mark ); // cavway flag
-    if (mBlock.isBacksight() ) {
+    if ( mBlock.isBacksight() ) {
       tv_type.setText( R.string.type_b );
     } else if (mBlock.isForesight() ) {
       tv_type.setText( R.string.type_d );
@@ -135,7 +136,7 @@ class DrawingShotDialog extends MyDialog
       tv_type.setText( R.string.type_m );
     }
 
-    if (mBlock.isMultiBad() ) {
+    if ( mBlock.isMultiBad() ) {
       tv_type.setTextColor( TDColor.DARK_ORANGE );
     } else if ( TopoDroidApp.mShotWindow != null && TopoDroidApp.mShotWindow.isBlockMagneticBad( mBlock ) ) {
       tv_type.setTextColor( TDColor.FIXED_RED );
@@ -144,7 +145,6 @@ class DrawingShotDialog extends MyDialog
     mETfrom.setOnLongClickListener( this );
     mETto.setOnLongClickListener( this );
 
-    // mKeyboard = new MyKeyboard( mContext, (KeyboardView)findViewById( R.id.keyboardview ), R.xml.my_keyboard_base, R.xml.my_keyboard_qwerty );
     mKeyboard= MyKeyboard.getMyKeyboard( mContext, findViewById( R.id.keyboardview ), R.xml.my_keyboard_base, R.xml.my_keyboard_qwerty );
 
     mBtnOK     = (Button) findViewById(R.id.btn_ok);
@@ -232,15 +232,22 @@ class DrawingShotDialog extends MyDialog
       mRBdup      = new MyCheckBox( mContext, size, R.drawable.iz_dup_ok, R.drawable.iz_dup_no );
       mRBsurf     = new MyCheckBox( mContext, size, R.drawable.iz_surface_ok, R.drawable.iz_surface_no );
       mRBcmtd     = new MyCheckBox( mContext, size, R.drawable.iz_comment_ok, R.drawable.iz_comment_no );
-      mRBbcks     = new MyCheckBox( mContext, size, R.drawable.iz_backsight_ok, R.drawable.iz_backsight_no ); // BACKSHOT
       layout3.addView( mRBdup,  lp );
       layout3.addView( mRBsurf, lp );
       layout3.addView( mRBcmtd, lp );
-      layout3.addView( mRBbcks, lp ); // BACKSHOT
       mRBdup.setOnClickListener( this );
       mRBsurf.setOnClickListener( this );
       mRBcmtd.setOnClickListener( this );
-      mRBbcks.setOnClickListener( this ); // BACKSHOT
+      // BACKSHOT flag only applies to legs, not splays
+      if ( mBlock.isLeg() ) {
+        mRBbcks     = new MyCheckBox( mContext, size, R.drawable.iz_backsight_ok, R.drawable.iz_backsight_no ); 
+        layout3.addView( mRBbcks, lp ); // BACKSHOT
+        mRBbcks.setOnClickListener( this ); 
+      // } else if ( TDSetting.mBacksightSplay && mBlock.isSplay() ) {
+      //   mRBbcks = new MyCheckBox( mContext, size, R.drawable.iz_backsplay, R.drawable.iz_backsplay );
+      //   layout3.addView( mRBbcks, lp ); // BACKSIGHT splay
+      //   mRBbcks.setOnClickListener( this );
+      }
       if ( TDLevel.overAdvanced && mBlock.isOtherSplay() ) {
         mCBxSplay = new MyCheckBox( mContext, size, R.drawable.iz_xsplays_ok, R.drawable.iz_ysplays_no );
         mCBxSplay.setChecked( false ); // ??? setState( false );
@@ -341,13 +348,14 @@ class DrawingShotDialog extends MyDialog
       //   mRBsurvey.setChecked( true );
       if ( TDLevel.overNormal ) {
         if ( mBlock.isDuplicate() ) {
-          mRBdup.setState( true );
+          setState( mRBdup, true );
         } else if ( mBlock.isSurface() ) {
-          mRBsurf.setState( true );
+          setState( mRBsurf, true );
         } else if ( mBlock.isCommented() ) { // FIXME_COMMENTED
-          mRBcmtd.setState( true );
+          setState( mRBcmtd, true );
         } else if ( mBlock.isBackshot() ) { // BACKSHOT
-          mRBbcks.setChecked( true );
+          // if ( mRBbcks != null ) mRBbcks.setChecked( true );
+          setState( mRBbcks, true );
         }
       }
     }
@@ -434,31 +442,31 @@ class DrawingShotDialog extends MyDialog
 
     } else if ( TDLevel.overNormal && b == mRBdup ) {
       mRBdup.toggleState();
-      if ( mRBdup.isChecked() ) {
-        mRBsurf.setState( false );
-        mRBcmtd.setState( false );
-        mRBbcks.setState( false ); // BACKSHOT
+      if ( isChecked( mRBdup ) ) {
+        setState( mRBsurf, false );
+        setState( mRBcmtd, false );
+        setState( mRBbcks, false ); // BACKSHOT
       }
     } else if ( TDLevel.overNormal && b == mRBsurf ) {
       mRBsurf.toggleState();
-      if ( mRBsurf.isChecked() ) {
-        mRBdup.setState( false );
-        mRBcmtd.setState( false );
-        mRBbcks.setState( false ); // BACKSHOT
+      if ( isChecked( mRBsurf ) ) {
+        setState( mRBdup,  false );
+        setState( mRBcmtd, false );
+        setState( mRBbcks, false ); // BACKSHOT
       }
     } else if ( TDLevel.overNormal && b == mRBcmtd ) {
       mRBcmtd.toggleState();
-      if ( mRBcmtd.isChecked() ) {
+      if ( isChecked( mRBcmtd ) ) {
         mRBdup.setState( false );
         mRBsurf.setState( false );
         mRBbcks.setState( false ); // BACKSHOT
       }
     } else if ( TDLevel.overNormal && b == mRBbcks ) { // BACKSHOT
       mRBbcks.toggleState();
-      if ( mRBbcks.isChecked() ) {
-        mRBdup.setState( false );
-        mRBsurf.setState( false );
-        mRBcmtd.setState( false );
+      if ( isChecked( mRBbcks ) ) {
+        setState( mRBdup,  false );
+        setState( mRBsurf, false );
+        setState( mRBcmtd, false );
       }
     } else if ( TDLevel.overNormal && b == mCBxSplay ) {
       mCBxSplay.toggleState();
@@ -504,16 +512,16 @@ class DrawingShotDialog extends MyDialog
       if ( TDLevel.overNormal ) {
         mBlock.clearFlagDuplicateSurfaceCommentedBackshot();
         long flag  = mBlock.getFlagFully();
-        if ( mRBdup.isChecked() )       { flag |= DBlock.FLAG_DUPLICATE; } // FIXME why |= ? because other flags have not been cleared
-        else if ( mRBsurf.isChecked() ) { flag |= DBlock.FLAG_SURFACE; }
-        else if ( mRBcmtd.isChecked() ) { flag |= DBlock.FLAG_COMMENTED; }
-        else if ( mRBbcks.isChecked() ) { flag |= DBlock.FLAG_BACKSHOT; }
-        // else /* if ( mRBsurvey.isChecked() ) */ { flag = DBlock.FLAG_SURVEY; }
+        if ( isChecked( mRBdup ) )       { flag |= DBlock.FLAG_DUPLICATE; } // FIXME why |= ? because other flags have not been cleared
+        else if ( isChecked( mRBsurf ) ) { flag |= DBlock.FLAG_SURFACE; }
+        else if ( isChecked( mRBcmtd ) ) { flag |= DBlock.FLAG_COMMENTED; }
+        else if ( isChecked( mRBbcks ) ) { flag |= DBlock.FLAG_BACKSHOT; }
+        // else /* if ( isChecked( mRBsurvey ) ) */ { flag = DBlock.FLAG_SURVEY; }
         mParent.updateBlockFlag( mBlock, flag, mPath ); // equal flag is checked by the method
       }
 
-      if ( TDLevel.overAdvanced && mCBxSplay != null ) {
-	if ( mCBxSplay.isChecked() ) {
+      if ( TDLevel.overAdvanced ) {
+	if ( isChecked( mCBxSplay ) ) {
           mParent.clearBlockSplayLeg( mBlock, mPath );
 	}
       }
@@ -539,6 +547,7 @@ class DrawingShotDialog extends MyDialog
 
   /** implements a user BACK press
    */
+  @SuppressWarnings("deprecated")
   @Override
   public void onBackPressed()
   {

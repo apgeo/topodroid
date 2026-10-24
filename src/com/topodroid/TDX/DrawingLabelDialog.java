@@ -11,8 +11,10 @@
  */
 package com.topodroid.TDX;
 
-// import com.topodroid.util.TDLog;
+import com.topodroid.util.TDLog;
 import com.topodroid.util.TDUtil;
+import com.topodroid.util.TDString;
+import com.topodroid.util.TDAnalytics;
 import com.topodroid.ui.MyDialog;
 import com.topodroid.prefs.TDSetting;
 
@@ -63,9 +65,10 @@ class DrawingLabelDialog extends MyDialog
   protected void onCreate(Bundle savedInstanceState)
   {
     super.onCreate(savedInstanceState);
+    TopoDroidApp.updateAnalytic( TDAnalytics.PLOT_LABEL );
     initLayout( R.layout.drawing_label_dialog, R.string.label_title );
 
-    mLabel     = (EditText) findViewById(R.id.label_text);
+    mLabel = (EditText) findViewById(R.id.label_text);
 
     ((Button) findViewById(R.id.label_ok)).setOnClickListener( this );
     ((Button) findViewById(R.id.label_cancel)).setOnClickListener( this );
@@ -127,9 +130,14 @@ class DrawingLabelDialog extends MyDialog
   {
     // TDLog.Log( TDLog.LOG_INPUT, "DrawingLabelDialog onClick() " + view.toString() );
     if (view.getId() == R.id.label_ok ) {
-      String label = TDUtil.getTextOrNull( mLabel );
+      String label = TDString.replaceNul( TDUtil.getTextOrNull( mLabel ) );
       if ( label != null ) {
-        mActivity.addLabel( mLabel.getText().toString(), mX, mY, getLevel() );
+        label = mLabel.getText().toString().trim();
+        if ( label.length() > 0 ) {
+          mActivity.addLabel( label, mX, mY, getLevel() );
+        } else {
+          TDLog.e("refrain from adding an empty label");
+        }
       } else { // TODO warning
         mLabel.setError( "missing label" );
         return;
@@ -139,6 +147,7 @@ class DrawingLabelDialog extends MyDialog
     }
     dismiss();
   }
+
 }
         
 

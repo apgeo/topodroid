@@ -106,7 +106,7 @@ The dialog to export the survey data presents only the format that are enabled i
 
 <i>The settings affecting the exported data/file are listed for each export format.</i><br><p>
 
-The exported file can be further shared by checking the <i>Share</i> checkbox.<br><p>
+The exported file can be directly shared by checking the <i>Share</i> checkbox.<br><p>
 
 
 The following export formats are no longer supported:
@@ -122,13 +122,19 @@ The following export formats are no longer supported:
 <b id="compass"><i>Compass</i></b> ".dat"<br>
 <i>Compass</i> data file are supported both in import and in export.<br>
 Supported data format are "normal" and "diving".<br>
-Data units are 'feet' and 'degrees' (converted to meters and degrees inside TopoDroid).<br><p>
+Data units are 'feet' and 'degrees' (converted to meters and degrees inside TopoDroid).<br>
+The imported azimuths are corrected with the magnetic declination specified in the "dat" file,
+and the declination of the TopoDroid survey is set to 0.<br><p>
 
 Settings:<ul style="margin-top=0">
-<li><u>Station prefix</u>: if given it is prepended to the station names</li>
-<li><u>Splays</u></li>
-<li><u>L/R swap</u></li>
+<li><u>Station prefix</u>: if the prefix is set, it is prepended to the station names</li>
+<li><u>Splays</u>: whether to include splays in the export</li>
+<li><u>L/R swap</u>: whther to swap LEFT and RIGHT</li>
 </ul>
+<br><p>
+
+The station prefix can be any arbitrary string. 
+By default it is the survey name.
 <br><p>
 
 <b id="csurvey"><i>cSurvey</i></b> ".csx"<br>
@@ -139,8 +145,10 @@ To make a <i>cSurvey</i> export with a sketch (both plan and profile),
 you should export from the <u>Drawing window</u>.
 <br><p>
 
-The <i>cSurvey</i> export includes the calibration-check shots and can include media files
-(audio and photo).<br><p>
+The <i>cSurvey</i> export includes the survey notes.<br>
+<!-- Warning: any single line "</note>" is skipped -->
+It also includes the calibration-check shots and can include media files
+(audio records and photo).<br><p>
 
 Settings:<ul style="margin-top=0">
 <li><u>station prefix</u>: whether to prefix the station names with the survey name</li>
@@ -149,6 +157,10 @@ Settings:<ul style="margin-top=0">
 
 
 <b id="survex">Survex</b> ".svx"<br>
+<i>Survex</i> data file are supported both in import and in export.<br>
+The imported azimuths are corrected with the magnetic declination specified in the Survex file,
+and the declination of the TopoDroid survey is set to 0.<br><p>
+
 Survey data can be exported as <i>Survex</i> files.<br>
 Data units follow the user options.<br><p>
 
@@ -163,6 +175,10 @@ Settings:<ul style="margin-top=0">
 </ul><p>
 
 <b id="therion">Therion</b> ".th"<br>
+<i>Therion</i> data file are supported both in import and in export.<br>
+The imported azimuths are corrected with the magnetic declination specified in the Therion file,
+and the declination of the TopoDroid survey is set to 0.<br><p>
+
 Survey data are exported in <i>Therion</i> format, using the data "normal" form.<br>
 The TopoDroid survey name is used for the <i>Therion</i> cave name, with underscore '_' replaced by space.<br>
 Data units follow the user options.<br><p>
@@ -208,6 +224,9 @@ Fixed points ("fix") are parsed but not taken into account as "cs" is not suppor
 
 <b id="trobot">TopoRobot</b> ".text"<br>
 <i>TopoRobot</i> data file are supported both in import and in export.<br>
+The imported azimuths are corrected with the magnetic declination specified in the TopoRobot file,
+and the declination of the TopoDroid survey is set to 0.<br><p>
+
 Survey data can be exported as <i>TopoRobot</i> files. The <i>TopoRobot</i> station naming policy
 must have been selected. If the station names follow <i>TopoRobot</i> convention "series.number", they are used.<br><p>
 
@@ -218,9 +237,16 @@ The name of the survey in the file is the filename without extension.<br>
 The export can also be limited to the last portion of data, by specifing the index
 of the <u>first shot</u> to export.<br><p>
 
+Settings:<ul style="margin-top=0">
+<li><i>Station prefix</i>: if set station name are prefixed with the survey name</li>
+</ul><br><p> 
+
 
 <b id="vtopo">VisualTopo</b> ".tro", ".trox"<br>
 <i>VisualTopo</i> data file are supported both in import and in export.<br>
+The imported azimuths are corrected with the magnetic declination specified in the VisualTopo file,
+and the declination of the TopoDroid survey is set to 0.<br><p>
+
 <i>VisualTopo</i> splays are included if enabled.<br>
 By default LRUD are at the TO station, but they can be set at the FROM station.<br>
 Data units are 'meters' and 'degrees'.<br>
@@ -228,15 +254,18 @@ Survey in <i>diving</i> data-mode are exported in "trox" format.<br><p>
 
 Settings:<ul style="margin-top=0">
 <li><u>Tro</u> old format. By default data are saved in "trox" format</li>
-<li><u>Splays</u></li>
-<li><u>LRUD at From</u></li>
-<li><u>Station series</u>: if specified the station names are qualified with the series</li>
+<li><u>Splays</u>: whether to include splays in the export</li>
+<li><u>LRUD at FROM</u> station</li>
+<li><u>Station prefix</u>: if set the station names can be qualified with a series. By default the series is the survey name</li>
 <li><u>Faverjon</u> whether the series is a prefix instead of a suffix.</li>
 </ul>
 <br><p>
 
 <b id="walls">Walls</b> ".srv"<br>
 <i>Walls</i> data file are supported both in import and in export.<br>
+The imported azimuths are corrected with the magnetic declination specified in the Walls file,
+and the declination of the TopoDroid survey is set to 0.<br><p>
+
 Survey data can be exported as <i>Walls</i> files (partially tested).<br>
 Data units follow the user options.<br>
 If the "<i>Walls</i> splays" setting is set the splay shots are exported as "named" splays (as for <i>Compass</i>).
@@ -252,19 +281,23 @@ Settings:<ul style="margin-top=0">
 Survey data can be exported as <i>WinKarst</i> files (untested).<br><p>
 
 Settings:<ul style="margin-top=0">
-<li><u>Station prefix</u>: if given it is prepended to the station names</li>
+<li><u>Station prefix</u>: if the station prefix is set, it is prepended to the station names</li>
 </ul>
 <br><p>
+  
+The station prefix can be any arbitrary string. 
+By default it is the survey name.
+<br><p>
 
+<!--
 <b id="ptopo">PocketTopo</b> ".top"<br>
 TopoDroid supports <i>PocketTopo</i> only in import.<br><p>
 
-<!--
 <i>PocketTopo</i> export contains only the survey data.<br><p>
 If the station naming policy is set to "<i>TopoRobot</i>" and the station names follow <i>TopoRobot</i> convention "series.number"
 these are used in the export, otherwise the names are converted to numbers.
 Alphabetic characters are replaces each character with two digits. More precisely 'a' goes to '00', 'b' to '01' and so on, 'A' to '50', 'B' to '51', and so on. Every other character (i.e., non-alphanumeric) goes to '99'.<br><p>
--->
+
 
 The "outline" and "profile" sketches are imported.
 <i>PocketTopo</i> uses only a few colors to differentiate line types.
@@ -272,7 +305,7 @@ Therefore a <a href="page_pt_cmap.htm">mapping</a> from colors to TopoDroid type
 
 It may happen that the imported sketch is not aligned with the survey data. In this case you can shift the sketch in the
 <u>Drawing window</u>, to fit the centerline.<br><p>
-
+-->
 
 <b id="polygon">Polygon</b> ".cave"<br>
 TopoDroid can export survey data in <i>Polygon</i> format.
@@ -465,9 +498,9 @@ are included if the automatic "section" points are enabled.
 The <i>Therion</i> <i>scrap</i> names are composed of the survey name, the sketch name and a suffix, either 'p', for plan, or 's', for profile.<br>
 For multi-scrap sketches the <i>Therion</i> <i>scrap</i> names of the scraps, beyond the first, are appended also a scrap number, beginning
 with 1.<br>
-X-section <i>Therion</i> <i>scrap</i> names are composed of the survey name, a two letter code, 'xx', and a number.<br><p>
+X-section <i>Therion</i> <i>scrap</i> names are composed of the survey name, a two-letter code, 'xx', and a number.<br><p>
 
-When a sketch with section points is exported through the <u>export</u> dialog, the x-sections of the section points are
+When a sketch with section-points is exported through the <u>export</u> dialog, the x-sections of the section-points are
 also exported.<br><p>
 
 It the sketch contains symbols that are not included in the <i>Therion</i> set, you must prepend the
@@ -516,8 +549,8 @@ The sketch grid cell are 1 m.
 <br><p>
 
 The XVI settings are among <i>Therion</i> settings:<ul style="margin-top=0">
-<li>Drawing <u>section-point</u>: if section points are automatically added to section lines,
-the section drawing is inserted in the xvi file, at the "section" point</li>
+<!-- li>Drawing <u>section-point</u>: if section-points are automatically added to section-lines,
+the section drawing is inserted in the xvi file, at the "section" point</li -->
 <li><u>grid</u> lines added to the export (cell size in the current sketch grid units). Default no</li>
 <li>export <u>scale</u>. Default 1:100</li>
 </ul><p>
@@ -546,7 +579,7 @@ and the X-Y axis.
 
 Settings:<ul style="margin-top=0">
 <li>DXF version: 9 (R12), 12 (R13), or 14 (R14). Default "9"</li>
-<li><u>section-point</u>: if a section line has the relative section point,
+<li><u>section-point</u>: any section-line has its section-point,
 the drawing of the section is inserted in the export, at the "section" point</li>
 <li><u>XY reference</u>: whether to insert the XY axes reference</li>
 <!-- li><u>stations</u>: whether to insert station points</li -->
@@ -594,7 +627,7 @@ folder "shp" with extension ".shz".<br><p>
 
 If you have georeferenced at least a station and checked the appropriate checkbox in the export dialog,
 the data are exported in the <i>WGS84</i> reference system, and corrected with the magnetic declination.<br>
-Otherwise the data are exported in local coordinates and the magnetic declination correction is not applied.<br><p>
+Otherwise, the data are exported in local coordinates and the magnetic declination correction is not applied.<br><p>
 
 The "point" <i>DBF</i> contains the fields
 <ul style="margin-top=0">
@@ -654,7 +687,7 @@ The default export scale is 1:100.
 <br><p>
 
 If splay classes are enabled, the splays are colored be the class: normal splay are gray,
-horizontal are light sea-green, vertical light steel-blue, and xsection light sky blue.
+horizontal are light sea-green, vertical light steel-blue, and x-section light sky blue.
 Splay-classes are not supported in "round-trip" export.
 <br><p>
 
@@ -662,9 +695,9 @@ Line effects, such as ticks in pit lines, are not exported, but the direction
 can be shown enabling the "Line Direction" setting.<br><p>
 
 Settings:<ul style="margin-top=0">
-<li><i>SVG</i> <u>program</u>: either <i>Inkscape</i> or <i>Illustrator</i>. This affect an export scale factor.</li>
-<li>Drawing <u>section-point</u>: if section points are automatically added to section lines,
-the section drawing is inserted in the export, at the "section" point</li>
+<li><i>SVG</i> <u>program</u>: either <i>Inkscape</i> or <i>Illustrator</i>. This affects the export scale factor. [Illustrator]</li>
+<!-- li>Drawing <u>section-point</u>: if section-points are automatically added to section-lines,
+the section drawing is inserted in the export, at the "section" point</li -->
 <li>automatic <u>station-points</u>: if enabled all stations are included in the export,
 otherwise only the user-chosen stations are included</li>
 <li><u>grouping items</u> by the type (ie, <i>Therion</i> name)</li>
@@ -729,11 +762,11 @@ otherwise only the user-chosen stations are included</li>
     <li><i>line termination</i>: either Linux or Windows [Linux]</li>
   </ul>
 </li>
-<li><b>PocketTopo</b>:
+<!-- li><b>PocketTopo</b>:
   <ul>
     <li><i>import color-map</i>: map of <i>PocketTopo</i> colors to sketch item types.</li>
   </ul>
-</li>
+</li -->
 <li><b>SVG</b>:
   <ul>
     <li>target <i>program</i> [<i>Inkscape</i>]</li>

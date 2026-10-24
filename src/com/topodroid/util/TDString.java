@@ -35,12 +35,14 @@ public class TDString
   public static final String TEN   = "10";
   public static final String TWENTY    = "20";
   public static final String TWENTYFOUR = "24";
+  public static final String FORTY     = "40";
   public static final String FIFTY     = "50";
   public static final String SIXTY     = "60";
   public static final String NINETY    = "90";
   public static final String NINETYONE = "91";
 
   public static final String OPTION_SCRAP = "-scrap";
+  public static final String OPTION_SYMBOL = "-symbol";
 
   /** @return true is the given string is null or empty
    * @param str    string
@@ -168,6 +170,26 @@ public class TDString
     return (str == null)? null : str.replaceAll("_", " ");
   }
 
+  /** @return this string with double-quotes replaced with ESC (escape)
+   */
+  public TDString escape( )
+  {
+    for ( int i=0; i<mSize; ++i ) {
+      if ( mChr[i] == '"' ) mChr[i] = '\u001b';
+    }
+    return this;
+  }
+
+  /** @return this string with double-quotes unescaped
+   */
+  public TDString unescape( )
+  {
+    for ( int i=0; i<mSize; ++i ) {
+      if ( mChr[i] == '\u001b' ) mChr[i] = '"';
+    }
+    return this;
+  }
+
   public static String escape( String str )
   {
     if ( str == null ) return "";
@@ -191,6 +213,37 @@ public class TDString
     String separator = String.format("%c", sep );
     String replacement = String.format("\\%c", sep );
     return str.replace( separator, replacement ); // replace each comma with backslash-comma
+  }
+
+  /** escape double-quotes for output prepending a backslash,
+   * before thay escape backslash as double-backslash
+   * @param str      input string
+   * @return escaped string
+   */
+  public static String escapeQuotes( String str )
+  {
+    StringBuilder sb = new StringBuilder();
+    int len = str.length();
+    for ( int k=0; k < len; ++k ) {
+      char ch = str.charAt( k );
+      if ( ch == '\\' || ch == '"' ) { 
+        sb.append( '\\' );
+      }
+      sb.append( ch );
+    }
+    return sb.toString();
+    // return str.replace( "\\", "\\\\").replace("\"", "\\\""); // ReplaceAll
+  }
+    
+
+  /** replace the nul character with space
+   * @param str   input string - can be null
+   * @return replacement string, or null if input is null
+   */
+  public static String replaceNul( String str )
+  {
+    if ( str == null ) return null;
+    return str.replace( '\0', ' ' );
   }
 
   // -----------------------------------------------------------
@@ -242,6 +295,17 @@ public class TDString
     if ( mSize != str.size() ) return false;
     for ( int i=0; i<mSize; ++i ) if ( mChr[i] != str.at(i) ) return false;
     return true;
+  }
+
+  /** compare two strings
+   * @param s1 first string
+   * @param s2 second string
+   * @return true is the two string are both null-or-empty or they are equal
+   */
+  static public boolean equals( String s1, String s2 )
+  {
+    if ( isNullOrEmpty( s1 ) ) return isNullOrEmpty( s2 );
+    return s1.equals( s2 );
   }
     
   /** @return -1 if this string is lexicographically smaller than the given string
@@ -584,26 +648,6 @@ public class TDString
     return this;
   }
 
-  /** @return this string with double-quotes escaped
-   */
-  public TDString escape( )
-  {
-    for ( int i=0; i<mSize; ++i ) {
-      if ( mChr[i] == '"' ) mChr[i] = '\u001b';
-    }
-    return this;
-  }
-
-  /** @return this string with double-quotes unescaped
-   */
-  public TDString unescape( )
-  {
-    for ( int i=0; i<mSize; ++i ) {
-      if ( mChr[i] == '\u001b' ) mChr[i] = '"';
-    }
-    return this;
-  }
-
   // ------------ array of strings ---------------------------
 
   /** @return the next index of non-empty string in an array (the array length if not found)
@@ -627,5 +671,5 @@ public class TDString
     while ( idx >= 0 && vals[idx].length() == 0 ) --idx;
     return idx;
   }
-    
+
 }

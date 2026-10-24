@@ -30,16 +30,16 @@ import com.topodroid.util.TDLog;
 import com.topodroid.util.TDVersion;
 import com.topodroid.util.TDFile;
 import com.topodroid.util.TDsafUri;
-import com.topodroid.util.TDStatus;
 import com.topodroid.util.TDString;
 import com.topodroid.util.TDUtil;
+import com.topodroid.util.TDAnalytics;
 import com.topodroid.num.TDNum;
 import com.topodroid.num.NumStation;
 import com.topodroid.num.NumShot;
 import com.topodroid.num.NumSplay;
 import com.topodroid.num.NumBranch;
 import com.topodroid.mag.Geodetic;
-import com.topodroid.ptopo.PTFile;
+// import com.topodroid.ptopo.PTFile;
 import com.topodroid.io.shp.ShpPointz;
 import com.topodroid.io.shp.ShpPolylinez;
 import com.topodroid.io.shp.ShpNamez;
@@ -54,6 +54,7 @@ import com.topodroid.prefs.TDSetting;
 import com.topodroid.dev.Device;
 import com.topodroid.types.ExtendType;
 import com.topodroid.types.PlotType;
+import com.topodroid.types.TDStatus;
 import com.topodroid.packetX.MemoryData;
 // import com.topodroid.types.StationFlag;
 
@@ -64,6 +65,8 @@ import java.io.StringWriter;
 // import java.io.FileOutputStream;
 // import java.io.FileInputStream;
 import java.io.OutputStream;
+import java.io.FileReader;
+import java.io.BufferedReader;
 // import java.io.FileWriter;
 import java.io.BufferedWriter;
 import java.io.BufferedInputStream;
@@ -95,6 +98,8 @@ public class TDExporter
 
   private static double mERadius = Geodetic.EARTH_A;
   private static double mSRadius = Geodetic.EARTH_A;
+
+  private static String creator = TDVersion.APP_NAME + " " + TDVersion.string();
 
   private static void checkShotsClino( List< DBlock > list )
   {
@@ -265,6 +270,7 @@ public class TDExporter
    */
   static int exportSurveyAsCsx( Uri uri, long sid, DataHelper data, SurveyInfo info, PlotSaveData psd1, PlotSaveData psd2, String origin, String surveyname )
   {
+    TopoDroidApp.updateAnalytic( TDAnalytics.EXPORT_CSX );
     int ret = 0; // 0 = failure
     ParcelFileDescriptor pfd = null;
     if ( uri != null ) {
@@ -276,12 +282,12 @@ public class TDExporter
       BufferedWriter bw = new BufferedWriter( (pfd != null)? TDsafUri.docFileWriter( pfd ) : TDFile.getFileWriter( TDPath.getOutFile( surveyname + ".csx" ) ) );
       // BufferedWriter bw = new BufferedWriter( TDsafUri.docFileWriter( pfd ) );
       ret = exportSurveyAsCsx( bw, sid, data, info, psd1, psd2, origin, surveyname );
-      bw.flush();
+      bw.flush(); // not necessary
       bw.close();
     } catch ( FileNotFoundException e ) {
-      TDLog.e("file not found");
+      TDLog.e("CSX file not found");
     } catch ( IOException e ) {
-      TDLog.e( "io error " + e.getMessage() );
+      TDLog.e( "CSX io error " + e.getMessage() );
     } finally {
       if ( pfd != null ) {
         TDsafUri.closeFileDescriptor( pfd );
@@ -303,6 +309,7 @@ public class TDExporter
    */
   static int exportSurveyAsCsx( BufferedWriter bw, long sid, DataHelper data, SurveyInfo info, PlotSaveData psd1, PlotSaveData psd2, String origin, String survey_name )
   {
+    TopoDroidApp.updateAnalytic( TDAnalytics.EXPORT_CSX );
     int ret = 0; // 0 = failure
     // TDLog.v( "export as csurvey: " + file.getName() );
     String cave   = toXml( info.name.toUpperCase(Locale.US) );
@@ -345,13 +352,14 @@ public class TDExporter
       }
     }
 
+    // TDLog.v("CSX hedaer");
     try {
       // BufferedWriter bw = TDFile.getMSwriter( "csx", survey_name + ".csx", "text/csx" );
       PrintWriter pw = new PrintWriter( bw );
       String date = TDUtil.getDateString( "yyyy-MM-dd" );
 
       pw.format("<csurvey version=\"1.11\" id=\"\">\n");
-      pw.format("<!-- %s created by TopoDroid v %s -->\n", date, TDVersion.string() );
+      pw.format("<!-- %s created by %s -->\n", date, creator );
 
 // ++++++++++++++++ PROPERTIES
       // FIXME origin = origin of Num
@@ -361,13 +369,41 @@ public class TDExporter
         pw.format("  <properties id=\"\" name=\"\" origin=\"%s\" ", origin );
       }
       // FIXME TODO_CSURVEY
-      pw.format(      "creatid=\"TopoDroid\" creatversion=\"%s\" creatdate=\"%s\" ", TDVersion.string(), date );
+      pw.format(      "creatid=\"%s\" creatversion=\"%s\" creatdate=\"%s\" ", TDVersion.APP_NAME, TDVersion.string(), date );
       pw.format(      "calculatemode=\"1\" calculatetype=\"2\" calculateversion=\"-1\" " );
       pw.format(      "ringcorrectionmode=\"2\" nordcorrectionmode=\"0\" inversionmode=\"1\" ");
-      pw.format(      "designwarpingmode=\"1\" bindcrosssection=\"1\">\n");
+      pw.format(      "designwarpingmode=\"1\" bindcrosssection=\"1\"");
+      pw.format(      ">\n");
+      // survey notes
+      String note_file = TDPath.getSurveyNoteFile( info.name );
+      if ( TDFile.hasTopoDroidFile( note_file ) ) {
+        // TDLog.v("CSX with note " + note_file );
+        pw.format("    <note>");
+        try {
+          FileReader fr = TDFile.getFileReader( note_file );
+          BufferedReader br = new BufferedReader( fr );
+          String line = br.readLine();
+          while ( line != null ) {
+            if ( ! "</note>".equals( line.trim() ) ) {
+              // pw.format( line.replaceAll("\"", "\\\"") + "\n" );
+              pw.format( line + "\n" );
+            }
+            line = br.readLine();
+          }
+          fr.close();
+        } catch ( IOException e ) {
+          TDLog.e(  "CSX load IOexception " + e.toString() );
+        }
+        pw.format("</note>\n");
+      } else {
+        // TDLog.v("CSX without note " + note_file );
+        pw.format("    <note />\n");
+      }
+   
       
 
    // ============== SESSIONS
+      // TDLog.v("CSX session");
       String info_date = info.date.replaceAll("[\\.,-,/]", "");
       pw.format("    <sessions>\n");
       pw.format("      <session date=\"%s\" ", info.date); // yyyy-mm-dd or any other format is ok
@@ -389,6 +425,7 @@ public class TDExporter
       session = session.toLowerCase(Locale.US);
 
    // ============== CAVE INFOS and BRANCHES
+      // TDLog.v("CSX cave info");
       pw.format("    <caveinfos>\n");
       pw.format("      <caveinfo name=\"%s\" color=\"1724697804\"", cave );
       // pw.format( " color=\"\"");
@@ -413,6 +450,7 @@ public class TDExporter
       pw.format("  </properties>\n");
 
 // ++++++++++++++++ SHOTS
+      // TDLog.v("CSX shots");
       pw.format("  <segments>\n");
 
       for ( DBlock blk : c_list ) { // calib-check shots
@@ -603,6 +641,7 @@ public class TDExporter
       pw.format("  </segments>\n");
 
       // ============= TRIG POINTS
+      // TDLog.v("CSX trigs");
       pw.format("  <trigpoints>\n");
       if ( fixed.size() > 0 ) {
         for ( FixedInfo fix : fixed ) {
@@ -615,6 +654,7 @@ public class TDExporter
       pw.format("  </trigpoints>\n");
 
       // ============= PLOTS
+      // TDLog.v("CSX plots");
       if ( psd1 != null ) {
         DrawingWindow.exportAsCsx( sid, pw, survey, cave, branch /*, session */, psd1, psd2 );
       } else {
@@ -626,12 +666,11 @@ public class TDExporter
         pw.format("  </profile>\n");
       }
       pw.format("</csurvey>\n");
-
-      bw.flush();
+      // TDLog.v("CSX close csurvey");
       bw.close();
       ret = 1;
     } catch ( IOException e ) {
-      TDLog.e( "Failed cSurvey export: " + e.getMessage() );
+      TDLog.e( "CSX failed export: " + e.getMessage() );
     }
     return ret;
   }
@@ -752,6 +791,7 @@ public class TDExporter
    */
   static int exportSurveyAsKml( BufferedWriter bw, long sid, DataHelper data, SurveyInfo info, String survey_name )
   {
+    TopoDroidApp.updateAnalytic( TDAnalytics.EXPORT_KML );
     final String name          = "<name>%s</name>\n";
     final String name2         = "  <name>%s</name>\n";
     final String placemark     = "<Placemark>\n";
@@ -780,7 +820,7 @@ public class TDExporter
     // TDLog.v( "export as KML " + file.getFilename() );
     List< TDNum > nums = getGeolocalizedData( sid, data, info.getDeclination(), 1.0f, false, false ); // false: geoid altitude, false no convergence
     if ( TDUtil.isEmpty(nums) ) {
-      TDLog.e( "Failed KML export: no geolocalized station");
+      TDLog.e( "KML failed export: no geolocalized station");
       return 2;
     }
 
@@ -791,12 +831,14 @@ public class TDExporter
       PrintWriter pw = new PrintWriter( bw );
 
       pw.format("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
-      pw.format("<kml xmlnx=\"http://www.opengis.net/kml/2.2\">\n");
+      pw.format("<kml xmlns=\"http://www.opengis.net/kml/2.2\">\n");
       pw.format("<Document>\n");
 
       pw.format(name, info.name );
-      pw.format("<description>%s - TopoDroid v %s</description>\n",  TDUtil.getDateString("yyyy.MM.dd"), TDVersion.string() );
-      pw.format("<TimeStamp><when>%s</when></TimeStamp>\n", info.date );
+      pw.format("<description>\n");
+      pw.format("  <![CDATA[%s - %s<br>\n",  TDUtil.getDateString("yyyy.MM.dd"), creator );
+      pw.format("  Survey %s date %s]]>\n", info.name, info.date );
+      pw.format("</description>\n");
 
       pw.format(style, "centerline");
       pw.format(linestyle);
@@ -903,7 +945,7 @@ public class TDExporter
       bw.close();
       return 1;
     } catch ( IOException e ) {
-      TDLog.e( "Failed KML export: " + e.getMessage() );
+      TDLog.e( "KML failed KML export: " + e.getMessage() );
       return 0;
     }
   }
@@ -920,9 +962,10 @@ public class TDExporter
    */
   static int exportSurveyAsShp( OutputStream os, long sid, DataHelper data, SurveyInfo info, String survey, String dirname )
   {
+    TopoDroidApp.updateAnalytic( TDAnalytics.EXPORT_SHP );
     List< TDNum > nums = getGeolocalizedData( sid, data, info.getDeclination(), 1.0f, false, true ); // false: geoid altitude, true with convergence
     if ( TDUtil.isEmpty(nums) ) {
-      TDLog.e( "Failed SHP export: no geolocalized station");
+      TDLog.e( "SHP failed export: no geolocalized station");
       return 0;
     }
 
@@ -1025,7 +1068,7 @@ public class TDExporter
         (new Archiver()).compressFiles( os, dirname, files );
       }
     } catch ( IOException e ) {
-      TDLog.e( "Failed SHP export: " + e.getMessage() );
+      TDLog.e( "SHP failed export: " + e.getMessage() );
       return 0;
     } finally {
       // TDLog.v( "delete dir " + dirname );
@@ -1033,102 +1076,6 @@ public class TDExporter
     }
     return 1;
   }
-
-  // ===================================================================================================
-  // GEO JASON GeoJSON export
-  //   NOTE shot flags are ignored
-
-  // /** export data json file
-  //  * @param bw    buffered output stream
-  //  * @param sid   survey ID
-  //  * @param data  database helper object
-  //  * @param info  survey info
-  //  * @param survey_name survey name
-  //  * @return 1 success, 0 fail, 2 no geopoint
-  //  */
-  // static int exportSurveyAsJson( BufferedWriter bw, long sid, DataHelper data, SurveyInfo info, String survey_name )
-  // {
-  //   final String name    = "\"name\": ";
-  //   final String type    = "\"type\": ";
-  //   final String item    = "\"item\": ";
-  //   final String geom    = "\"geometry\": ";
-  //   final String coords  = "\"coordinates\": ";
-  //   final String feature = "\"Feature\"";
-  //   // TDLog.v( "export as GeoJSON " + file.getName() );
-  //   List< TDNum > nums = getGeolocalizedData( sid, data, info.getDeclination(), 1.0f, true, false ); // true: ellipsoid altitude, false no convergence
-  //   if ( TDUtil.isEmpty(nums) ) {
-  //     TDLog.e( "Failed GeoJSON export: no geolocalized station");
-  //     return 2;
-  //   }
-
-  //   // now write the GeoJSON
-  //   try {
-  //     // TDLog.Log( TDLog.LOG_IO, "export GeoJSON " + file.getName() );
-  //     // BufferedWriter bw = TDFile.getMSwriter( "json", survey_name + ".json", "text/json" );
-  //     PrintWriter pw = new PrintWriter( bw );
-
-  //     pw.format("const geojsonObject = {\n");
-  //     pw.format("  \"name\": \"%s\",\n", info.name );
-  //     pw.format("  \"created\": \"%s - TopoDroid v %s\",\n",  TDUtil.getDateString("yyyy.MM.dd"), TDVersion.string() );
-  //     pw.format("  %s \"FeatureCollection\",\n", type );
-  //     pw.format("  \"features\": [\n");
-  //     
-  //     for ( TDNum num : nums ) {
-  //       List< NumShot >    shots = num.getShots();
-  //       for ( NumShot sh : shots ) {
-  //         NumStation from = sh.from;
-  //         NumStation to   = sh.to;
-  //         if ( from.has3DCoords() && to.has3DCoords() ) {
-  //           pw.format("    {\n");
-  //           pw.format("      %s %s,\n", type, feature );
-  //           pw.format("      %s \"centerline\",\n", item );
-  //           pw.format("      %s \"%s %s\",\n", name, from.name, to.name );
-  //           pw.format("      %s \"LineString\",\n", geom );
-  //           pw.format(Locale.US, "      %s [ [ %.8f, %.8f, %.1f ], [ %.8f, %.8f, %.1f ] ]\n", coords, from.e, from.s, from.v, to.e, to.s, to.v );
-  //           pw.format("    },\n");
-  //         }
-  //       }
-  //     }
-  //     if ( TDSetting.mKmlSplays ) {
-  //       for ( TDNum num : nums ) {
-  //         List< NumSplay >   splays = num.getSplays();
-  //         for ( NumSplay sp : splays ) {
-  //           NumStation from = sp.from;
-  //           pw.format("    {\n");
-  //           pw.format("      %s %s,\n", type, feature );
-  //           pw.format("      %s \"splay\",\n", item );
-  //           pw.format("      %s \"%s\",\n", name, from.name );
-  //           pw.format("      %s \"LineString\",\n", geom );
-  //           pw.format(Locale.US, "     %s [ [ %.8f, %.8f, %.1f ], [ %.8f, %.8f, %.1f ] ]\n", coords, from.e, from.s, from.v, sp.e, sp.s, sp.v );
-  //           pw.format("    },\n");
-  //         }
-  //       }
-  //     }
-  //     if ( TDSetting.mKmlStations ) {
-  //       for ( TDNum num : nums ) {
-  //         List< NumStation > stations = num.getStations();
-  //         for ( NumStation st : stations ) {
-  //           pw.format("    {\n");
-  //           pw.format("      %s %s,\n", type, feature );
-  //           pw.format("      %s \"station\",\n", item );
-  //           pw.format("      %s \"%s\",\n", name, st.name );
-  //           pw.format("      %s \"Point\",\n", geom );
-  //           pw.format(Locale.US, "      %s [ %.8f %.8f %.1f ]\n", coords, st.e, st.s, st.v );
-  //           pw.format("    },\n");
-  //         }
-  //       }
-  //     }
-  //     pw.format("    { }\n"); // add a null feature
-  //     pw.format("  ]\n");     // close features array
-  //     pw.format("};\n");      // close geojson object
-  //     bw.flush();
-  //     bw.close();
-  //     return 1;
-  //   } catch ( IOException e ) {
-  //     TDLog.e( "Failed GeoJSON export: " + e.getMessage() );
-  //     return 0;
-  //   }
-  // }
 
   // -------------------------------------------------------------------
   // TRACK FILE GPX
@@ -1160,10 +1107,11 @@ public class TDExporter
    */
   static int exportSurveyAsGpx( BufferedWriter bw, long sid, DataHelper data, SurveyInfo info, String surveyname )
   {
+    TopoDroidApp.updateAnalytic( TDAnalytics.EXPORT_GPX );
     // TDLog.v( "export as trackfile: " + file.getName() );
     List< TDNum > nums = getGeolocalizedData( sid, data, info.getDeclination(), 1.0f, false, false ); // false: geoid altitude, false no convergence
     if ( TDUtil.isEmpty(nums) ) {
-      TDLog.e( "Failed KML export: no geolocalized station");
+      TDLog.e( "KML failed export: no geolocalized station");
       return 2;
     }
 
@@ -1178,7 +1126,7 @@ public class TDExporter
       pw.format("  xmlns=\"http://www.topografix.com/GPX/1/1\"\n" );
       pw.format("  xmlns:xsi=\"http://www.w3c.org/2001/XMLSchema-instance\"\n" );
       pw.format("  xsi:schemaLocation=\"http://www.topografix.com/GPX/1/1\"\n" );
-      pw.format("  version=\"1.1\" creator=\"TopoDroid %s\">\n", TDVersion.string() );
+      pw.format("  version=\"1.1\" creator=\"%s\">\n", creator );
       pw.format("<metadata>\n");
       pw.format("<name>%s</name>\n", surveyname );
       pw.format("<time>%s</time>\n", TDUtil.getDateString("yyyy-MM-dd") );
@@ -1246,181 +1194,11 @@ public class TDExporter
       bw.close();
       return 1;
     } catch ( IOException e ) {
-      TDLog.e( "Failed GPX export: " + e.getMessage() );
+      TDLog.e( "GPX failed export: " + e.getMessage() );
       return 0;
     }
   }
 
-  // -------------------------------------------------------------------
-  // TRACK FILE OZIEXPLORER
-  //   NOTE shot flags are ignored
-
-  /** export data track-file
-   * @param bw    buffered output stream
-   * @param sid   survey ID
-   * @param data  database helper object
-   * @param info  survey info
-   * @param survey_name survey name (unused)
-   * @return 1 success, 0 fail, 2 no geopoint
-   *
-  static int exportSurveyAsPlt( BufferedWriter bw, long sid, DataHelper data, SurveyInfo info, String survey_name )
-  {
-    // TDLog.v( "export as trackfile: " + file.getName() );
-    List< TDNum > nums = getGeolocalizedData( sid, data, info.getDeclination(), TDUtil.M2FT, false, false ); // false geoid alt. - false no convergence
-    if ( TDUtil.isEmpty(nums) ) {
-      TDLog.e( "Failed PLT export: no geolocalized station");
-      return 2;
-    }
-
-    // now write the PLT file
-    try {
-      // TDLog.Log( TDLog.LOG_IO, "export trackfile " + file.getName() );
-      // BufferedWriter bw = TDFile.getMSwriter( "plt", survey_name + ".plt", "text/plt" );
-      PrintWriter pw = new PrintWriter( bw );
-
-      pw.format("OziExplorer Track Point File Version 2.1\r\n");
-      pw.format("WGS 84\r\n");
-      pw.format("Altitude is in Feet\r\n");
-      pw.format("Reserved 3\r\n");
-
-      // skip-value: 0 (usually 1)
-      // track-type: 0=normal, 10=closed_polygon, 20=alarm_zone
-      // fill-style: 0=solid, 1=clear, 2=Bdiag, 3=Fdiag, 4=cross, 5=diag_cross, 6=horiz, 7=vert
-      //
-      pw.format("0,2,1677690,%s - TopoDroid v %s,0,0,0,8421376,-1,0\r\n", TDUtil.getDateString("yyyy.MM.dd"), TDVersion.string() );
-
-      int tot_stations = 0;
-      for ( TDNum num : nums ) {
-        List< NumStation > stations = num.getStations();
-        // List< NumShot >    shots = num.getShots();
-        // List< NumSplay >   splays = num.getSplays();
-	tot_stations += stations.size();
-      }
-      pw.format("%d\r\n", tot_stations );
-      
-      // date should be "days_since_12/30/1899.time_of_the_day"
-      // eg, 0=12/30/1899, 2=1/1/1900, 35065=1/1/1996, 36526=1/1/00, 39447=1/1/08, 40908=1/1/12, ...
-      Calendar cal = Calendar.getInstance();
-      cal.set(1996, Calendar.JANUARY, 1);
-      long diff = System.currentTimeMillis() - cal.getTimeInMillis();
-      long days = 35065 + diff / 86400000L; // 24*60*60*1000 // FIXME +33 ?
-
-      // String date = TDUtil.getDateString( "dd-MMM-yy" );
-
-      for ( TDNum num : nums ) {
-        List< NumStation > stations = num.getStations();
-        List< NumShot >    shots = num.getShots();
-        // List< NumSplay >   splays = num.getSplays();
-        NumStation last = null;
-        for ( NumShot sh : shots ) {
-          NumStation from = sh.from;
-          NumStation to   = sh.to;
-          if ( from != last ) {
-            pw.format(Locale.US, "%.8f, %.8f,1, %.1f,%d,,\r\n", from.e, from.s, from.v, days );
-          }
-          pw.format(Locale.US, "%.8f,%.8f,0,%.1f,%d,,\r\n", to.e, to.s, to.v, days );
-          last = to;
-        }
-      }
-
-      bw.flush();
-      bw.close();
-      return 1;
-    } catch ( IOException e ) {
-      TDLog.e( "Failed PLT export: " + e.getMessage() );
-      return 0;
-    }
-  }
-  */
-
-  // #############################################################################################################
-  // =======================================================================
-  // POCKETTOPO EXPORT PocketTopo
-  //   NOTE shot flags are ignored
-
-  /** export data in PocketTopo format (.top)
-   * @param os    output stream
-   * @param sid   survey ID
-   * @param data  database helper object
-   * @param info  survey info
-   * @param sketch     sketching window (not used: sketches are not exported)
-   * @param origin     sketch origin
-   * @param survey_name survey name (unused)
-   * @return 1 success, 0 fail
-   */
-  static int exportSurveyAsTop( OutputStream os, long sid, DataHelper data, SurveyInfo info, DrawingWindow sketch, String origin, String survey_name )
-  {
-    // TDLog.v( "export as pockettopo: " + file.getName() );
-    PTFile ptfile = new PTFile();
-    // TODO add a trip
-    // date --> year, month, day --> _time
-    // _declination (0)
-    // _comment
-
-    // TODO add shots
-    // _from, _to
-    // _dist, _azimuth, _inclination, _roll
-    // extend left --> shot._flags bit-0
-    // _trip_index (0)
-    // _comment
-    String[] vals = info.date.split( "\\." );
-    try {
-      ptfile.addTrip( Integer.parseInt(vals[0]), Integer.parseInt(vals[1]), Integer.parseInt(vals[2]), info.getDeclination(), info.comment );
-    } catch ( NumberFormatException e ) {
-      TDLog.e( "export survey as TOP date parse error " + info.date );
-    }
-
-    List< DBlock > list = data.selectAllExportShots( sid, TDStatus.NORMAL );
-    checkShotsClino( list );
-    int extend = 0;  // current extend
-    DBlock ref_item = null;
-    int fromId, toId;
-
-    for ( DBlock item : list ) {
-      String from = item.mFrom;
-      String to   = item.mTo;
-      extend = item.getIntExtend();
-      if ( from == null || from.length() == 0 ) {
-        from = "";
-        if ( to == null || to.length() == 0 ) {
-          to = "";
-          if ( ref_item != null 
-            && ( item.isSecLeg() || item.isRelativeDistance( ref_item ) ) ) {
-            from = ref_item.mFrom;
-            to   = ref_item.mTo;
-            extend = ref_item.getIntExtend();
-          } else {
-            ref_item = null;
-          }
-        } else { // only TO station
-          ref_item = null;
-        }
-      } else { // with FROM station
-        if ( to == null || to.length() == 0 ) { // splay shot
-          to = "";
-          ref_item = null;
-        } else {
-          ref_item = item;
-        }
-      }
-      ptfile.addShot( (short)0, from, to, item.mLength, item.mBearing, item.mClino, item.mRoll, extend, item.mComment );
-    }
-
-    // if ( sketch != null ) {
-    //   // TODO add sketch
-    // }
-
-    try {
-      // FileOutputStream fos = TDFile.getFileOutputStream( file );
-      // OutputStream os = TDFile.getMSoutput( "top", survey_name + ".top", "application/octet-stream" );
-      ptfile.write( os );
-      os.close();
-      return 1;
-    } catch ( IOException e ) {
-      TDLog.e( "Failed PocketTopo export: " + e.getMessage() );
-      return 0;
-    }
-  }
   // =======================================================================
   // THERION EXPORT Therion
   //   NOTE handled flags: duplicate surface
@@ -1543,6 +1321,7 @@ public class TDExporter
    */
   static int exportSurveyAsTh( BufferedWriter bw, long sid, DataHelper data, SurveyInfo info, String surveyname )
   {
+    TopoDroidApp.updateAnalytic( TDAnalytics.EXPORT_TH  );
     boolean with_thconfig = TDSetting.mTherionWithConfig;
     boolean embed_thconfig = false;
 
@@ -1559,7 +1338,7 @@ public class TDExporter
           BufferedWriter bcw = new BufferedWriter( new FileWriter( thconfig ) );
           PrintWriter pcw = new PrintWriter( bcw );
           pcw.format("encoding utf-8\n");
-          pcw.format("# %s created by TopoDroid v %s\n\n", TDUtil.getDateString("yyyy.MM.dd"), TDVersion.string() );
+          pcw.format("# %s created by %s\n\n", TDUtil.getDateString("yyyy.MM.dd"), creator );
           pcw.format("source \"./%s.th\"\n\n", info.name );
           pcw.format("layout topodroid\n");
           pcw.format("  legend on\n");
@@ -1583,7 +1362,7 @@ public class TDExporter
     float ul = TDSetting.mUnitLength;
     float ua = TDSetting.mUnitAngle;
 
-    String uls = ( ul < 1.01f )? "meter"  : "foot"; // FIXME
+    String uls = ( ul < 1.01f )? "meter"  : "feet";
     String uas = ( ua < 1.01f )? "degree" : "grad";
     // String uls = TDSetting.mUnitLengthStr;
     // String uas = TDSetting.mUnitAngleStr;
@@ -1605,7 +1384,7 @@ public class TDExporter
       PrintWriter pw = new PrintWriter( bw );
 
       pw.format("encoding utf-8\n");
-      pw.format("# %s created by TopoDroid v %s\n\n", TDUtil.getDateString("yyyy.MM.dd"), TDVersion.string() );
+      pw.format("# %s created by %s\n\n", TDUtil.getDateString("yyyy.MM.dd"), creator );
 
       if ( embed_thconfig /* && TDSetting.mExportUri */ ) { // embed thconfig
         pw.format("layout topodroid\n");
@@ -2043,6 +1822,7 @@ public class TDExporter
    */ 
   static int exportSurveyAsSvx( BufferedWriter bw, long sid, DataHelper data, SurveyInfo info, Device device, String survey_name )
   {
+    TopoDroidApp.updateAnalytic( TDAnalytics.EXPORT_SVX );
     // TDLog.v( "export as survex: " + file.getName() );
 
     float ul = TDSetting.mUnitLength;
@@ -2061,7 +1841,7 @@ public class TDExporter
       // BufferedWriter bw = TDFile.getMSwriter( "svx", survey_name + ".svx", "text/svx" );
       PrintWriter pw = new PrintWriter( bw );
 
-      pw.format("; %s created by TopoDroid v %s", TDUtil.getDateString("yyyy.MM.dd"), TDVersion.string() );
+      pw.format("; %s created by %s", TDUtil.getDateString("yyyy.MM.dd"), creator );
       writeSurvexEOL( pw );
 
       pw.format("; %s", info.name );
@@ -2316,7 +2096,7 @@ public class TDExporter
                     writeSurvexLRUD( pw, blk.mTo, computeLRUD( blk, list, false ), ul );
                     st_name = blk.mTo;
                   } else {
-                    TDLog.e("ERROR unattached branch shot " + sh.from.name + " " + sh.to.name + " station " + st_name );
+                    TDLog.e("unattached branch shot " + sh.from.name + " " + sh.to.name + " station " + st_name );
                     break;
                   }
                 }
@@ -2367,7 +2147,7 @@ public class TDExporter
 
   static private void writeCsvHeader( PrintWriter pw, SurveyInfo info, String uls, String uas, String newline )
   {
-    pw.format("# %s [*] created by TopoDroid v %s%s", TDUtil.getDateString("yyyy.MM.dd"), TDVersion.string(), newline );
+    pw.format("# %s [*] created by %s%s", TDUtil.getDateString("yyyy.MM.dd"), creator, newline );
     pw.format("# name: %s%s", info.name, newline );
     pw.format("# date: %s%s", info.date, newline );
     pw.format("# team: %s%s", info.team, newline );
@@ -2437,6 +2217,7 @@ public class TDExporter
    */ 
   static int exportSurveyAsRawCsv( BufferedWriter bw, long sid, DataHelper data, SurveyInfo info, String survey_name )
   {
+    TopoDroidApp.updateAnalytic( TDAnalytics.EXPORT_CSVF );
     char sep = TDSetting.mCsvSeparator;
     List< RawDBlock > list = data.selectAllShotsRawData( sid );
     String newline = TDSetting.mSurvexEol;
@@ -2494,6 +2275,7 @@ public class TDExporter
    */ 
   static int exportSurveyAsCsv( BufferedWriter bw, long sid, DataHelper data, SurveyInfo info, String survey_name )
   {
+    TopoDroidApp.updateAnalytic( TDAnalytics.EXPORT_CSV );
     char sep = TDSetting.mCsvSeparator;
     String newline = TDSetting.mSurvexEol;
     // TDLog.v( "export as CSV: " + file.getName() );
@@ -2502,7 +2284,7 @@ public class TDExporter
     // List< FixedInfo > fixed = data.selectAllFixed( sid, TDStatus.NORMAL );
     float ul = TDSetting.mUnitLength;
     float ua = TDSetting.mUnitAngle;
-    String uls = ( ul < 1.01f )? "meter"  : "foot"; // FIXME
+    String uls = ( ul < 1.01f )? "meter"  : "feet";
     String uas = ( ua < 1.01f )? "degree" : "grad";
     try {
       // TDLog.Log( TDLog.LOG_IO, "export CSV " + file.getName() );
@@ -2651,140 +2433,6 @@ public class TDExporter
       return 0;
     }
   }
-
-  // -----------------------------------------------------------------------
-  // TOPOLINUX EXPORT 
-  // commented flag not supported 
-
-  // public String exportSurveyAsTlx( BufferedWriter bw, long sid, DataHelper data, SurveyInfo info, String surveyname ) // FIXME args
-  // {
-  //   File dir = TDFile.getFile( TopoDroidApp.APP_TLX_PATH );
-  //   if (!dir.exists()) {
-  //     dir.mkdirs();
-  //   }
-  //   String filename = TopoDroidApp.APP_TLX_PATH + info.name + ".tlx";
-  //   List< DBlock > list = mData.selectAllExportShots( sid, TDStatus.NORMAL );
-  //   checkShotsClino( list );
-  //   try {
-  //     TDPath.checkPath( filename );
-  //     // BufferedWriter bw = TDFile.getMSwriter( "tlx", surveyname + ".tlx", "text/tlx" );
-  //     PrintWriter pw = new PrintWriter( bw );
-  //     pw.format("tlx2\n");
-  //     pw.format("# %s created by TopoDroid v %s\n\n", TDUtil.getDateString("yyyy.MM.dd"), TDVersion.string() );
-  //     pw.format("# date %s \n", mData.getSurveyDate( sid ) );
-  //     pw.format("# %s \n", mData.getSurveyComment( sid ) );
-  //     int n = 0;
-  //     float l=0.0f, b=0.0f, c=0.0f;
-  //     float l0[] = new float[10];
-  //     float b0[] = new float[10];
-  //     float c0[] = new float[10];
-  //     float r0[] = new float[10];
-  //     DBlock ref_item = null;
-  //     int extend = 0;
-  //     int flag   = DBlock.FLAG_SURVEY;
-
-  //     for ( DBlock item : list ) {
-  //       String from = item.mFrom;
-  //       String to   = item.mTo;
-  //       if ( from != null && from.length() > 0 ) {
-  //         if ( to != null && to.length() > 0 ) {
-  //           if ( n > 0 /* && ref_item != null */ ) {
-  //             b = TDUtil.in360( b/n );
-  //             pw.format(Locale.US, "%.2f %.1f %.1f 0.0 %d %d %d\n", l/n, b, c/n, extend, flag, n );
-  //             while ( n > 0 ) {
-  //               -- n;
-  //               pw.format(Locale.US, "@ %.2f %.1f %.1f %.1f\n", l0[n], b0[n], c0[n], r0[n] );
-  //             }
-  //             extend = 0;
-  //             flag   = DBlock.FLAG_SURVEY;
-  //           }
-  //           n = 1;
-  //           ref_item = item;
-  //           // item.Comment()
-  //           pw.format("    \"%s\" \"%s\" ", from, to );
-  //           l = item.mLength;
-  //           b = item.mBearing;
-  //           c = item.mClino;
-  //           extend = item.getIntExtend();
-  //           flag   = (int) item.getFlag();
-  //           l0[0] = item.mLength;
-  //           b0[0] = item.mBearing;
-  //           c0[0] = item.mClino;
-  //           r0[0] = item.mRoll;
-  //         } else { // to.isEmpty()
-  //           if ( n > 0 /* && ref_item != null */ ) {
-  //             b = TDUtil.in360( b/n );
-  //             pw.format(Locale.US, "%.2f %.1f %.1f 0.0 %d %d %d\n", l/n, b, c/n, extend, flag, n );
-  //             while ( n > 0 ) {
-  //               -- n;
-  //               pw.format(Locale.US, "@ %.2f %.1f %.1fi %.1f\n", l0[n], b0[n], c0[n], r0[n] );
-  //             }
-  //             n = 0;
-  //             ref_item = null;
-  //             extend = 0;
-  //             flag   = DBlock.FLAG_SURVEY;
-  //           }
-  //           // item.Comment()
-  //           pw.format("    \"%s\" \"\" ", from );
-  //           pw.format(Locale.US, "%.2f %.1f %.1f %.1f %d %d 1\n",
-  //             item.mLength, item.mBearing, item.mClino, item.mRoll, item.getIntExtend(), item.getFlag() );
-  //         }
-  //       } else { // from.isEmpty()
-  //         if ( to != null && to.length() > 0 ) {
-  //           if ( n > 0 /* && ref_item != null */ ) {
-  //             b = TDUtil.in360( b/n );
-  //             pw.format(Locale.US, "%.2f %.1f %.1f 0.0 %d 0 %d\n", l/n, b, c/n, extend, n );
-  //             while ( n > 0 ) {
-  //               -- n;
-  //               pw.format(Locale.US, "@ %.2f %.1f %.1f %.1f\n", l0[n], b0[n], c0[n], r0[n] );
-  //             }
-  //             n = 0;
-  //             ref_item = null;
-  //             extend = 0;
-  //             flag   = DBlock.FLAG_SURVEY;
-  //           }
-  //           // item.Comment()
-  //           pw.format("    \"\" \"%s\" ", to );
-  //           pw.format(Locale.US, "%.2f %.1f %.1f %.1f %d %d 1\n",
-  //             item.mLength, item.mBearing, item.mClino, item.mRoll, item.getIntExtend(), item.getFlag() );
-  //         } else {
-  //           // not exported
-  //           if ( ref_item != null &&
-  //              ( item.isSecLeg() || item.isRelativeDistance( ref_item ) ) ) {
-  //             float bb = TDUtil.around( item.mBearing, b0[0] );
-  //             l += item.mLength;
-  //             b += bb;
-  //             c += item.mClino;
-  //             l0[n] = item.mLength;
-  //             b0[n] = item.mBearing;
-  //             c0[n] = item.mClino;
-  //             r0[n] = item.mRoll;
-  //             ++n;
-  //           }
-  //         }
-  //       }
-  //     }
-  //     if ( n > 0 /* && ref_item != null */ ) {
-  //       b = TDUtil.in360( b/n );
-  //       pw.format(Locale.US, "%.2f %.1f %.1f 0.0 %d 0 %d\n", l/n, b, c/n, extend, n );
-  //       while ( n > 0 ) {
-  //         -- n;
-  //         pw.format(Locale.US, "@ %.2f %.1f %.1f %.1f\n", l0[n], b0[n], c0[n], r0[n] );
-  //       }
-  //       // extend = 0;
-  //       // flag   = DBlock.FLAG_SURVEY;
-  //     }
-  //     // pw.format(Locale.US, "%.2f %.1f %.1f %.1f %d %d %d\n", 
-  //     //   item.mLength, item.mBearing, item.mClino, item.mRoll, item.getIntExtend(), 0, 1 );
-  //     // item.mComment
-  //     bw.flush();
-  //     bw.close();
-  //     return filename;
-  //   } catch ( IOException e ) {
-  //     TDLog.e( "Failed QTopo export: " + e.getMessage() );
-  //     return null;
-  //   }
-  // }
 
   // -----------------------------------------------------------------------
   // COMPASS EXPORT DAT
@@ -2998,9 +2646,11 @@ public class TDExporter
     pw.format( "\r\n" );
   }
 
+  // @note called only with TDSetting.mCompassSplays true
   private static void printSplayToDat( PrintWriter pw, String prefix, String from, String to, DBlock blk, boolean reverse )
   {
-    if ( ! TDSetting.mCompassSplays ) return;
+    // if ( ! TDSetting.mCompassSplays ) return;
+    // if ( TDSetting.mCompassSplayMode == 0 ) return;
     float b = blk.mBearing;
     float c = blk.mClino;
     if ( reverse ) {
@@ -3048,6 +2698,7 @@ public class TDExporter
    */ 
   static int exportSurveyAsDat( BufferedWriter bw, long sid, DataHelper data, SurveyInfo info, String survey_name, String prefix )
   {
+    TopoDroidApp.updateAnalytic( TDAnalytics.EXPORT_DAT );
     // TDLog.v( "export as compass: " + survey_name + " swap LR " + TDSetting.mSwapLR );
     boolean not_diving = ! info.isDivingMode();
 
@@ -3059,7 +2710,7 @@ public class TDExporter
       PrintWriter pw = new PrintWriter( bw );
   
       // FIXME 
-      // pw.format("# %s created by TopoDroid v %s\n\n", TDUtil.getDateString("yyyy.MM.dd"), TDVersion.string() );
+      // pw.format("# %s created by %s\n\n", TDUtil.getDateString("yyyy.MM.dd"), creator );
 
       pw.format("%s\r\n", info.name ); // export as single survey
       pw.format("SURVEY NAME: %s\r\n", info.name );
@@ -3106,7 +2757,8 @@ public class TDExporter
       boolean duplicate = false;
       LRUD lrud;
 
-      HashMap<String, Integer > splay_stations = TDSetting.mCompassSplays ?  new HashMap<String, Integer >() : null;
+      HashMap<String, Integer > splay_stations = ( TDSetting.mCompassSplays )?  new HashMap<String, Integer >() : null;
+      boolean with_splays = TDSetting.mCompassSplays && not_diving;
 
       for ( DBlock item : list ) {
         String from = item.mFrom;
@@ -3125,9 +2777,13 @@ public class TDExporter
               duplicate = false;
               ref_item = null; 
             }
-	    if ( TDSetting.mCompassSplays && not_diving ) {
+	    if ( with_splays ) {
 	      int ii = nextSplayInt( splay_stations, to );
-	      printSplayToDat( pw, prefix, to, to + "ss" + ii, item, true ); // reverse
+          // if ( TDSetting.mCompassSplayMode == 1 ) {
+	      //   printSplayToDat( pw, prefix, to, to + "ss" + ii, item, true ); // reverse
+          // } else { // TDSetting.mCompassSplayModes ==  2
+            printSplayToDat( pw, prefix, to, ")" + to + ii, item, true ); // reverse
+          // }
 	    }
           }
         } else { // with FROM station
@@ -3139,9 +2795,13 @@ public class TDExporter
               duplicate = false;
               ref_item = null; 
             }
-	    if ( TDSetting.mCompassSplays && not_diving ) {
+	    if ( with_splays ) {
 	      int ii = nextSplayInt( splay_stations, from );
-	      printSplayToDat( pw, prefix, from, from + "ss" + ii, item, false ); // not reverse
+          // if ( TDSetting.mCompassSplayMode == 1 ) {
+	      //   printSplayToDat( pw, prefix, from, from + "ss" + ii, item, false ); // not reverse
+          // } else { // TDSetting.mCompassSplayMode ==  2
+	        printSplayToDat( pw, prefix, from, ")" + from + ii, item, false ); // not reverse
+          // }
 	    }
           } else {
             if ( leg.mCnt > 0 && ref_item != null ) {
@@ -3538,6 +3198,7 @@ public class TDExporter
 
   static int exportSurveyAsTrb( BufferedWriter bw, long sid, DataHelper data, SurveyInfo info, String survey_name, long first )
   {
+    TopoDroidApp.updateAnalytic( TDAnalytics.EXPORT_TRB );
     int trip = 1;
     int code = 1;
     List< DBlock > list = data.selectExportShots( sid, TDStatus.NORMAL, first );
@@ -3550,7 +3211,7 @@ public class TDExporter
       PrintWriter pw = new PrintWriter( bw );
   
       // FIXME 
-      // pw.format("# TopoDroid v %s\r\n", TDVersion.string() );
+      // pw.format("# %s\r\n", creator );
       // pw.format("# %s\r\n", TDUtil.getDateString("MM dd yyyy") );
 
       //           5 11 15 19 23
@@ -3601,7 +3262,7 @@ public class TDExporter
       if ( TDSetting.TRobotJB ) {
         /* nothing */
       } else {
-        pw.format(Locale.US, "    -4\t1\t1\t1\t1\t$s TopoDroid v %s - %s\r\n",   TDUtil.currentDateTimeTRobot(), TDVersion.string() );
+        pw.format(Locale.US, "    -4\t1\t1\t1\t1\t$s %s %s\r\n",   TDUtil.currentDateTimeTRobot(), creator );
         pw.format("    -3\t1\t1\t1\t1\r\n"); // not used - legacy 
       }
       String team = (info.team != null)? info.team : "-";
@@ -3785,7 +3446,6 @@ public class TDExporter
   //     ref_item = null; 
   //   }
   //   pw.format( "\r\n" );
-
   // }
 
   // ----------------------------------------------------------------------------------------
@@ -3825,6 +3485,7 @@ public class TDExporter
 
   static int exportSurveyAsSur( BufferedWriter bw, long sid, DataHelper data, SurveyInfo info, String survey_name, String prefix )
   {
+    TopoDroidApp.updateAnalytic( TDAnalytics.EXPORT_SUR );
     // TDLog.v( "export as winkarst: " + file.getName() + " swap LR " + TDSetting.mSwapLR );
     List< DBlock > list = data.selectAllExportShots( sid, TDStatus.NORMAL );
     checkShotsClino( list );
@@ -3834,7 +3495,7 @@ public class TDExporter
       PrintWriter pw = new PrintWriter( bw );
   
       // FIXME 
-      pw.format("#FILE AUTHOR: TopoDroid v %s\r\n", TDVersion.string() );
+      pw.format("#FILE AUTHOR: %s\r\n", creator );
       pw.format("#FILE DATE: %s\r\n", TDUtil.getDateString("MM dd yyyy") );
       pw.format("\r\n"); 
       pw.format("#SURVEY NAME: %s\r\n", info.name );
@@ -3942,398 +3603,6 @@ public class TDExporter
   }
 
   // =======================================================================
-  // GHTOPO EXPORT
-  // commented flag supported for splays
-  //   surface flag handled
-  //   duplicate flag not handled
-  //
-  // // one of 6 14 31 83 115 164 211
-  // static private int randomColor()
-  // {
-  //   return 5;
-  // }
-  //
-  // static int exportSurveyAsGtx( BufferedWriter bw, long sid, DataHelper data, SurveyInfo info, String survey_name )
-  // {
-  //   String date = info.date.replace( '.', '-' ); // MySQL date format YYYY-MM-DD
-  //   try {
-  //     // TDLog.Log( TDLog.LOG_IO, "export GHTopo " + file.getName() );
-  //     // BufferedWriter bw = TDFile.getMSwriter( "gtx", survey_name + ".gtx", "text/gtx" );
-  //     PrintWriter pw = new PrintWriter( bw );
-  //     pw.format("<?xml version=\"1.0\" encoding=\"utf-8\"?>\n");
-  //     pw.format("<!-- %s created by TopoDroid v %s -->\r\n", TDUtil.getDateString("yyyy.MM.dd"), TDVersion.string() );
-  //     pw.format("<GHTopo>\n");
-  //     // mandatory - cave name
-  //     pw.format("<General>\n");
-  //     pw.format("<Cavite"); 
-  //     pw.format(" FolderName=\"%s\"", info.name );
-  //     pw.format(" CoordsSystem=\"\"");          // Coord system (optional)  
-  //     pw.format(" CoordsSystemEPSG=\"4978\"");  // EPSG code
-  //     pw.format(" FolderObservations=\"\"");
-  //     pw.format("/>\n");
-  //     pw.format("</General>\n");
-  //     // optional - TopoDroid generates only one default namespace
-  //     pw.format("<Namespaces>\n");
-  //     pw.format("<Namespace");
-  //     pw.format(" Name=\"\"");
-  //     pw.format(" ColorB=\"0\"");       // Color R (int in [0..255])
-  //     pw.format(" ColorG=\"0\"");
-  //     pw.format(" ColorR=\"255\"");
-  //     pw.format(" NamespaceIdx=\"0\""); // Index of namespace
-  //     pw.format(" Description=\"\"");   // ...
-  //     pw.format("/>\n");
-  //     pw.format("</Namespaces>\n");
-  //     // optional - N.B. do not generate section <Filters>
-  //     // pw.format("<Filters>\n");
-  //     // pw.format("<Filters");
-  //     // pw.format(" Filter=\"\"");
-  //     // pw.format(" Numero=\"\"");
-  //     // pw.format(" Name=\"\"");
-  //     // pw.format(" Expression=\"\"");
-  //     // pw.format(" Description=\"\"");
-  //     // pw.format("/>\n");
-  //     // pw.format("</Filters>\n");
-  //     List< DBlock > list = data.selectAllExportShots( sid, TDStatus.NORMAL );
-  //     checkShotsClino( list );
-  //     TRobot trobot = new TRobot( list );
-  //     // trobot.dump(); // DEBUG
-  //     // mandatory - N.B. only one entrance, typically main entrance
-  //     List< FixedInfo > fixeds = data.selectAllFixed( sid, TDStatus.NORMAL );
-  //     boolean entrance_todo = true;
-  //     pw.format("<Entrances>\n");
-  //     if ( fixeds.size() > 0 ) {
-  //       // int ce = 0;
-  //       for ( FixedInfo fixed : fixeds ) {
-  //         TRobotPoint pt = trobot.getPoint( fixed.name );
-  //         if ( pt != null ) {
-  //           pw.format("<Entrance");
-  //           pw.format(Locale.US, " X=\"%.10f\"", fixed.lng );
-  //           pw.format(Locale.US, " Y=\"%.10f\"", fixed.lat );
-  //           pw.format(Locale.US, " Z=\"%.2f\"",  fixed.h_geo );
-  //           pw.format(" Name=\"%s\"",     fixed.name );
-  //           pw.format(" Numero=\"0\"" );  // ce
-  //           pw.format(" Comments=\"%s\"", fixed.comment );
-  //           pw.format(" RefPoint=\"%d\"", pt.mNumber );
-  //           pw.format(" RefSerie=\"%d\"", pt.mSeries.mNumber );
-  //           // pw.format(" IdTerrain=\"\"" ); // optional
-  //           // pw.format(" Comments=\"\"" );  // optional
-  //           pw.format(" Colour=\"$255000000\"");
-  //           pw.format("/>\n" );
-  //           entrance_todo = false;
-  //           // ++ ce;
-  //           break;
-  //         }
-  //       }
-  //     }
-  //     if ( entrance_todo ) { // use first survey point of first series
-  //       TRobotSeries sr = trobot.mSeries.get(0);
-  //       TRobotPoint  pt = sr.mBegin;
-  //       pw.format("<Entrance");
-  //       pw.format(" X=\"0.00\"" ); // Unknown coords set to 0.00
-  //       pw.format(" Y=\"0.00\"" );
-  //       pw.format(" Z=\"0.00\"" );
-  //       pw.format(" Name=\"First Station\"");       // name of entrance
-  //       pw.format(" Numero=\"0\"");
-  //       pw.format(" Comments=\"\"");
-  //       pw.format(" RefPoint=\"%d\"", pt.mNumber ); // Point number (typically 0)
-  //       pw.format(" RefSerie=\"%d\"", sr.mNumber ); // Series number (typically 1)
-  //       // pw.format(" IdTerrain=\"\"");            // Cave code (optional)
-  //       // pw.format(" Comments=\"\"");             // Comment (optional)
-  //       pw.format(" Colour=\"$255000000\"");        // string $RRRGGGBBB (value is full red)
-  //       pw.format("/>\n");
-  //     }
-  //     pw.format("</Entrances>\n");
-  //     // optional - TopoDroid should not generate it
-  //     // pw.format("<Secteurs>\n");
-  //     // pw.format("<Secteur");
-  //     // pw.format(" Name=\"\"");       // ...
-  //     // pw.format(" Numero=\"\"");     // ...
-  //     // pw.format("/>\n");
-  //     // pw.format("</Secteurs>\n");
-  //     // optional - TopoDroid should not generate it
-  //     // pw.format("<Networks>\n");
-  //     // pw.format("<Network");
-  //     // pw.format(" Name=\"%s\"", info.name ); // name of network
-  //     // pw.format(" Type=\"0\"");              // for future use - set to 0
-  //     // pw.format(" ColorB=\"0\"");
-  //     // pw.format(" ColorG=\"0\"");
-  //     // pw.format(" ColorR=\"255\"");
-  //     // pw.format(" Numero=\"1\"");            // index of network, start from 0
-  //     // pw.format(" Comments=\"\"");           // optional
-  //     // pw.format("/>\n" );
-  //     // pw.format("</Networks>\n");
-  //     // mandatory: instruments code
-  //     pw.format("<Codes>\n");
-  //     pw.format("<Code");
-  //     pw.format(" Numero=\"1\"");             // index of code instruments
-  //     pw.format(" ClinoUnit=\"360\"");        // degrees 360, grad 400
-  //     pw.format(" CompassUnit=\"360\"");
-  //     pw.format(" FactLong=\"1\"");           // length correction factor
-  //     pw.format(" Type=\"0\"");               // for future use - set to 0
-  //     pw.format(" AngleLimite=\"0.0\" ");     // TOPOROBOT angle limite - Set to 0.00 always
-  //     pw.format(" PsiL=\"0.05\"");            // length tolerance [m]
-  //     pw.format(" PsiP=\"1.0\"");             // clino tolerance [clino units]
-  //     pw.format(" PsiAz=\"1.0\"");            // azimuth tolerance
-  //     pw.format(" Comments=\"\"");            // optional
-  //     pw.format(" ErrorTourillon=\"0\"");     // Parameters for Compass and clino correction functions: set to 0
-  //     pw.format(" DiamBoule1=\"0\"");
-  //     pw.format(" DiamBoule2=\"0\"");
-  //     pw.format(" FuncCorrAzCo=\"0\"");
-  //     pw.format(" FuncCorrIncCo=\"0\"");
-  //     pw.format(" FuncCorrAzErrMax=\"0\"");
-  //     pw.format(" FuncCorrIncErrMax=\"0\"");
-  //     pw.format(" FuncCorrAzPosErrMax=\"0\"");
-  //     pw.format(" FuncCorrIncPosErrMax=\"0\"");
-  //     pw.format("/>\n");
-  //     pw.format("</Codes>\n");
-  //     // mandatory
-  //     float declination = ( info.hasDeclination() )? info.getDeclination() : 0;
-  //     pw.format("<Seances>\n");
-  //     pw.format("<Trip");
-  //     pw.format(" Date=\"%s\"", date );             // date YYYY-MM-DD
-  //     pw.format(" ColorIndex=\"%d\"", randomColor() ); // index of TopoRobot palette, in 1..255: Black=1 Red=6 Green=11 Blue=211 Fuchsia=73
-  //     pw.format(" Numero=\"1\"");                   // index of session
-  //     pw.format(" Comments=\"%s\"", info.comment ); // optional
-  //     pw.format(" Surveyor1=\"%s\"", info.team );   // N.B. info.team is not parsed - main operator
-  //     pw.format(" Surveyor2=\"\"");                 // assistant(s)
-  //     pw.format(" ModeDeclination=\"0\"");          // 0 or 1, GHTopo will calculate automatically from date and coordinates. Typically = 0
-  //     pw.format(Locale.US, " Declination=\"%.2f\"", declination);  // magnetic declination
-  //     // pw.format(" Inclination=\"0\"");              // deprecated - set to 0 or omit
-  //     pw.format("/>\n");
-  //     pw.format("</Seances>\n");
-  //     // mandatory
-  //     pw.format("<Series>\n");
-  //     for ( TRobotSeries series : trobot.mSeries ) {
-  //       TRobotPoint dep = series.mBegin;
-  //       TRobotPoint arr = series.mEnd;
-  //       pw.format("<Serie");
-  //       pw.format(" Numero=\"%d\" ", series.mNumber );      // series number
-  //       pw.format(" Name=\"\"");                            // series name
-  //       // pw.format(" Color=\"#0000FF\"");                    // For GHTopo future usage - Must be set to #0000FF - Unused: omit
-  //       pw.format(" SerDep=\"%d\"",  dep.mSeries.mNumber ); // TOPOROBOT notation of the starting station SerDep.PtDep ; eg: 14.18
-  //       pw.format(" PtDep=\"%d\"",   dep.mNumber );         // TOPOROBOT notation of the starting station SerDep.PtDep ; eg: 14.18
-  //       pw.format(" SerArr=\"%d\"",  arr.mSeries.mNumber ); // TOPOROBOT notation of the ending station SerDep.PtDep ; eg: 39.45
-  //       pw.format(" PtArr=\"%d\"",   arr.mNumber );         // TOPOROBOT notation of the endins station SerDep.PtDep ; eg: 39.45
-  //       pw.format(" Network=\"1\"");    // Index of rattachment network - Typically = 0
-  //       pw.format(" Raideur=\"1.00\""); // Stiffness coefficient - Typically = 1.00 for standard shots
-  //       pw.format(" Entrance=\"0\"");   // Index of rattachment entrance - Typically = 0
-  //       pw.format(" Obstacle=\"0\"");   // TOPOROBOT index of obstacle - Typically = 0
-  //       // pw.format(" Comments=\"\"");    // optional
-  //       pw.format(">\n");
-  //       pw.format("<Stations>\n");
-  //       TRobotPoint from = series.mBegin;
-  //       for ( TRobotPoint pt : series.mPoints ) {
-  //         // get leg from-pt and print it
-  //         DBlock blk = pt.mBlk;
-  //         if ( blk != null ) {
-  //           float az   = blk.mBearing;
-  //           float incl = blk.mClino;
-  //           if ( ! pt.mForward ) {
-  //             // az = ( az + 180 ); if ( az >= 360 ) az -= 360;
-  //             az = TDMath.add180( az );
-  //             incl = - incl;
-  //           }
-  //           float len = blk.mLength;
-  //           LRUD lrud = computeLRUD( blk, list, true ); // LRUD at FROM station
-  //           // float up    = 0; // TODO compute from splays as in COMPASS
-  //           // float left  = 0;
-  //           // float down  = 0;
-  //           // float right = 0;
-  //           pw.format("<Shot");
-  //           pw.format(" ID=\"%s\"", pt.mName );
-  //           pw.format(" Code=\"1\"");          // index of instrument - if unknown 1
-  //           pw.format(" Trip=\"1\"");          // index of session - if unknown 1
-  //           pw.format(" Secteur=\"0\"");       // Index of 'Seecteur' (subnetwork) - Typically = 0
-  //           // pw.format(Locale.US, " Label=\"\"");       // Label ID terrain (eg: AB123) - optional
-  //           pw.format(" Horodate=\"%s 00:00:00.00\"", date ); // horodating YYYY-MM-DD HH:MN:SS.MSd. If unknown now() or empty string
-  //           pw.format(" Humidity=\"0.00\"");                  // Humidity ; If unknown or unsupported, set to 0.00
-  //           pw.format(" Temperature=\"0.00\"");               // Temperature. If unknown or unsupported, set to 0.00
-  //           pw.format(" Comments=\"%s\"", blk.mComment );     // optional
-  //           pw.format(" TypeShot=\"%d\"", ( blk.isSurface() ? 7 : 0 ) ); // Type of shot; 0 Default; 1 Natural cave; 7 Surface shot. Typically = 0
-  //           pw.format(Locale.US, " Length=\"%.3f\"", len );
-  //           pw.format(Locale.US, " Az=\"%.2f\"",     az );
-  //           pw.format(Locale.US, " Incl=\"%.2f\"",   incl );
-  //           pw.format(Locale.US, " Left=\"%.2f\"",   lrud.l ); // left );
-  //           pw.format(Locale.US, " Right=\"%.2f\"",  lrud.r ); // right );
-  //           pw.format(Locale.US, " Up=\"%.2f\"",     lrud.u ); // up );
-  //           pw.format(Locale.US, " Down=\"%.2f\"",   lrud.d ); // down );
-  //           pw.format("/>\n");
-  //         }
-  //         from = pt;
-  //       }
-  //       pw.format("</Stations>\n");
-  //       pw.format("</Serie>\n");
-  //     }
-  //     pw.format("</Series>\n");
-  //     // optional (splays)
-  //     pw.format("<AntennaShots>\n");
-  //     // for all splays
-  //     int number = 0;
-  //     for ( DBlock blk : list ) {
-  //       if ( ! blk.isSplay() ) continue;
-  //       TRobotPoint pt = trobot.getPoint( blk.mFrom );
-  //       if ( pt == null ) continue;
-  //       ++ number;
-  //       // Comment: unused (by experience)
-  //       // Trip and Code Label: Unused here (inherits from <PtDep> and <SerDep>)
-  //       if ( blk.isCommented() ) {
-  //         pw.format(Locale.US, "<!-- AntennaShot");
-  //         pw.format(Locale.US, " PtDep=\"%d\"",    pt.mNumber );         // TOPOROBOT notation of the starting station SerDep.PtDep ; eg: 14.18
-  //         pw.format(Locale.US, " SerDep=\"%d\"",   pt.mSeries.mNumber ); // TOPOROBOT notation of the starting station SerDep.PtDep ; eg: 14.18
-  //         pw.format(Locale.US, " Az=\"%.2f\"",     blk.mBearing );
-  //         pw.format(Locale.US, " Incl=\"%.2f\"",   blk.mClino );
-  //         pw.format(Locale.US, " Length=\"%.3f\"", blk.mLength );
-  //         // pw.format(Locale.US, " Network=\"0\"");  // deprecated - set to 0 or omit
-  //         // pw.format(Locale.US, " Secteur=\"0\"");  // deprecated - set to 0 or omit
-  //         pw.format(Locale.US, " Comments=\"%s\"", blk.mComment );
-  //         pw.format("/ -->\n");
-  //       } else {
-  //         // TDLog.v( "TRobot splay " + blk.mFrom + " nr " + number + " Pt " + pt.mSeries.mNumber + "." + pt.mNumber );
-  //         pw.format(Locale.US, "<AntennaShot");
-  //         pw.format(Locale.US, " PtDep=\"%d\"",    pt.mNumber );         // TOPOROBOT notation of the starting station SerDep.PtDep ; eg: 14.18
-  //         pw.format(Locale.US, " SerDep=\"%d\"",   pt.mSeries.mNumber ); // TOPOROBOT notation of the starting station SerDep.PtDep ; eg: 14.18
-  //         pw.format(Locale.US, " Az=\"%.2f\"",     blk.mBearing );
-  //         pw.format(Locale.US, " Incl=\"%.2f\"",   blk.mClino );
-  //         pw.format(Locale.US, " Length=\"%.3f\"", blk.mLength );
-  //         // pw.format(Locale.US, " Network=\"0\"");  // deprecated - set to 0 or omit
-  //         // pw.format(Locale.US, " Secteur=\"0\"");  // deprecated - set to 0 or omit
-  //         pw.format(Locale.US, " Comments=\"%s\"", blk.mComment );
-  //         pw.format("/>\n");
-  //       }
-  //     }
-  //     pw.format("</AntennaShots>\n");
-  //     pw.format("</GHTopo>\n");
-  //     bw.flush();
-  //     bw.close();
-  //     return 1;
-  //   } catch ( IOException e ) {
-  //     TDLog.e( "Failed Walls export: " + e.getMessage() );
-  //     return 0;
-  //   }
-  // }
-
-  // =======================================================================
-  // GROTTOLF EXPORT
-  // commented flag supported for legs
-
-  // // write RLDU and the cross-section points
-  // static private void writeGrtProfile( PrintWriter pw, LRUDprofile lrud )
-  // {
-  //   pw.format(Locale.US, "%.2f %.2f %.2f %.2f\n", lrud.r, lrud.l, lrud.d, lrud.u );
-  //   pw.format(Locale.US, "# %d %.1f\n", lrud.size(), lrud.bearing );
-  //   int size = lrud.size();
-  //   for ( int k = 0; k<size; ++k ) {
-  //     pw.format(Locale.US, "# %.1f %.2f\n", lrud.getClino(k), lrud.getDistance(k) );
-  //   }
-  // }
-
-  // static private void writeGrtLeg( PrintWriter pw, AverageLeg leg, String fr, String to, boolean first,
-  //                                  DBlock item, List< DBlock > list )
-  // {
-  //   LRUDprofile lrud = null;
-  //   if ( item.isCommented() ) pw.format("; ");
-  //   if ( first ) {
-  //     pw.format(Locale.US, "%s %s 0.000 0.000 0.000 ", fr, fr );
-  //     lrud = computeLRUDprofile( item, list, true );
-  //     writeGrtProfile( pw, lrud );
-  //   }
-  //   pw.format(Locale.US, "%s %s %.1f %.1f %.2f ", fr, to, leg.bearing(), leg.clino(), leg.length() );
-  //   lrud = computeLRUDprofile( item, list, false );
-  //   writeGrtProfile( pw, lrud );
-  //   leg.reset();
-  // }
-
-  // static private void writeGrtFix( PrintWriter pw, String station, List< FixedInfo > fixed )
-  // {
-  //   if ( fixed.size() > 0 ) {
-  //     for ( FixedInfo fix : fixed ) {
-  //       if ( station.equals( fix.name ) ) {
-  //         pw.format(Locale.US, "%.8f %.8f %.1f\n", fix.lng, fix.lat, fix.h_geo );
-  //         return;
-  //       }
-  //     }
-  //   }
-  //   pw.format("0.00 0.00 0.00\n");
-  // }
-
-  // static int exportSurveyAsGrt( BufferedWriter bw, long sid, DataHelper data, SurveyInfo info, String name )
-  // {
-  //   try {
-  //     // TDLog.Log( TDLog.LOG_IO, "export Grottolf " + file.getName() );
-  //     // BufferedWriter bw = TDFile.getMSwriter( "grt", name + ".grt", "text/grt" );
-  //     PrintWriter pw = new PrintWriter( bw );
-  // 
-  //     pw.format("%s\n", info.name );
-  //     pw.format(";\n");
-  //     pw.format("; %s created by TopoDroid v %s \n", TDUtil.getDateString("yyyy/MM/dd"), TDVersion.string() );
-  //     pw.format(Locale.US, "360.00 360.00 %.2f 1.00\n", info.getDeclination() ); // degrees degrees decl. meters
-
-  //     List< FixedInfo > fixed = data.selectAllFixed( sid, TDStatus.NORMAL );
-  //     boolean first = true; // first station
-  //     List< DBlock > list = data.selectAllExportShots( sid, TDStatus.NORMAL );
-  //     checkShotsClino( list );
-  //     // int extend = 1;
-  //     AverageLeg leg = new AverageLeg(0);
-  //     DBlock ref_item = null;
-  //     String ref_from = null;
-  //     String ref_to   = null;
-  //     for ( DBlock item : list ) {
-  //       String from    = item.mFrom;
-  //       String to      = item.mTo;
-  //       if ( TDString.isNullOrEmpty( from ) ) {
-  //         if ( TDString.isNullOrEmpty( to ) ) { // no station: not exported
-  //           if ( ref_item != null &&
-  //              ( item.isSecLeg() || item.isRelativeDistance( ref_item ) ) ) {
-  //             leg.add( item.mLength, item.mBearing, item.mClino );
-  //           }
-  //         } else { // only TO station
-  //           if ( leg.mCnt > 0 && ref_item != null ) {
-  //             if ( first ) writeGrtFix( pw, ref_from, fixed );
-  //             writeGrtLeg( pw, leg, ref_from, ref_to, first, ref_item, list );
-  //             first = false;
-  //             ref_item = null; 
-  //             ref_from = null;
-  //             ref_to   = null;
-  //           }
-  //         }
-  //       } else { // with FROM station
-  //         if ( TDString.isNullOrEmpty( to ) ) { // splay shot
-  //           if ( leg.mCnt > 0 && ref_item != null ) { // finish writing previous leg shot
-  //             if ( first ) writeGrtFix( pw, ref_from, fixed );
-  //             writeGrtLeg( pw, leg, ref_from, ref_to, first, ref_item, list );
-  //             first = false;
-  //             ref_item = null; 
-  //             ref_from = null;
-  //             ref_to   = null;
-  //           }
-  //         } else {
-  //           if ( leg.mCnt > 0 && ref_item != null ) {
-  //             if ( first ) writeGrtFix( pw, ref_from, fixed );
-  //             writeGrtLeg( pw, leg, ref_from, ref_to, first, ref_item, list );
-  //             first = false;
-  //           }
-  //           ref_item = item;
-  //           ref_from = from;
-  //           ref_to   = to;
-  //           leg.set( item.mLength, item.mBearing, item.mClino );
-  //         }
-  //       }
-  //     }
-  //     if ( leg.mCnt > 0 && ref_item != null ) {
-  //       if ( first ) writeGrtFix( pw, ref_from, fixed );
-  //       writeGrtLeg( pw, leg, ref_from, ref_to, first, ref_item, list );
-  //     }
-
-  //     bw.flush();
-  //     bw.close();
-  //     return 1;
-  //   } catch ( IOException e ) {
-  //     TDLog.e( "Failed Walls export: " + e.getMessage() );
-  //     return 0;
-  //   }
-  // }
-
-  // =======================================================================
   // WALLS EXPORT 
   //   duplicate and surface flags are TODO
 
@@ -4363,6 +3632,7 @@ public class TDExporter
  
   static int exportSurveyAsSrv( BufferedWriter bw, long sid, DataHelper data, SurveyInfo info, String name )
   {
+    TopoDroidApp.updateAnalytic( TDAnalytics.EXPORT_SRV );
     // TDLog.v( "export as walls: " + file.getName() );
     float ul = TDSetting.mUnitLength;
     float ua = TDSetting.mUnitAngle;
@@ -4377,7 +3647,7 @@ public class TDExporter
       PrintWriter pw = new PrintWriter( bw );
   
       pw.format("; %s\n", info.name );
-      pw.format("; created by TopoDroid v %s - %s \n", TDVersion.string(), TDUtil.getDateString("yyyy.MM.dd") );
+      pw.format("; created by %s - %s \n", creator, TDUtil.getDateString("yyyy.MM.dd") );
 
       String date = info.date;
       int y = 0;
@@ -4640,6 +3910,7 @@ public class TDExporter
    */ 
   static int exportSurveyAsCav( BufferedWriter bw, long sid, DataHelper data, SurveyInfo info, String survey_name )
   {
+    TopoDroidApp.updateAnalytic( TDAnalytics.EXPORT_CAV );
     // TDLog.v( "export as topo: " + file.getName() );
     String eol = TDSetting.mSurvexEol;
     ArrayList< String > ents = null;
@@ -4650,7 +3921,7 @@ public class TDExporter
       PrintWriter pw = new PrintWriter( bw );
 
       pw.format("#cave %s%s", info.name, eol );
-      pw.format("%% Made by: TopoDroid %s - %s%s", TDVersion.string(), TDUtil.currentDate(), eol );
+      pw.format("%% Made by: %s - %s%s", creator, TDUtil.currentDate(), eol );
 
       String date = info.date;
       int y = 0;
@@ -4793,6 +4064,7 @@ public class TDExporter
    */
   static int exportSurveyAsPlg( BufferedWriter bw, long sid, DataHelper data, SurveyInfo info, String survey_name )
   {
+    TopoDroidApp.updateAnalytic( TDAnalytics.EXPORT_PLG );
     // TDLog.v("polygon " + file.getName() );
     float ul = 1; // TDSetting.mUnitLength;
     float ua = 1; // TDSetting.mUnitAngle;
@@ -4818,7 +4090,7 @@ public class TDExporter
       pw.format("Project name: %s", info.name );    printPolygonEOL( pw );  // FIXME char coding
       pw.format("Project place: %s", "" );          printPolygonEOL( pw ); // HBPly
       pw.format("Project code: ");                  printPolygonEOL( pw ); // HBPly
-      pw.format("Made by: TopoDroid %s", TDVersion.string() );   printPolygonEOL( pw );
+      pw.format("Made by: %s", creator );           printPolygonEOL( pw );
       pw.format(Locale.US, "Made date: %f", TDUtil.getDatePlg() ); printPolygonEOL( pw );
       pw.format("Last modi: 0");   printPolygonEOL( pw ); // no modification
       pw.format("AutoCorrect: 0"); printPolygonEOL( pw ); // HBPly no closed loops
@@ -5049,7 +4321,7 @@ public class TDExporter
             break;
           }
           if (d0.to.equals(first_from) && !d0.from.equals("-")) { // backward to GPS
-            d0.reverse();
+            d0.reverseShot();
             printPolygonData( pw, d0 );
             d0.used = true;
             break;
@@ -5076,7 +4348,7 @@ public class TDExporter
                   break;
                 }
                 if ( to.equals( d1.to ) || to.equals( d1.from ) ) { // try reversed
-                  d2.reverse();
+                  d2.reverseShot();
                   printPolygonData( pw, d2 );
                   d2.used = true;
                   break;
@@ -5125,13 +4397,14 @@ public class TDExporter
    */ 
   static int exportSurveyAsDxf( BufferedWriter bw, long sid, DataHelper data, SurveyInfo info, TDNum num, String survey_name )
   {
+    TopoDroidApp.updateAnalytic( TDAnalytics.EXPORT_DXF );
     // TDLog.v( "export survey as Dxf " + file.getName() );
     try {
       // TDLog.Log( TDLog.LOG_IO, "export DXF " + file.getName() );
       // BufferedWriter bw = TDFile.getMSwriter( "dxf", survey_name + ".dxf", "text/dxf" );
       PrintWriter out = new PrintWriter( bw );
       // TODO
-      out.printf(Locale.US, "999\nDXF created by TopoDroid v %s - %s ", TDVersion.string(), TDUtil.getDateString("yyyy.MM.dd") );
+      out.printf(Locale.US, "999\nDXF created by %s - %s ", creator, TDUtil.getDateString("yyyy.MM.dd") );
       if ( info.hasDeclination() ) {
         out.printf(Locale.US, "(declination %.4f)\n", info.getDeclination() ); // DECLINATION DXF
       } else {
@@ -5531,6 +4804,7 @@ public class TDExporter
    */ 
   static int exportSurveyAsTro( BufferedWriter bw, long sid, DataHelper data, SurveyInfo info, String survey_name, String vt_series )
   {
+    TopoDroidApp.updateAnalytic( TDAnalytics.EXPORT_TRO );
     // TDLog.v( "export as visualtopo: " + file.getName() );
     List< DBlock > list = data.selectAllExportShots( sid, TDStatus.NORMAL );
     checkShotsClino( list );
@@ -5544,7 +4818,7 @@ public class TDExporter
       PrintWriter  psw = new PrintWriter( sw );
   
       pw.format("Version 5.02\r\n\r\n");
-      pw.format("; %s created by TopoDroid v %s\r\n\r\n", TDUtil.getDateString("yyyy.MM.dd"), TDVersion.string() );
+      pw.format("; %s created by %s\r\n\r\n", TDUtil.getDateString("yyyy.MM.dd"), creator );
       if ( fixed.size() > 0 ) { 
         FixedInfo fix = fixed.get(0);
         pw.format(Locale.US, "; Trou %s,%.7f,%.7f,LT2E\r\n", info.name, fix.lat, fix.lng );
@@ -5727,6 +5001,7 @@ public class TDExporter
    */ 
   static int exportSurveyAsTrox( BufferedWriter bw, long sid, DataHelper data, SurveyInfo info, String survey_name, String vt_series )
   {
+    TopoDroidApp.updateAnalytic( TDAnalytics.EXPORT_TROX );
     boolean diving = info.isDivingMode();
 
     // TDLog.v( "export as visualtopo-X " );
@@ -5743,7 +5018,7 @@ public class TDExporter
       PrintWriter  psw = new PrintWriter( sw );
 
       pw.format("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?>\r\n" );
-      pw.format("<!-- %s created by TopoDroid v %s -->\r\n", TDUtil.getDateString("yyyy.MM.dd"), TDVersion.string() );
+      pw.format("<!-- %s created by %s -->\r\n", TDUtil.getDateString("yyyy.MM.dd"), creator );
       pw.format("<VisualTopo>\r\n");
       pw.format("<Version>5.15</Version>\r\n");
       pw.format("<Lignes>%d</Lignes>\r\n", lignes );
@@ -5917,4 +5192,802 @@ public class TDExporter
     }
   }
 
+  // ===================================================================================================
+  // GEO JASON GeoJSON export
+  //   NOTE shot flags are ignored
+
+  // /** export data json file
+  //  * @param bw    buffered output stream
+  //  * @param sid   survey ID
+  //  * @param data  database helper object
+  //  * @param info  survey info
+  //  * @param survey_name survey name
+  //  * @return 1 success, 0 fail, 2 no geopoint
+  //  */
+  // static int exportSurveyAsJson( BufferedWriter bw, long sid, DataHelper data, SurveyInfo info, String survey_name )
+  // {
+  //   TopoDroidApp.updateAnalytic( TDAnalytics.EXPORT_JSON );
+  //   final String name    = "\"name\": ";
+  //   final String type    = "\"type\": ";
+  //   final String item    = "\"item\": ";
+  //   final String geom    = "\"geometry\": ";
+  //   final String coords  = "\"coordinates\": ";
+  //   final String feature = "\"Feature\"";
+  //   // TDLog.v( "export as GeoJSON " + file.getName() );
+  //   List< TDNum > nums = getGeolocalizedData( sid, data, info.getDeclination(), 1.0f, true, false ); // true: ellipsoid altitude, false no convergence
+  //   if ( TDUtil.isEmpty(nums) ) {
+  //     TDLog.e( "GeoJSON failed export: no geolocalized station");
+  //     return 2;
+  //   }
+
+  //   // now write the GeoJSON
+  //   try {
+  //     // TDLog.Log( TDLog.LOG_IO, "export GeoJSON " + file.getName() );
+  //     // BufferedWriter bw = TDFile.getMSwriter( "json", survey_name + ".json", "text/json" );
+  //     PrintWriter pw = new PrintWriter( bw );
+
+  //     pw.format("const geojsonObject = {\n");
+  //     pw.format("  \"name\": \"%s\",\n", info.name );
+  //     pw.format("  \"created\": \"%s - %s\",\n",  TDUtil.getDateString("yyyy.MM.dd"), creator );
+  //     pw.format("  %s \"FeatureCollection\",\n", type );
+  //     pw.format("  \"features\": [\n");
+  //     
+  //     for ( TDNum num : nums ) {
+  //       List< NumShot >    shots = num.getShots();
+  //       for ( NumShot sh : shots ) {
+  //         NumStation from = sh.from;
+  //         NumStation to   = sh.to;
+  //         if ( from.has3DCoords() && to.has3DCoords() ) {
+  //           pw.format("    {\n");
+  //           pw.format("      %s %s,\n", type, feature );
+  //           pw.format("      %s \"centerline\",\n", item );
+  //           pw.format("      %s \"%s %s\",\n", name, from.name, to.name );
+  //           pw.format("      %s \"LineString\",\n", geom );
+  //           pw.format(Locale.US, "      %s [ [ %.8f, %.8f, %.1f ], [ %.8f, %.8f, %.1f ] ]\n", coords, from.e, from.s, from.v, to.e, to.s, to.v );
+  //           pw.format("    },\n");
+  //         }
+  //       }
+  //     }
+  //     if ( TDSetting.mKmlSplays ) {
+  //       for ( TDNum num : nums ) {
+  //         List< NumSplay >   splays = num.getSplays();
+  //         for ( NumSplay sp : splays ) {
+  //           NumStation from = sp.from;
+  //           pw.format("    {\n");
+  //           pw.format("      %s %s,\n", type, feature );
+  //           pw.format("      %s \"splay\",\n", item );
+  //           pw.format("      %s \"%s\",\n", name, from.name );
+  //           pw.format("      %s \"LineString\",\n", geom );
+  //           pw.format(Locale.US, "     %s [ [ %.8f, %.8f, %.1f ], [ %.8f, %.8f, %.1f ] ]\n", coords, from.e, from.s, from.v, sp.e, sp.s, sp.v );
+  //           pw.format("    },\n");
+  //         }
+  //       }
+  //     }
+  //     if ( TDSetting.mKmlStations ) {
+  //       for ( TDNum num : nums ) {
+  //         List< NumStation > stations = num.getStations();
+  //         for ( NumStation st : stations ) {
+  //           pw.format("    {\n");
+  //           pw.format("      %s %s,\n", type, feature );
+  //           pw.format("      %s \"station\",\n", item );
+  //           pw.format("      %s \"%s\",\n", name, st.name );
+  //           pw.format("      %s \"Point\",\n", geom );
+  //           pw.format(Locale.US, "      %s [ %.8f %.8f %.1f ]\n", coords, st.e, st.s, st.v );
+  //           pw.format("    },\n");
+  //         }
+  //       }
+  //     }
+  //     pw.format("    { }\n"); // add a null feature
+  //     pw.format("  ]\n");     // close features array
+  //     pw.format("};\n");      // close geojson object
+  //     bw.flush();
+  //     bw.close();
+  //     return 1;
+  //   } catch ( IOException e ) {
+  //     TDLog.e( "GeoJSON failed export: " + e.getMessage() );
+  //     return 0;
+  //   }
+  // }
+
+  // =======================================================================
+  // GHTOPO EXPORT
+  // commented flag supported for splays
+  //   surface flag handled
+  //   duplicate flag not handled
+  //
+  // // one of 6 14 31 83 115 164 211
+  // static private int randomColor()
+  // {
+  //   return 5;
+  // }
+  //
+  // static int exportSurveyAsGtx( BufferedWriter bw, long sid, DataHelper data, SurveyInfo info, String survey_name )
+  // {
+  //   TopoDroidApp.updateAnalytic( TDAnalytics.EXPORT_GTX );
+  //   String date = info.date.replace( '.', '-' ); // MySQL date format YYYY-MM-DD
+  //   try {
+  //     // TDLog.Log( TDLog.LOG_IO, "export GHTopo " + file.getName() );
+  //     // BufferedWriter bw = TDFile.getMSwriter( "gtx", survey_name + ".gtx", "text/gtx" );
+  //     PrintWriter pw = new PrintWriter( bw );
+  //     pw.format("<?xml version=\"1.0\" encoding=\"utf-8\"?>\n");
+  //     pw.format("<!-- %s created by %s -->\r\n", TDUtil.getDateString("yyyy.MM.dd"), creator );
+  //     pw.format("<GHTopo>\n");
+  //     // mandatory - cave name
+  //     pw.format("<General>\n");
+  //     pw.format("<Cavite"); 
+  //     pw.format(" FolderName=\"%s\"", info.name );
+  //     pw.format(" CoordsSystem=\"\"");          // Coord system (optional)  
+  //     pw.format(" CoordsSystemEPSG=\"4978\"");  // EPSG code
+  //     pw.format(" FolderObservations=\"\"");
+  //     pw.format("/>\n");
+  //     pw.format("</General>\n");
+  //     // optional - TopoDroid generates only one default namespace
+  //     pw.format("<Namespaces>\n");
+  //     pw.format("<Namespace");
+  //     pw.format(" Name=\"\"");
+  //     pw.format(" ColorB=\"0\"");       // Color R (int in [0..255])
+  //     pw.format(" ColorG=\"0\"");
+  //     pw.format(" ColorR=\"255\"");
+  //     pw.format(" NamespaceIdx=\"0\""); // Index of namespace
+  //     pw.format(" Description=\"\"");   // ...
+  //     pw.format("/>\n");
+  //     pw.format("</Namespaces>\n");
+  //     // optional - N.B. do not generate section <Filters>
+  //     // pw.format("<Filters>\n");
+  //     // pw.format("<Filters");
+  //     // pw.format(" Filter=\"\"");
+  //     // pw.format(" Numero=\"\"");
+  //     // pw.format(" Name=\"\"");
+  //     // pw.format(" Expression=\"\"");
+  //     // pw.format(" Description=\"\"");
+  //     // pw.format("/>\n");
+  //     // pw.format("</Filters>\n");
+  //     List< DBlock > list = data.selectAllExportShots( sid, TDStatus.NORMAL );
+  //     checkShotsClino( list );
+  //     TRobot trobot = new TRobot( list );
+  //     // trobot.dump(); // DEBUG
+  //     // mandatory - N.B. only one entrance, typically main entrance
+  //     List< FixedInfo > fixeds = data.selectAllFixed( sid, TDStatus.NORMAL );
+  //     boolean entrance_todo = true;
+  //     pw.format("<Entrances>\n");
+  //     if ( fixeds.size() > 0 ) {
+  //       // int ce = 0;
+  //       for ( FixedInfo fixed : fixeds ) {
+  //         TRobotPoint pt = trobot.getPoint( fixed.name );
+  //         if ( pt != null ) {
+  //           pw.format("<Entrance");
+  //           pw.format(Locale.US, " X=\"%.10f\"", fixed.lng );
+  //           pw.format(Locale.US, " Y=\"%.10f\"", fixed.lat );
+  //           pw.format(Locale.US, " Z=\"%.2f\"",  fixed.h_geo );
+  //           pw.format(" Name=\"%s\"",     fixed.name );
+  //           pw.format(" Numero=\"0\"" );  // ce
+  //           pw.format(" Comments=\"%s\"", fixed.comment );
+  //           pw.format(" RefPoint=\"%d\"", pt.mNumber );
+  //           pw.format(" RefSerie=\"%d\"", pt.mSeries.mNumber );
+  //           // pw.format(" IdTerrain=\"\"" ); // optional
+  //           // pw.format(" Comments=\"\"" );  // optional
+  //           pw.format(" Colour=\"$255000000\"");
+  //           pw.format("/>\n" );
+  //           entrance_todo = false;
+  //           // ++ ce;
+  //           break;
+  //         }
+  //       }
+  //     }
+  //     if ( entrance_todo ) { // use first survey point of first series
+  //       TRobotSeries sr = trobot.mSeries.get(0);
+  //       TRobotPoint  pt = sr.mBegin;
+  //       pw.format("<Entrance");
+  //       pw.format(" X=\"0.00\"" ); // Unknown coords set to 0.00
+  //       pw.format(" Y=\"0.00\"" );
+  //       pw.format(" Z=\"0.00\"" );
+  //       pw.format(" Name=\"First Station\"");       // name of entrance
+  //       pw.format(" Numero=\"0\"");
+  //       pw.format(" Comments=\"\"");
+  //       pw.format(" RefPoint=\"%d\"", pt.mNumber ); // Point number (typically 0)
+  //       pw.format(" RefSerie=\"%d\"", sr.mNumber ); // Series number (typically 1)
+  //       // pw.format(" IdTerrain=\"\"");            // Cave code (optional)
+  //       // pw.format(" Comments=\"\"");             // Comment (optional)
+  //       pw.format(" Colour=\"$255000000\"");        // string $RRRGGGBBB (value is full red)
+  //       pw.format("/>\n");
+  //     }
+  //     pw.format("</Entrances>\n");
+  //     // optional - TopoDroid should not generate it
+  //     // pw.format("<Secteurs>\n");
+  //     // pw.format("<Secteur");
+  //     // pw.format(" Name=\"\"");       // ...
+  //     // pw.format(" Numero=\"\"");     // ...
+  //     // pw.format("/>\n");
+  //     // pw.format("</Secteurs>\n");
+  //     // optional - TopoDroid should not generate it
+  //     // pw.format("<Networks>\n");
+  //     // pw.format("<Network");
+  //     // pw.format(" Name=\"%s\"", info.name ); // name of network
+  //     // pw.format(" Type=\"0\"");              // for future use - set to 0
+  //     // pw.format(" ColorB=\"0\"");
+  //     // pw.format(" ColorG=\"0\"");
+  //     // pw.format(" ColorR=\"255\"");
+  //     // pw.format(" Numero=\"1\"");            // index of network, start from 0
+  //     // pw.format(" Comments=\"\"");           // optional
+  //     // pw.format("/>\n" );
+  //     // pw.format("</Networks>\n");
+  //     // mandatory: instruments code
+  //     pw.format("<Codes>\n");
+  //     pw.format("<Code");
+  //     pw.format(" Numero=\"1\"");             // index of code instruments
+  //     pw.format(" ClinoUnit=\"360\"");        // degrees 360, grad 400
+  //     pw.format(" CompassUnit=\"360\"");
+  //     pw.format(" FactLong=\"1\"");           // length correction factor
+  //     pw.format(" Type=\"0\"");               // for future use - set to 0
+  //     pw.format(" AngleLimite=\"0.0\" ");     // TOPOROBOT angle limite - Set to 0.00 always
+  //     pw.format(" PsiL=\"0.05\"");            // length tolerance [m]
+  //     pw.format(" PsiP=\"1.0\"");             // clino tolerance [clino units]
+  //     pw.format(" PsiAz=\"1.0\"");            // azimuth tolerance
+  //     pw.format(" Comments=\"\"");            // optional
+  //     pw.format(" ErrorTourillon=\"0\"");     // Parameters for Compass and clino correction functions: set to 0
+  //     pw.format(" DiamBoule1=\"0\"");
+  //     pw.format(" DiamBoule2=\"0\"");
+  //     pw.format(" FuncCorrAzCo=\"0\"");
+  //     pw.format(" FuncCorrIncCo=\"0\"");
+  //     pw.format(" FuncCorrAzErrMax=\"0\"");
+  //     pw.format(" FuncCorrIncErrMax=\"0\"");
+  //     pw.format(" FuncCorrAzPosErrMax=\"0\"");
+  //     pw.format(" FuncCorrIncPosErrMax=\"0\"");
+  //     pw.format("/>\n");
+  //     pw.format("</Codes>\n");
+  //     // mandatory
+  //     float declination = ( info.hasDeclination() )? info.getDeclination() : 0;
+  //     pw.format("<Seances>\n");
+  //     pw.format("<Trip");
+  //     pw.format(" Date=\"%s\"", date );             // date YYYY-MM-DD
+  //     pw.format(" ColorIndex=\"%d\"", randomColor() ); // index of TopoRobot palette, in 1..255: Black=1 Red=6 Green=11 Blue=211 Fuchsia=73
+  //     pw.format(" Numero=\"1\"");                   // index of session
+  //     pw.format(" Comments=\"%s\"", info.comment ); // optional
+  //     pw.format(" Surveyor1=\"%s\"", info.team );   // N.B. info.team is not parsed - main operator
+  //     pw.format(" Surveyor2=\"\"");                 // assistant(s)
+  //     pw.format(" ModeDeclination=\"0\"");          // 0 or 1, GHTopo will calculate automatically from date and coordinates. Typically = 0
+  //     pw.format(Locale.US, " Declination=\"%.2f\"", declination);  // magnetic declination
+  //     // pw.format(" Inclination=\"0\"");              // deprecated - set to 0 or omit
+  //     pw.format("/>\n");
+  //     pw.format("</Seances>\n");
+  //     // mandatory
+  //     pw.format("<Series>\n");
+  //     for ( TRobotSeries series : trobot.mSeries ) {
+  //       TRobotPoint dep = series.mBegin;
+  //       TRobotPoint arr = series.mEnd;
+  //       pw.format("<Serie");
+  //       pw.format(" Numero=\"%d\" ", series.mNumber );      // series number
+  //       pw.format(" Name=\"\"");                            // series name
+  //       // pw.format(" Color=\"#0000FF\"");                    // For GHTopo future usage - Must be set to #0000FF - Unused: omit
+  //       pw.format(" SerDep=\"%d\"",  dep.mSeries.mNumber ); // TOPOROBOT notation of the starting station SerDep.PtDep ; eg: 14.18
+  //       pw.format(" PtDep=\"%d\"",   dep.mNumber );         // TOPOROBOT notation of the starting station SerDep.PtDep ; eg: 14.18
+  //       pw.format(" SerArr=\"%d\"",  arr.mSeries.mNumber ); // TOPOROBOT notation of the ending station SerDep.PtDep ; eg: 39.45
+  //       pw.format(" PtArr=\"%d\"",   arr.mNumber );         // TOPOROBOT notation of the endins station SerDep.PtDep ; eg: 39.45
+  //       pw.format(" Network=\"1\"");    // Index of rattachment network - Typically = 0
+  //       pw.format(" Raideur=\"1.00\""); // Stiffness coefficient - Typically = 1.00 for standard shots
+  //       pw.format(" Entrance=\"0\"");   // Index of rattachment entrance - Typically = 0
+  //       pw.format(" Obstacle=\"0\"");   // TOPOROBOT index of obstacle - Typically = 0
+  //       // pw.format(" Comments=\"\"");    // optional
+  //       pw.format(">\n");
+  //       pw.format("<Stations>\n");
+  //       TRobotPoint from = series.mBegin;
+  //       for ( TRobotPoint pt : series.mPoints ) {
+  //         // get leg from-pt and print it
+  //         DBlock blk = pt.mBlk;
+  //         if ( blk != null ) {
+  //           float az   = blk.mBearing;
+  //           float incl = blk.mClino;
+  //           if ( ! pt.mForward ) {
+  //             // az = ( az + 180 ); if ( az >= 360 ) az -= 360;
+  //             az = TDMath.add180( az );
+  //             incl = - incl;
+  //           }
+  //           float len = blk.mLength;
+  //           LRUD lrud = computeLRUD( blk, list, true ); // LRUD at FROM station
+  //           // float up    = 0; // TODO compute from splays as in COMPASS
+  //           // float left  = 0;
+  //           // float down  = 0;
+  //           // float right = 0;
+  //           pw.format("<Shot");
+  //           pw.format(" ID=\"%s\"", pt.mName );
+  //           pw.format(" Code=\"1\"");          // index of instrument - if unknown 1
+  //           pw.format(" Trip=\"1\"");          // index of session - if unknown 1
+  //           pw.format(" Secteur=\"0\"");       // Index of 'Seecteur' (subnetwork) - Typically = 0
+  //           // pw.format(Locale.US, " Label=\"\"");       // Label ID terrain (eg: AB123) - optional
+  //           pw.format(" Horodate=\"%s 00:00:00.00\"", date ); // horodating YYYY-MM-DD HH:MN:SS.MSd. If unknown now() or empty string
+  //           pw.format(" Humidity=\"0.00\"");                  // Humidity ; If unknown or unsupported, set to 0.00
+  //           pw.format(" Temperature=\"0.00\"");               // Temperature. If unknown or unsupported, set to 0.00
+  //           pw.format(" Comments=\"%s\"", blk.mComment );     // optional
+  //           pw.format(" TypeShot=\"%d\"", ( blk.isSurface() ? 7 : 0 ) ); // Type of shot; 0 Default; 1 Natural cave; 7 Surface shot. Typically = 0
+  //           pw.format(Locale.US, " Length=\"%.3f\"", len );
+  //           pw.format(Locale.US, " Az=\"%.2f\"",     az );
+  //           pw.format(Locale.US, " Incl=\"%.2f\"",   incl );
+  //           pw.format(Locale.US, " Left=\"%.2f\"",   lrud.l ); // left );
+  //           pw.format(Locale.US, " Right=\"%.2f\"",  lrud.r ); // right );
+  //           pw.format(Locale.US, " Up=\"%.2f\"",     lrud.u ); // up );
+  //           pw.format(Locale.US, " Down=\"%.2f\"",   lrud.d ); // down );
+  //           pw.format("/>\n");
+  //         }
+  //         from = pt;
+  //       }
+  //       pw.format("</Stations>\n");
+  //       pw.format("</Serie>\n");
+  //     }
+  //     pw.format("</Series>\n");
+  //     // optional (splays)
+  //     pw.format("<AntennaShots>\n");
+  //     // for all splays
+  //     int number = 0;
+  //     for ( DBlock blk : list ) {
+  //       if ( ! blk.isSplay() ) continue;
+  //       TRobotPoint pt = trobot.getPoint( blk.mFrom );
+  //       if ( pt == null ) continue;
+  //       ++ number;
+  //       // Comment: unused (by experience)
+  //       // Trip and Code Label: Unused here (inherits from <PtDep> and <SerDep>)
+  //       if ( blk.isCommented() ) {
+  //         pw.format(Locale.US, "<!-- AntennaShot");
+  //         pw.format(Locale.US, " PtDep=\"%d\"",    pt.mNumber );         // TOPOROBOT notation of the starting station SerDep.PtDep ; eg: 14.18
+  //         pw.format(Locale.US, " SerDep=\"%d\"",   pt.mSeries.mNumber ); // TOPOROBOT notation of the starting station SerDep.PtDep ; eg: 14.18
+  //         pw.format(Locale.US, " Az=\"%.2f\"",     blk.mBearing );
+  //         pw.format(Locale.US, " Incl=\"%.2f\"",   blk.mClino );
+  //         pw.format(Locale.US, " Length=\"%.3f\"", blk.mLength );
+  //         // pw.format(Locale.US, " Network=\"0\"");  // deprecated - set to 0 or omit
+  //         // pw.format(Locale.US, " Secteur=\"0\"");  // deprecated - set to 0 or omit
+  //         pw.format(Locale.US, " Comments=\"%s\"", blk.mComment );
+  //         pw.format("/ -->\n");
+  //       } else {
+  //         // TDLog.v( "TRobot splay " + blk.mFrom + " nr " + number + " Pt " + pt.mSeries.mNumber + "." + pt.mNumber );
+  //         pw.format(Locale.US, "<AntennaShot");
+  //         pw.format(Locale.US, " PtDep=\"%d\"",    pt.mNumber );         // TOPOROBOT notation of the starting station SerDep.PtDep ; eg: 14.18
+  //         pw.format(Locale.US, " SerDep=\"%d\"",   pt.mSeries.mNumber ); // TOPOROBOT notation of the starting station SerDep.PtDep ; eg: 14.18
+  //         pw.format(Locale.US, " Az=\"%.2f\"",     blk.mBearing );
+  //         pw.format(Locale.US, " Incl=\"%.2f\"",   blk.mClino );
+  //         pw.format(Locale.US, " Length=\"%.3f\"", blk.mLength );
+  //         // pw.format(Locale.US, " Network=\"0\"");  // deprecated - set to 0 or omit
+  //         // pw.format(Locale.US, " Secteur=\"0\"");  // deprecated - set to 0 or omit
+  //         pw.format(Locale.US, " Comments=\"%s\"", blk.mComment );
+  //         pw.format("/>\n");
+  //       }
+  //     }
+  //     pw.format("</AntennaShots>\n");
+  //     pw.format("</GHTopo>\n");
+  //     bw.flush();
+  //     bw.close();
+  //     return 1;
+  //   } catch ( IOException e ) {
+  //     TDLog.e( "Failed Walls export: " + e.getMessage() );
+  //     return 0;
+  //   }
+  // }
+
+  // =======================================================================
+  // GROTTOLF EXPORT
+  // commented flag supported for legs
+
+  // // write RLDU and the cross-section points
+  // static private void writeGrtProfile( PrintWriter pw, LRUDprofile lrud )
+  // {
+  //   pw.format(Locale.US, "%.2f %.2f %.2f %.2f\n", lrud.r, lrud.l, lrud.d, lrud.u );
+  //   pw.format(Locale.US, "# %d %.1f\n", lrud.size(), lrud.bearing );
+  //   int size = lrud.size();
+  //   for ( int k = 0; k<size; ++k ) {
+  //     pw.format(Locale.US, "# %.1f %.2f\n", lrud.getClino(k), lrud.getDistance(k) );
+  //   }
+  // }
+
+  // static private void writeGrtLeg( PrintWriter pw, AverageLeg leg, String fr, String to, boolean first,
+  //                                  DBlock item, List< DBlock > list )
+  // {
+  //   LRUDprofile lrud = null;
+  //   if ( item.isCommented() ) pw.format("; ");
+  //   if ( first ) {
+  //     pw.format(Locale.US, "%s %s 0.000 0.000 0.000 ", fr, fr );
+  //     lrud = computeLRUDprofile( item, list, true );
+  //     writeGrtProfile( pw, lrud );
+  //   }
+  //   pw.format(Locale.US, "%s %s %.1f %.1f %.2f ", fr, to, leg.bearing(), leg.clino(), leg.length() );
+  //   lrud = computeLRUDprofile( item, list, false );
+  //   writeGrtProfile( pw, lrud );
+  //   leg.reset();
+  // }
+
+  // static private void writeGrtFix( PrintWriter pw, String station, List< FixedInfo > fixed )
+  // {
+  //   if ( fixed.size() > 0 ) {
+  //     for ( FixedInfo fix : fixed ) {
+  //       if ( station.equals( fix.name ) ) {
+  //         pw.format(Locale.US, "%.8f %.8f %.1f\n", fix.lng, fix.lat, fix.h_geo );
+  //         return;
+  //       }
+  //     }
+  //   }
+  //   pw.format("0.00 0.00 0.00\n");
+  // }
+
+  // static int exportSurveyAsGrt( BufferedWriter bw, long sid, DataHelper data, SurveyInfo info, String name )
+  // {
+  //   TopoDroidApp.updateAnalytic( TDAnalytics.EXPORT_GRT );
+  //   try {
+  //     // TDLog.Log( TDLog.LOG_IO, "export Grottolf " + file.getName() );
+  //     // BufferedWriter bw = TDFile.getMSwriter( "grt", name + ".grt", "text/grt" );
+  //     PrintWriter pw = new PrintWriter( bw );
+  // 
+  //     pw.format("%s\n", info.name );
+  //     pw.format(";\n");
+  //     pw.format("; %s created by %s \n", TDUtil.getDateString("yyyy/MM/dd"), creator );
+  //     pw.format(Locale.US, "360.00 360.00 %.2f 1.00\n", info.getDeclination() ); // degrees degrees decl. meters
+
+  //     List< FixedInfo > fixed = data.selectAllFixed( sid, TDStatus.NORMAL );
+  //     boolean first = true; // first station
+  //     List< DBlock > list = data.selectAllExportShots( sid, TDStatus.NORMAL );
+  //     checkShotsClino( list );
+  //     // int extend = 1;
+  //     AverageLeg leg = new AverageLeg(0);
+  //     DBlock ref_item = null;
+  //     String ref_from = null;
+  //     String ref_to   = null;
+  //     for ( DBlock item : list ) {
+  //       String from    = item.mFrom;
+  //       String to      = item.mTo;
+  //       if ( TDString.isNullOrEmpty( from ) ) {
+  //         if ( TDString.isNullOrEmpty( to ) ) { // no station: not exported
+  //           if ( ref_item != null &&
+  //              ( item.isSecLeg() || item.isRelativeDistance( ref_item ) ) ) {
+  //             leg.add( item.mLength, item.mBearing, item.mClino );
+  //           }
+  //         } else { // only TO station
+  //           if ( leg.mCnt > 0 && ref_item != null ) {
+  //             if ( first ) writeGrtFix( pw, ref_from, fixed );
+  //             writeGrtLeg( pw, leg, ref_from, ref_to, first, ref_item, list );
+  //             first = false;
+  //             ref_item = null; 
+  //             ref_from = null;
+  //             ref_to   = null;
+  //           }
+  //         }
+  //       } else { // with FROM station
+  //         if ( TDString.isNullOrEmpty( to ) ) { // splay shot
+  //           if ( leg.mCnt > 0 && ref_item != null ) { // finish writing previous leg shot
+  //             if ( first ) writeGrtFix( pw, ref_from, fixed );
+  //             writeGrtLeg( pw, leg, ref_from, ref_to, first, ref_item, list );
+  //             first = false;
+  //             ref_item = null; 
+  //             ref_from = null;
+  //             ref_to   = null;
+  //           }
+  //         } else {
+  //           if ( leg.mCnt > 0 && ref_item != null ) {
+  //             if ( first ) writeGrtFix( pw, ref_from, fixed );
+  //             writeGrtLeg( pw, leg, ref_from, ref_to, first, ref_item, list );
+  //             first = false;
+  //           }
+  //           ref_item = item;
+  //           ref_from = from;
+  //           ref_to   = to;
+  //           leg.set( item.mLength, item.mBearing, item.mClino );
+  //         }
+  //       }
+  //     }
+  //     if ( leg.mCnt > 0 && ref_item != null ) {
+  //       if ( first ) writeGrtFix( pw, ref_from, fixed );
+  //       writeGrtLeg( pw, leg, ref_from, ref_to, first, ref_item, list );
+  //     }
+
+  //     bw.flush();
+  //     bw.close();
+  //     return 1;
+  //   } catch ( IOException e ) {
+  //     TDLog.e( "Failed Walls export: " + e.getMessage() );
+  //     return 0;
+  //   }
+  // }
+
+  // -----------------------------------------------------------------------
+  // TOPOLINUX EXPORT 
+  // commented flag not supported 
+
+  // public String exportSurveyAsTlx( BufferedWriter bw, long sid, DataHelper data, SurveyInfo info, String surveyname ) // FIXME args
+  // {
+  //   TopoDroidApp.updateAnalytic( TDAnalytics.EXPORT_TLX );
+  //   File dir = TDFile.getFile( TopoDroidApp.APP_TLX_PATH );
+  //   if (!dir.exists()) {
+  //     dir.mkdirs();
+  //   }
+  //   String filename = TopoDroidApp.APP_TLX_PATH + info.name + ".tlx";
+  //   List< DBlock > list = mData.selectAllExportShots( sid, TDStatus.NORMAL );
+  //   checkShotsClino( list );
+  //   try {
+  //     TDPath.checkPath( filename );
+  //     // BufferedWriter bw = TDFile.getMSwriter( "tlx", surveyname + ".tlx", "text/tlx" );
+  //     PrintWriter pw = new PrintWriter( bw );
+  //     pw.format("tlx2\n");
+  //     pw.format("# %s created by %s\n\n", TDUtil.getDateString("yyyy.MM.dd"), creator );
+  //     pw.format("# date %s \n", mData.getSurveyDate( sid ) );
+  //     pw.format("# %s \n", mData.getSurveyComment( sid ) );
+  //     int n = 0;
+  //     float l=0.0f, b=0.0f, c=0.0f;
+  //     float l0[] = new float[10];
+  //     float b0[] = new float[10];
+  //     float c0[] = new float[10];
+  //     float r0[] = new float[10];
+  //     DBlock ref_item = null;
+  //     int extend = 0;
+  //     int flag   = DBlock.FLAG_SURVEY;
+
+  //     for ( DBlock item : list ) {
+  //       String from = item.mFrom;
+  //       String to   = item.mTo;
+  //       if ( from != null && from.length() > 0 ) {
+  //         if ( to != null && to.length() > 0 ) {
+  //           if ( n > 0 /* && ref_item != null */ ) {
+  //             b = TDUtil.in360( b/n );
+  //             pw.format(Locale.US, "%.2f %.1f %.1f 0.0 %d %d %d\n", l/n, b, c/n, extend, flag, n );
+  //             while ( n > 0 ) {
+  //               -- n;
+  //               pw.format(Locale.US, "@ %.2f %.1f %.1f %.1f\n", l0[n], b0[n], c0[n], r0[n] );
+  //             }
+  //             extend = 0;
+  //             flag   = DBlock.FLAG_SURVEY;
+  //           }
+  //           n = 1;
+  //           ref_item = item;
+  //           // item.Comment()
+  //           pw.format("    \"%s\" \"%s\" ", from, to );
+  //           l = item.mLength;
+  //           b = item.mBearing;
+  //           c = item.mClino;
+  //           extend = item.getIntExtend();
+  //           flag   = (int) item.getFlag();
+  //           l0[0] = item.mLength;
+  //           b0[0] = item.mBearing;
+  //           c0[0] = item.mClino;
+  //           r0[0] = item.mRoll;
+  //         } else { // to.isEmpty()
+  //           if ( n > 0 /* && ref_item != null */ ) {
+  //             b = TDUtil.in360( b/n );
+  //             pw.format(Locale.US, "%.2f %.1f %.1f 0.0 %d %d %d\n", l/n, b, c/n, extend, flag, n );
+  //             while ( n > 0 ) {
+  //               -- n;
+  //               pw.format(Locale.US, "@ %.2f %.1f %.1fi %.1f\n", l0[n], b0[n], c0[n], r0[n] );
+  //             }
+  //             n = 0;
+  //             ref_item = null;
+  //             extend = 0;
+  //             flag   = DBlock.FLAG_SURVEY;
+  //           }
+  //           // item.Comment()
+  //           pw.format("    \"%s\" \"\" ", from );
+  //           pw.format(Locale.US, "%.2f %.1f %.1f %.1f %d %d 1\n",
+  //             item.mLength, item.mBearing, item.mClino, item.mRoll, item.getIntExtend(), item.getFlag() );
+  //         }
+  //       } else { // from.isEmpty()
+  //         if ( to != null && to.length() > 0 ) {
+  //           if ( n > 0 /* && ref_item != null */ ) {
+  //             b = TDUtil.in360( b/n );
+  //             pw.format(Locale.US, "%.2f %.1f %.1f 0.0 %d 0 %d\n", l/n, b, c/n, extend, n );
+  //             while ( n > 0 ) {
+  //               -- n;
+  //               pw.format(Locale.US, "@ %.2f %.1f %.1f %.1f\n", l0[n], b0[n], c0[n], r0[n] );
+  //             }
+  //             n = 0;
+  //             ref_item = null;
+  //             extend = 0;
+  //             flag   = DBlock.FLAG_SURVEY;
+  //           }
+  //           // item.Comment()
+  //           pw.format("    \"\" \"%s\" ", to );
+  //           pw.format(Locale.US, "%.2f %.1f %.1f %.1f %d %d 1\n",
+  //             item.mLength, item.mBearing, item.mClino, item.mRoll, item.getIntExtend(), item.getFlag() );
+  //         } else {
+  //           // not exported
+  //           if ( ref_item != null &&
+  //              ( item.isSecLeg() || item.isRelativeDistance( ref_item ) ) ) {
+  //             float bb = TDUtil.around( item.mBearing, b0[0] );
+  //             l += item.mLength;
+  //             b += bb;
+  //             c += item.mClino;
+  //             l0[n] = item.mLength;
+  //             b0[n] = item.mBearing;
+  //             c0[n] = item.mClino;
+  //             r0[n] = item.mRoll;
+  //             ++n;
+  //           }
+  //         }
+  //       }
+  //     }
+  //     if ( n > 0 /* && ref_item != null */ ) {
+  //       b = TDUtil.in360( b/n );
+  //       pw.format(Locale.US, "%.2f %.1f %.1f 0.0 %d 0 %d\n", l/n, b, c/n, extend, n );
+  //       while ( n > 0 ) {
+  //         -- n;
+  //         pw.format(Locale.US, "@ %.2f %.1f %.1f %.1f\n", l0[n], b0[n], c0[n], r0[n] );
+  //       }
+  //       // extend = 0;
+  //       // flag   = DBlock.FLAG_SURVEY;
+  //     }
+  //     // pw.format(Locale.US, "%.2f %.1f %.1f %.1f %d %d %d\n", 
+  //     //   item.mLength, item.mBearing, item.mClino, item.mRoll, item.getIntExtend(), 0, 1 );
+  //     // item.mComment
+  //     bw.flush();
+  //     bw.close();
+  //     return filename;
+  //   } catch ( IOException e ) {
+  //     TDLog.e( "Failed QTopo export: " + e.getMessage() );
+  //     return null;
+  //   }
+  // }
+
+  // -------------------------------------------------------------------
+  // TRACK FILE OZIEXPLORER
+  //   NOTE shot flags are ignored
+
+  /** export data track-file
+   * @param bw    buffered output stream
+   * @param sid   survey ID
+   * @param data  database helper object
+   * @param info  survey info
+   * @param survey_name survey name (unused)
+   * @return 1 success, 0 fail, 2 no geopoint
+   *
+  static int exportSurveyAsPlt( BufferedWriter bw, long sid, DataHelper data, SurveyInfo info, String survey_name )
+  {
+    TopoDroidApp.updateAnalytic( TDAnalytics.EXPORT_PLT );
+    // TDLog.v( "export as trackfile: " + file.getName() );
+    List< TDNum > nums = getGeolocalizedData( sid, data, info.getDeclination(), TDUtil.M2FT, false, false ); // false geoid alt. - false no convergence
+    if ( TDUtil.isEmpty(nums) ) {
+      TDLog.e( "Failed PLT export: no geolocalized station");
+      return 2;
+    }
+
+    // now write the PLT file
+    try {
+      // TDLog.Log( TDLog.LOG_IO, "export trackfile " + file.getName() );
+      // BufferedWriter bw = TDFile.getMSwriter( "plt", survey_name + ".plt", "text/plt" );
+      PrintWriter pw = new PrintWriter( bw );
+
+      pw.format("OziExplorer Track Point File Version 2.1\r\n");
+      pw.format("WGS 84\r\n");
+      pw.format("Altitude is in Feet\r\n");
+      pw.format("Reserved 3\r\n");
+
+      // skip-value: 0 (usually 1)
+      // track-type: 0=normal, 10=closed_polygon, 20=alarm_zone
+      // fill-style: 0=solid, 1=clear, 2=Bdiag, 3=Fdiag, 4=cross, 5=diag_cross, 6=horiz, 7=vert
+      //
+      pw.format("0,2,1677690,%s %s,0,0,0,8421376,-1,0\r\n", TDUtil.getDateString("yyyy.MM.dd"), creator );
+
+      int tot_stations = 0;
+      for ( TDNum num : nums ) {
+        List< NumStation > stations = num.getStations();
+        // List< NumShot >    shots = num.getShots();
+        // List< NumSplay >   splays = num.getSplays();
+	tot_stations += stations.size();
+      }
+      pw.format("%d\r\n", tot_stations );
+      
+      // date should be "days_since_12/30/1899.time_of_the_day"
+      // eg, 0=12/30/1899, 2=1/1/1900, 35065=1/1/1996, 36526=1/1/00, 39447=1/1/08, 40908=1/1/12, ...
+      Calendar cal = Calendar.getInstance();
+      cal.set(1996, Calendar.JANUARY, 1);
+      long diff = System.currentTimeMillis() - cal.getTimeInMillis();
+      long days = 35065 + diff / 86400000L; // 24*60*60*1000 // FIXME +33 ?
+
+      // String date = TDUtil.getDateString( "dd-MMM-yy" );
+
+      for ( TDNum num : nums ) {
+        List< NumStation > stations = num.getStations();
+        List< NumShot >    shots = num.getShots();
+        // List< NumSplay >   splays = num.getSplays();
+        NumStation last = null;
+        for ( NumShot sh : shots ) {
+          NumStation from = sh.from;
+          NumStation to   = sh.to;
+          if ( from != last ) {
+            pw.format(Locale.US, "%.8f, %.8f,1, %.1f,%d,,\r\n", from.e, from.s, from.v, days );
+          }
+          pw.format(Locale.US, "%.8f,%.8f,0,%.1f,%d,,\r\n", to.e, to.s, to.v, days );
+          last = to;
+        }
+      }
+
+      bw.flush();
+      bw.close();
+      return 1;
+    } catch ( IOException e ) {
+      TDLog.e( "Failed PLT export: " + e.getMessage() );
+      return 0;
+    }
+  }
+  */
+
+  // #############################################################################################################
+  // =======================================================================
+  // POCKETTOPO EXPORT PocketTopo
+  //   NOTE shot flags are ignored
+
+  // /** export data in PocketTopo format (.top)
+  //  * @param os    output stream
+  //  * @param sid   survey ID
+  //  * @param data  database helper object
+  //  * @param info  survey info
+  //  * @param sketch     sketching window (not used: sketches are not exported)
+  //  * @param origin     sketch origin
+  //  * @param survey_name survey name (unused)
+  //  * @return 1 success, 0 fail
+  //  */
+  // static int exportSurveyAsTop( OutputStream os, long sid, DataHelper data, SurveyInfo info, DrawingWindow sketch, String origin, String survey_name )
+  // {
+  //   TopoDroidApp.updateAnalytic( TDAnalytics.EXPORT_TOP );
+  //   // TDLog.v( "export as pockettopo: " + file.getName() );
+  //   PTFile ptfile = new PTFile();
+  //   // TODO add a trip
+  //   // date --> year, month, day --> _time
+  //   // _declination (0)
+  //   // _comment
+
+  //   // TODO add shots
+  //   // _from, _to
+  //   // _dist, _azimuth, _inclination, _roll
+  //   // extend left --> shot._flags bit-0
+  //   // _trip_index (0)
+  //   // _comment
+  //   String[] vals = info.date.split( "\\." );
+  //   try {
+  //     ptfile.addTrip( Integer.parseInt(vals[0]), Integer.parseInt(vals[1]), Integer.parseInt(vals[2]), info.getDeclination(), info.comment );
+  //   } catch ( NumberFormatException e ) {
+  //     TDLog.e( "export survey as TOP date parse error " + info.date );
+  //   }
+
+  //   List< DBlock > list = data.selectAllExportShots( sid, TDStatus.NORMAL );
+  //   checkShotsClino( list );
+  //   int extend = 0;  // current extend
+  //   DBlock ref_item = null;
+  //   int fromId, toId;
+
+  //   for ( DBlock item : list ) {
+  //     String from = item.mFrom;
+  //     String to   = item.mTo;
+  //     extend = item.getIntExtend();
+  //     if ( from == null || from.length() == 0 ) {
+  //       from = "";
+  //       if ( to == null || to.length() == 0 ) {
+  //         to = "";
+  //         if ( ref_item != null 
+  //           && ( item.isSecLeg() || item.isRelativeDistance( ref_item ) ) ) {
+  //           from = ref_item.mFrom;
+  //           to   = ref_item.mTo;
+  //           extend = ref_item.getIntExtend();
+  //         } else {
+  //           ref_item = null;
+  //         }
+  //       } else { // only TO station
+  //         ref_item = null;
+  //       }
+  //     } else { // with FROM station
+  //       if ( to == null || to.length() == 0 ) { // splay shot
+  //         to = "";
+  //         ref_item = null;
+  //       } else {
+  //         ref_item = item;
+  //       }
+  //     }
+  //     ptfile.addShot( (short)0, from, to, item.mLength, item.mBearing, item.mClino, item.mRoll, extend, item.mComment );
+  //   }
+
+  //   // if ( sketch != null ) {
+  //   //   // TODO add sketch
+  //   // }
+
+  //   try {
+  //     // FileOutputStream fos = TDFile.getFileOutputStream( file );
+  //     // OutputStream os = TDFile.getMSoutput( "top", survey_name + ".top", "application/octet-stream" );
+  //     ptfile.write( os );
+  //     os.close();
+  //     return 1;
+  //   } catch ( IOException e ) {
+  //     TDLog.e( "Failed PocketTopo export: " + e.getMessage() );
+  //     return 0;
+  //   }
+  // }
 }

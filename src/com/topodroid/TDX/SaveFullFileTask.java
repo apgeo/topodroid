@@ -41,9 +41,10 @@ class SaveFullFileTask extends AsyncTask<Void,Void,String>
   private String mOrigin = null;
   private PlotSaveData mPsd1 = null;
   private PlotSaveData mPsd2 = null;
-  private boolean mToast;
+  private boolean mToast = false;
   private String mFormat;
   private Uri mUri;
+  private boolean mShared = false;
 
   /** 
    * @param context   context
@@ -56,9 +57,10 @@ class SaveFullFileTask extends AsyncTask<Void,Void,String>
    * @param origin    sketch origin
    * @param fullname  file name, either "survey" or "survey-plot" 
    * @param toast     whether to toast to result
+   * @param shared    whether to share export
    */
   SaveFullFileTask( TopoDroidApp app, Context context, Uri uri, long sid, DataHelper data, SurveyInfo info, PlotSaveData psd1, PlotSaveData psd2, String origin, // String filename,
-                    String fullname, /* String dirname, */ boolean toast )
+                    String fullname, /* String dirname, */ boolean toast, boolean shared )
   {
     mApp      = app;
     mUri      = uri;
@@ -72,6 +74,7 @@ class SaveFullFileTask extends AsyncTask<Void,Void,String>
     mPsd1     = psd1;
     mPsd2     = psd2;
     mToast    = toast;
+    mShared   = shared;
     mFormat   = context.getResources().getString(R.string.saved_file_1);
   }
 
@@ -107,13 +110,14 @@ class SaveFullFileTask extends AsyncTask<Void,Void,String>
     } else {
       // TDLog.Log( TDLog.LOG_IO, "exported survey as CSX " + filename );
       if ( mToast ) TDToast.make( String.format( mFormat, "csx" ) ); // was filename
-      if ( TDSetting.mExportPlotShare ) {
+      if ( mShared /* TDSetting.mExportPlotShare */ ) {
         String filename2 = filename + ".csx";
         // TDLog.v("sharing CSX filename " + filename2 );
         String mimetype = TDConst.getMimeFromExtension( "csx" );
         mApp.shareFile( filename2, mimetype, 2 );
       }
     }
+    // TDSetting.mExportPlotShare = false; // reset the share flag
   }
 
 }

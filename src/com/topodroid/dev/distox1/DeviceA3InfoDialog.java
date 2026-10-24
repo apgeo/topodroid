@@ -16,6 +16,7 @@ import com.topodroid.dev.Device;
 import com.topodroid.TDX.DeviceActivity;
 import com.topodroid.TDX.R;
 import com.topodroid.TDX.TopoDroidAlertDialog;
+import com.topodroid.TDX.TDandroid;
 
 import android.os.Bundle;
 // import android.app.Dialog;
@@ -106,8 +107,9 @@ public class DeviceA3InfoDialog extends MyDialog
    */
   void updateInfo( DeviceA3Info info )
   {
-    mParent.runOnUiThread( new Runnable() {
-      public void run() {
+    // mParent.runOnUiThread(
+    TDandroid.runOnMainThread(
+      new Runnable() { public void run() {
         if ( info == null ) {
           tv_serial.setText( mParent.getResources().getString( R.string.read_failed ) );
         } else {
@@ -171,5 +173,10 @@ public class DeviceA3InfoDialog extends MyDialog
   //     mParent.setDeviceModel( mDevice, Device.DISTO_X310 );
   //   }
   // }
+
+  // @Override public void onBackPressed() { super.onBackPressed(); }
+  // @Override public void onDestroy() { super.onDestroy(); }
+  // @Override public boolean onKeyUp( int code, KeyEvent event ) {}
+  // @Override public boolean onKeyDown( int code, KeyEvent event ) {}
 
 }

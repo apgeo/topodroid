@@ -17,9 +17,11 @@ import com.topodroid.util.TDLog;
 import com.topodroid.util.TDio;
 import com.topodroid.util.TDString;
 import com.topodroid.util.TDUtil;
+import com.topodroid.util.TDAnalytics;
 // import com.topodroid.prefs.TDSetting;
 import com.topodroid.types.ExtendType;
 import com.topodroid.types.LegType;
+import com.topodroid.TDX.TopoDroidApp;
 
 import java.io.IOException;
 // import java.io.FileNotFoundException;
@@ -107,6 +109,8 @@ class ParserSurvex extends ImportParser
   ParserSurvex( InputStreamReader isr, String filename, boolean apply_declination ) throws ParserException
   {
     super( apply_declination );
+    TopoDroidApp.updateAnalytic( TDAnalytics.IMPORT_SVX );
+    if ( mApplyDeclination ) mDeclination = 0.0f;
     mName    = TDio.extractName( filename );
     fixes    = new ArrayList<>();
     stations = new ArrayList<>();
@@ -115,6 +119,7 @@ class ParserSurvex extends ImportParser
     ParserSurvexState state = new ParserSurvexState("."); // root of the linked list of states
     readFile( isr, filename, state );
     checkValid();
+    if ( mApplyDeclination ) mDeclination = 0.0f;
   }
 
   // private String nextLine( BufferedReader br ) throws IOException // from ImportParser
@@ -560,9 +565,7 @@ class ParserSurvex extends ImportParser
 
                     len = len * sLen - zLen;
                     ber = ber * state.mScaleBer * state.mUnitBer - state.mZeroBer;
-                    if ( mApplyDeclination ) ber += state.mDeclination;
-	            // if ( ber < 0 ) { ber += 360; } else if ( ber >= 360 ) { ber -= 360; }
-                    ber = TDMath.in360( ber );
+                    ber = checkApplyDeclination( ber, state.mDeclination );
                     cln = cln * state.mScaleCln * state.mUnitCln - state.mZeroCln;
 
                   } catch ( NumberFormatException e ) {
@@ -588,9 +591,7 @@ class ParserSurvex extends ImportParser
 
                       len = len * sLen - zLen;
                       ber = ber * state.mScaleBer * state.mUnitBer - state.mZeroBer;
-                      if ( mApplyDeclination ) ber += state.mDeclination;
-	              // if ( ber < 0 ) { ber += 360; } else if ( ber >= 360 ) { ber -= 360; }
-                      ber = TDMath.in360( ber );
+                      ber = checkApplyDeclination( ber, state.mDeclination );
                       cln = cln * state.mScaleCln * state.mUnitCln - state.mZeroCln;
 
                       float dist, b;

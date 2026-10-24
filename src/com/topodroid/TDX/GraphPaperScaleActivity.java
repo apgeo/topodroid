@@ -13,6 +13,7 @@ package com.topodroid.TDX;
 
 // import com.topodroid.util.TDLog;
 import com.topodroid.util.TDTag;
+import com.topodroid.util.TDAnalytics;
 // import com.topodroid.ui.MyDialog;
 // import com.topodroid.ui.MotionEventWrap;
 import com.topodroid.prefs.TDSetting;
@@ -37,7 +38,7 @@ import android.widget.TextView;
 
 /**
  */
-public class GraphPaperScaleActivity extends Activity
+public class GraphPaperScaleActivity extends MyActivity
                           implements View.OnClickListener
 {
   // private TDPrefActivity mParent;
@@ -72,6 +73,7 @@ public class GraphPaperScaleActivity extends Activity
   {
     super.onCreate(savedInstanceState);
 
+    TopoDroidApp.updateAnalytic( TDAnalytics.GRAPH_PAPER );
     getWindow().getDecorView().setSystemUiVisibility( TDSetting.mUiVisibility );
 
     // mIsNotMultitouch = ! TDandroid.checkMultitouch( this );
@@ -158,7 +160,7 @@ public class GraphPaperScaleActivity extends Activity
       setResult( RESULT_OK, intent );
       finish();
     } else if ( b == mBtnCancel ) {
-      onBackPressed();
+      super.onBackPressed();
     } else if ( b == mBtnHelp ) {
       doHelp();
     }
@@ -169,11 +171,23 @@ public class GraphPaperScaleActivity extends Activity
   @Override
   public void onBackPressed()
   {
-    super.onBackPressed();
     mSurface.stopDrawingThread();
     setResult( RESULT_CANCELED );
-    finish();
+    super.onBackPressed(); // FIXME issue 167
+    // finish();
   }
+
+  @Override
+  protected void onDestroy() { super.onDestroy(); }
+
+  // N.B. no onKeyDown onKeyUp
+  // @Override public boolean onKeyUp( int code, KeyEvent event ) { return backKeyUp( code, event ); }
+
+  // @Override public boolean onKeyDown( int code, KeyEvent event )
+  // { 
+  //   if ( code == KEYCODE_BACK ) return backKeyDown( code, event );
+  //   return false;
+  // }
 
   /** display help
    */
@@ -184,4 +198,19 @@ public class GraphPaperScaleActivity extends Activity
 
   }
 
+
+  // ----------------------------------------------------------------
+  // TITLE BAR
+
+  @Override
+  public void setTitle( CharSequence t )
+  {
+    ((TextView)findViewById( R.id.title )).setText( t );
+  }
+
+  // @Override
+  // public void setTitleColor( int color )
+  // {
+  //   ((TextView)findViewById( R.id.title )).setTextColor( color );
+  // }
 }

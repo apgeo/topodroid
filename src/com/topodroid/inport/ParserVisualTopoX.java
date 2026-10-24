@@ -17,11 +17,13 @@ import com.topodroid.util.TDLog;
 import com.topodroid.util.TDio;
 import com.topodroid.util.TDString;
 import com.topodroid.util.TDUtil;
+import com.topodroid.util.TDAnalytics;
 import com.topodroid.prefs.TDSetting;
 import com.topodroid.types.ExtendType;
 import com.topodroid.types.LegType;
 import com.topodroid.TDX.TDAzimuth;
 import com.topodroid.TDX.SurveyInfo;
+import com.topodroid.TDX.TopoDroidApp;
 
 import java.io.IOException;
 import java.io.BufferedReader;
@@ -44,11 +46,14 @@ class ParserVisualTopoX extends ImportParser
   ParserVisualTopoX( InputStreamReader isr, String filename, boolean apply_declination, boolean lrud, boolean leg_first ) throws ParserException
   {
     super( apply_declination );
+    TopoDroidApp.updateAnalytic( TDAnalytics.IMPORT_TRO );
+    if ( mApplyDeclination ) mDeclination = 0.0f;
     mName = TDio.extractName( filename );
     mLrud = lrud;
     mLegFirst = leg_first;
     readFile( isr, filename );
     checkValid();
+    if ( mApplyDeclination ) mDeclination = 0.0f;
   }
 
   /** @return angle value
@@ -159,8 +164,7 @@ class ParserVisualTopoX extends ImportParser
     }
     if ( ! mLegFirst ) { 
       // extend = ( mBearing < 90 || mBearing > 270 )? 1 : -1;
-      shots.add( new ParserShot( mFrom, mTo, mLength, mBearing, mClino, 0.0f,
-                                 shot_extend, LegType.NORMAL, duplicate, surface, backshot, comment ) );
+      shots.add( new ParserShot( mFrom, mTo, mLength, mBearing, mClino, 0.0f, shot_extend, LegType.NORMAL, duplicate, surface, backshot, comment ) );
     }
   }
   private void addSplay( String mFrom, float mLength, float mBearing, float mClino )
@@ -182,8 +186,8 @@ class ParserVisualTopoX extends ImportParser
     String last_to = "";
 
     int dir_w = 1;  // direction of left/right width
-    int dir_b = 1;  // bearing direction (unused)
-    int dir_c = 1;  // clino direction (unused)
+    int dir_b = 1;  // bearing direction (read but unused)
+    int dir_c = 1;  // clino direction (read but unused)
 
     boolean splayAtFrom = true;
     String comment = "";
@@ -241,7 +245,7 @@ class ParserVisualTopoX extends ImportParser
           } else {
             mClino   = angle( getFloatValue("Pte=\"", line, 0), uc, dmc);
           }
-          mBearing = TDMath.in360( mBearing );
+          mBearing = checkApplyDeclination( mBearing, mDeclination );
           if ( mLrud && ! isSplay ) {
             mLeft  = getFloatValue( "G=\"", line, -1 ) * ul;
             mRight = getFloatValue( "D=\"", line, -1 ) * ul;
@@ -260,7 +264,8 @@ class ParserVisualTopoX extends ImportParser
             if ( isSplay ) {
               addSplay( mFrom, mLength, mBearing, mClino );
             } else {
-              addLeg( mFrom, mTo, mLength, mBearing, mClino, shot_extend, duplicate, surface, backshot, comment, mStation, mLeft, mRight, mUp, mDown, dir_w );
+              addLeg( mFrom, mTo, mLength, mBearing, mClino, shot_extend, duplicate, surface, backshot, comment,
+                      mStation, mLeft, mRight, mUp, mDown, dir_w );
             }
           }
         } else if ( line.startsWith("</Visee>") && inMesures ) { 
@@ -268,7 +273,8 @@ class ParserVisualTopoX extends ImportParser
             if ( isSplay ) {
               addSplay( mFrom, mLength, mBearing, mClino );
             } else {
-              addLeg( mFrom, mTo, mLength, mBearing, mClino, shot_extend, duplicate, surface, backshot, comment, mStation, mLeft, mRight, mUp, mDown, dir_w );
+              addLeg( mFrom, mTo, mLength, mBearing, mClino, shot_extend, duplicate, surface, backshot, comment,
+                      mStation, mLeft, mRight, mUp, mDown, dir_w );
             }
           }
           inVisee = false;

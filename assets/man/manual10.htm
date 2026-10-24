@@ -24,11 +24,17 @@ While in draw mode, the sketch can also be moved by dragging it from the corners
 Point tools are iconic symbols. To add a symbol to the sketch touch the canvas where you want to put the point.<br>
 If the point is orientable, it is drawn with the set orientation (selectable with the slider in the icon picker dialog).
 This orientation can be overridden with a touch of the display slightly dragged in the desired orientation.
-With a further drag the user can set the icon scale besides the orientation. With a longer drag, the dot symbol appears and its direction and size can be adjusted.<br>
-With "labels" you must also enter the text in the coming dialog.<br><p>
+With a further drag the user can set the icon scale besides the orientation. With a longer drag, the dot symbol appears and its direction and size can be adjusted.<br><p>
 
 <img src="point_gesture.png" alt="Point item drawing" width="140" border="1">
 <br><p>
+
+<b>Labels</b><br>
+"Label" points are somewhat special. When you add a new "label" point, the keyboard is shown to enter the label text.
+Text entering is ended by tapping on the canvas or closing the window.<br>
+The text can be later changed by editing the "label" point.<br>
+<i>Warning</i>: the down-arrow of the navigation bar hides the keyboard, without ending entering the text.<br>
+<p>
 
 <b>Line tools</b><br>
 Line tools are line-drawing styles.
@@ -69,9 +75,57 @@ Segments of Bezier lines have two control points. These are stored with the segm
 To clear the selection tap somewhere else in the canvas. The item can be deleted (removed) or its <a href="page_item_edit.htm">properties</a> changed ("tool" button). Editing applies also to shots and stations.
 <br><p>
 
-Editing an orientable point, its icon can be rotated also with a swipe from the top corners of the canvas (if corner-drag is enabled).<br><p>
+Editing an orientable point or area, the symbol or pattern, respectively,
+can be rotated with a swipe from the top corners of the canvas.<br><p>
 
 A survey shot (leg or splay) has a green dot in the middle to select it. When a leg is selected in the profile view, a horizontal yellow segment is also displayed on the side opposite to the leg "extend", or on both sides if the leg is extended vertically. The leg extend can be set by tapping the left or right end of this segment, or the middle.<br><p>
+
+
+<h4>Line style</h4>
+TopoDroid has five line styles. With the normal style [default] the lines are drawn as polylines. With the fine style the polyline segments are shorter, while with the coarse style they are longer. In the fourth style lines are interpolated replacing the segments with cubic Bezier curves (splines). These segments pass through the two endpoints and have two control points used define the curvature.
+With the fifth line style the traced lines are simplified using a point-weeding algorithm.
+If you export the drawing in dxf with DXF version 6 do not use splines because they get exported as polylines.<br><p>
+
+<h4>Line/Area clipping</h4>
+If the <i>Line Clipping</i> setting is enabled, lines may be clipped to the sketch outline.<br>
+Only lines and areas of types supporting "clipping" are clipped to the outline.<br>
+By default lines and areas are not clippable<br><p>
+
+The "clippable" attribute specifies whether the line symbol is clipped at the end,
+or both at the end and the start, or not clipped (which is the default).
+If clipped at both sides the portion of the line that is retained starts
+from the middle and is increased towards both ends until an outline line is encountered.
+Otherwise the portion of line retained starts at one end and increased towards the other.<br>
+Clipping may fail, especially in presence of cubic (Bezier) curves.<br><p>
+
+Areas are clipped only if they intersect a single outline line.
+In order to clip areas the border must be traced starting from outside the outline and ending again outside the outline.
+For areas the "clippable" attribute specifies whether the area is clipped in "plan" views, or "profile" views, or both.<br>
+If the area border is traced crossing the outline line several times, the area is clipped to the central portion.
+<br><p>
+
+<h4>Retracing</h4>
+If the path-tracing style is not complex (Bezier or weeding), line and areas can be drawn in "retracing" mode.
+<br>
+A long tap on the <i>tools</i> button turns retracing on/off.<br>
+When retrace drawing is active the line/area in the respective <i>tool</i> button is white.<br>
+Line retracing and line joining are mutually exclusive.<br>
+Lines of type "section" and of closed line types cannot be retraced.
+<br><p>
+
+To retrace a portion of a line, trace a line that starts and or ends close to the line.<br>
+The retraced portion of a line/area is not transformed (Bezier spline, weeding, decimation, etc.).
+<br><p>
+
+Areas can be "retraced" by tracing a line that starts and ends close to the border af the area.
+The shorter between the two pieces of this border is replaced by the newly traced line.<br>
+The area can be enlarged or shrinked, and a concavity can be filled (figure below).
+<br><p>
+
+Retracing can be undone and redone.<br><p>
+
+<img src="area_concavity.png" width="360" border="1">
+<br><p>
 
 <h4>Point-wise edit actions [A]</h4>
 

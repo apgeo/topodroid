@@ -12,29 +12,33 @@
 package com.topodroid.TDX;
 
 import com.topodroid.util.TDString;
+import com.topodroid.util.TDLog;
 
 class DisplayMode
 {
-  static final int DISPLAY_NONE     = 0;
-  static final int DISPLAY_LEG      = 0x01;
-  static final int DISPLAY_SPLAY    = 0x02;
-  static final int DISPLAY_STATION  = 0x04;
-  static final int DISPLAY_GRID     = 0x08;
-  static final int DISPLAY_LATEST   = 0x10; // whether to display the latest shots
-  static final int DISPLAY_SCALEBAR = 0x20; // whether to display the scale reference bar on not 
-  static final int DISPLAY_OUTLINE  = 0x40; // whether to display only the outline - 3d sections
-  static final int DISPLAY_WALLS    = 0x80; 
-  static final int DISPLAY_ID       = 0x100; 
-  static final int DISPLAY_BLANK    = 0x200; 
+  static final int DISPLAY_NONE      = 0;
+  static final int DISPLAY_LEG       = 0x01;
+  static final int DISPLAY_SPLAY     = 0x02;
+  static final int DISPLAY_STATION   = 0x04;
+  static final int DISPLAY_GRID      = 0x08;
+  static final int DISPLAY_LATEST    = 0x10; // whether to display the latest shots
+  static final int DISPLAY_SCALEBAR  = 0x20; // whether to display the scale reference bar on not 
+  static final int DISPLAY_OUTLINE   = 0x40; // whether to display only the outline - 3d sections
+  static final int DISPLAY_WALLS     = 0x80; 
+  static final int DISPLAY_ID        = 0x100; 
+  static final int DISPLAY_BLANK     = 0x200; 
+  static final int DISPLAY_ELEVATION = 0x400; 
+  static final int DISPLAY_SECTIONS  = 0x800; // whether to display xsections
 
   // static final int DISPLAY_SHOT     = 0x0313; // leg splay latest blank id
-  static final int DISPLAY_PLOT     = 0x2f;
+  static final int DISPLAY_PLOT     = 0x82f;
   static final int DISPLAY_SECTION  = 0x3d; //        0x20 | 0x10 | 0x08 | 0x04 |        0x01
   // static final int DISPLAY_XXXXXXXX = 0x6d; // 0x40 | 0x20 |        0x08 | 0x04 |        0x01
-  static final int DISPLAY_OVERVIEW = 0x2f; //        0x20 |        0x08 | 0x04 | 0x02 | 0x01 skip outline and latest 
+  static final int DISPLAY_OVERVIEW = 0x82f; //   0x800 | 0x20 |        0x08 | 0x04 | 0x02 | 0x01 skip outline and latest 
   static final int DISPLAY_FULL     = 0x032f; 
 
-  static final int DISPLAY_SKETCH   = DISPLAY_SPLAY | DISPLAY_STATION | DISPLAY_GRID | DISPLAY_SCALEBAR | DISPLAY_OUTLINE | DISPLAY_WALLS;
+  static final int DISPLAY_SKETCH   = DISPLAY_SPLAY | DISPLAY_STATION | DISPLAY_GRID | DISPLAY_SCALEBAR | DISPLAY_OUTLINE | DISPLAY_WALLS 
+| DISPLAY_SECTIONS;
 
   static boolean isLeg( int mode )     { return ( mode & DISPLAY_LEG     ) == DISPLAY_LEG; }
   static boolean isSplay( int mode )   { return ( mode & DISPLAY_SPLAY   ) == DISPLAY_SPLAY; }
@@ -43,6 +47,7 @@ class DisplayMode
   static boolean isLatest( int mode )  { return ( mode & DISPLAY_LATEST  ) == DISPLAY_LATEST; }
   static boolean isScalebar( int mode ){ return ( mode & DISPLAY_SCALEBAR) == DISPLAY_SCALEBAR; }
   static boolean isOutline( int mode ) { return ( mode & DISPLAY_OUTLINE ) == DISPLAY_OUTLINE; }
+  static boolean isSections( int mode ){ return ( mode & DISPLAY_SECTIONS) == DISPLAY_SECTIONS; }
   static boolean isId( int mode )      { return ( mode & DISPLAY_ID )      == DISPLAY_ID; }
   static boolean isBlank( int mode )   { return ( mode & DISPLAY_BLANK )   == DISPLAY_BLANK; }
 
@@ -54,13 +59,15 @@ class DisplayMode
     sb.append( ( ( mode & DISPLAY_STATION )  == DISPLAY_STATION )? TDString.ONE : TDString.ZERO );
     sb.append( ( ( mode & DISPLAY_GRID )     == DISPLAY_GRID )?    TDString.ONE : TDString.ZERO );
 
-    sb.append( ( ( mode & DISPLAY_LATEST )   == DISPLAY_LATEST )?   TDString.ONE : TDString.ZERO );
+    sb.append( ( ( mode & DISPLAY_LATEST )   == DISPLAY_LATEST   )? TDString.ONE : TDString.ZERO );
     sb.append( ( ( mode & DISPLAY_SCALEBAR ) == DISPLAY_SCALEBAR )? TDString.ONE : TDString.ZERO );
     sb.append("0");  // sb.append( ( ( mode & DISPLAY_OUTLINE )  == DISPLAY_OUTLINE )? "1" : "0" );
-    sb.append("0");
+    sb.append("0");  // DISPLAY_WALLS
 
-    sb.append( ( ( mode & DISPLAY_ID     )   == DISPLAY_ID     )? TDString.ONE : TDString.ZERO );
-    sb.append( ( ( mode & DISPLAY_BLANK  )   == DISPLAY_BLANK  )? TDString.ONE : TDString.ZERO );
+    sb.append( ( ( mode & DISPLAY_ID        ) == DISPLAY_ID        )? TDString.ONE : TDString.ZERO );
+    sb.append( ( ( mode & DISPLAY_BLANK     ) == DISPLAY_BLANK     )? TDString.ONE : TDString.ZERO );
+    sb.append( ( ( mode & DISPLAY_ELEVATION ) == DISPLAY_ELEVATION )? TDString.ONE : TDString.ZERO );
+    sb.append( ( ( mode & DISPLAY_SECTIONS ) == DISPLAY_SECTIONS )? TDString.ONE : TDString.ZERO );
 
     return sb.toString();
   }
@@ -68,18 +75,23 @@ class DisplayMode
   static int parseString( String str )
   {
     if ( str == null ) return DISPLAY_FULL;
+    TDLog.v( "Parse display mode " + str );
     int ret = 0;
-    if ( str.charAt(0) == '1' ) ret |= DISPLAY_LEG;
-    if ( str.charAt(1) == '1' ) ret |= DISPLAY_SPLAY;
-    if ( str.charAt(2) == '1' ) ret |= DISPLAY_STATION;
-    if ( str.charAt(3) == '1' ) ret |= DISPLAY_GRID;
+    int len = str.length();
+    if ( len > 0 && str.charAt(0) == '1' ) ret |= DISPLAY_LEG;
+    if ( len > 1 && str.charAt(1) == '1' ) ret |= DISPLAY_SPLAY;
+    if ( len > 2 && str.charAt(2) == '1' ) ret |= DISPLAY_STATION;
+    if ( len > 3 && str.charAt(3) == '1' ) ret |= DISPLAY_GRID;
 
-    if ( str.charAt(4) == '1' ) ret |= DISPLAY_LATEST;
-    if ( str.charAt(5) == '1' ) ret |= DISPLAY_SCALEBAR;
+    if ( len > 4 && str.charAt(4) == '1' ) ret |= DISPLAY_LATEST;
+    if ( len > 5 && str.charAt(5) == '1' ) ret |= DISPLAY_SCALEBAR;
     // OUTLINE not saved
+    // WALLS not saved
 
-    if ( str.charAt(8) == '1' ) ret |= DISPLAY_ID;
-    if ( str.charAt(9) == '1' ) ret |= DISPLAY_BLANK;
+    if ( len >  8 && str.charAt( 8) == '1' ) ret |= DISPLAY_ID;
+    if ( len >  9 && str.charAt( 9) == '1' ) ret |= DISPLAY_BLANK;
+    if ( len > 10 && str.charAt(10) == '1' ) ret |= DISPLAY_ELEVATION;
+    if ( len > 11 && str.charAt(11) == '1' ) ret |= DISPLAY_SECTIONS;
     return ret;
   }
 

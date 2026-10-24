@@ -14,8 +14,8 @@ package com.topodroid.TDX;
 import com.topodroid.util.TDLog;
 import com.topodroid.util.TDString;
 import com.topodroid.util.TDUtil;
+import com.topodroid.util.TDColor;
 // import com.topodroid.util.TDTag;
-import com.topodroid.util.TDStatus;
 import com.topodroid.util.TDRequest;
 import com.topodroid.util.TDLocale;
 import com.topodroid.util.TDUtil;
@@ -31,6 +31,7 @@ import com.topodroid.prefs.TDSetting;
 import com.topodroid.prefs.TDPrefCat;
 import com.topodroid.calib.CalibCheckDialog;
 import com.topodroid.types.PlotType;
+import com.topodroid.types.TDStatus;
 
 import java.util.Locale;
 import java.util.List;
@@ -90,8 +91,8 @@ import android.graphics.drawable.BitmapDrawable;
 import android.net.Uri;
 // import android.net.Uri.Builder;
 
-public class SurveyWindow extends Activity
-                            implements IExporter
+public class SurveyWindow extends MyActivity
+                          implements IExporter
                             , ITeamText
                             , OnItemClickListener
                             , View.OnClickListener
@@ -155,7 +156,7 @@ public class SurveyWindow extends Activity
   private EditText mEditTeam;
   private EditText mEditDecl;
   private EditText mEditComment;
-  private TextView mTVxsections;
+  // private TextView mTVxsections;
   private TextView mTVdatamode;
 
   private MyDateSetListener mDateListener;
@@ -225,9 +226,10 @@ public class SurveyWindow extends Activity
     mTextName.setText( info.name );
     mTextName.setTextColor( mNameColor );
     mInitStation = info.initStation;
-    mXSections   = info.xsections;
+    mXSections   = SurveyInfo.XSECTION_PRIVATE; // info.isSharedXSections() ? SurveyInfo.XSECTION_SHARED : SurveyInfo.XSECTION_PRIVATE;
     mDatamode    = info.datamode;
     // mExtend      = info.getExtend(); // info.mExtend; // FIXME NOT USED
+    // TDLog.v("XSections " + mXSections );
 
     mEditDate.setText( info.date );
     if ( info.comment != null && info.comment.length() > 0 ) {
@@ -246,7 +248,7 @@ public class SurveyWindow extends Activity
     } 
     setDeclination( info.declination );
 
-    mTVxsections.setText( (mXSections == SurveyInfo.XSECTION_SHARED)? R.string.xsections_shared : R.string.xsections_private );
+    // mTVxsections.setText( (mXSections == SurveyInfo.XSECTION_SHARED)? R.string.xsections_shared : R.string.xsections_private );
     if ( TDSetting.mDivingMode ) {
       mTVdatamode.setText( (mDatamode == SurveyInfo.DATAMODE_NORMAL)? R.string.datamode_normal : R.string.datamode_diving );
     } else {
@@ -286,12 +288,13 @@ public class SurveyWindow extends Activity
 
     setContentView(R.layout.survey_activity);
     setTitle( R.string.title_survey );
+    setTitleColor( TDColor.TITLE_NORMAL );
     mTextName    = (EditText) findViewById(R.id.survey_name);
     mEditDate    = (Button) findViewById(R.id.survey_date);
     mEditTeam    = (EditText) findViewById(R.id.survey_team);
     mEditDecl    = (EditText) findViewById(R.id.survey_decl);
     mEditComment = (EditText) findViewById(R.id.survey_comment);
-    mTVxsections = (TextView) findViewById(R.id.survey_xsections);
+    // mTVxsections = (TextView) findViewById(R.id.survey_xsections);
     mTVdatamode  = (TextView) findViewById(R.id.survey_datamode);
 
     mEditDecl.setOnFocusChangeListener( new OnFocusChangeListener() {
@@ -370,7 +373,9 @@ public class SurveyWindow extends Activity
     setTitle( // mApp.getConnectionStateTitleStr() + // IF_COSURVEY
               getResources().getString( R.string.title_survey ) );
     if ( TDSetting.WITH_IMMUTABLE && ! TDInstance.isSurveyMutable ) { // IMMUTABLE
-      mActivity.setTitleColor( 0xffff3333 );
+      mActivity.setTitleColor( TDColor.TITLE_MUTABLE );
+    } else {
+      mActivity.setTitleColor( TDColor.TITLE_NORMAL );
     }
   }
 
@@ -421,10 +426,7 @@ public class SurveyWindow extends Activity
       return;
     }
     if ( view instanceof EditText ) {
-      if ( TDSetting.WITH_IMMUTABLE && ! TDInstance.isSurveyMutable ) {
-        TDToast.makeWarn("Immutable survey");
-        return;
-      } 
+      if ( TDSetting.WITH_IMMUTABLE && TDInstance.isSurveyImmutable() ) return;
       ArrayList< String > names = new ArrayList< String >();
       CharSequence chars = mEditTeam.getText();
       if ( chars != null ) {
@@ -449,10 +451,7 @@ public class SurveyWindow extends Activity
         }
         return;
       } else if ( b == mEditDate ) {
-        if ( TDSetting.WITH_IMMUTABLE && ! TDInstance.isSurveyMutable ) {
-          TDToast.makeWarn("Immutable survey");
-          return;
-        } 
+        if ( TDSetting.WITH_IMMUTABLE && TDInstance.isSurveyImmutable() ) return;
         String date = TDUtil.stringToDate( mEditDate.getText().toString() );
         int y = TDUtil.dateParseYear( date );
         int m = TDUtil.dateParseMonth( date );
@@ -646,16 +645,17 @@ public class SurveyWindow extends Activity
    * @param prefix    station name prefix (Compass, VTopo, Winkarst)
    * @param first     not used
    * @param second    whether to export the second view (unused: only plan or profile in DrawingWindow) - not used here
+   * @param unused
+   * @param shared    whether to share export
    * @note interface IExporter
    */
-  public void doExport( String type, String filename, String prefix, long first, boolean second )
+  public void doExport( String type, String filename, String prefix, long first, boolean second, List<String> unused, boolean shared )
   {
     TDLog.v( "SURVEY do export - name " + filename + " prefix " + prefix );
     if ( ! saveSurvey( false ) ) {
       TDLog.e( "SURVEY do export - name " + filename + " : save survey failed" );
       return;
     }
-    TDSetting.mExportPrefix = prefix; // save export-prefix
     // mExportInfo = null;
     int index = TDConst.surveyFormatIndex( type );
     // TDLog.v( "SURVEY do export: type " + type + " index " + index );
@@ -681,7 +681,7 @@ public class SurveyWindow extends Activity
         //  mApp.doExportDataAsync( getApplicationContext(), export_info, true, false ); // uri = null
         //}
         // 20251208 since there is no need for the "if"
-        mApp.doExportDataAsync( getApplicationContext(), export_info, true, false ); // uri = null
+        mApp.doExportDataAsync( getApplicationContext(), export_info, true, false, shared ); // uri = null
       }
     } else {
       TDLog.e("Survey Window export - negative index " + index );
@@ -751,24 +751,45 @@ public class SurveyWindow extends Activity
     // // TDPath.deleteSurveyOverviewFiles( survey );
 
     TDPath.deleteSurveyDir( survey );
-
     mApp_mData.doDeleteSurvey( TDInstance.sid );
     mApp.setSurveyFromName( null, SurveyInfo.DATAMODE_NORMAL, false, true ); // tell app to clear survey name and id
     setResult( RESULT_OK, new Intent() );
-    TopoDroidApp.mSurveyWindow = null;
-    super.onBackPressed();
+    onBackPressed(); // FIXME issue 167
     // finish();
   }
 
-  @Override
-  public boolean onKeyDown( int code, KeyEvent event )
+  @Override public void onBackPressed()
+  {
+    TopoDroidApp.mSurveyWindow = null;
+    saveSurvey( true );
+    super.onBackPressed();
+  }
+
+  @Override protected void onDestroy() { super.onDestroy(); }
+
+  /** handle key up event // alternative-169
+   * @param code  key code
+   * @param ev    key event
+   */
+  @Override public boolean onKeyUp( int code, KeyEvent event )
+  {
+    TDLog.v("Survey Window key up: code " + code );
+    return backKeyUp( code, event );
+  }
+
+  @Override public boolean onKeyDown( int code, KeyEvent event )
   {
     switch ( code ) {
+      // case KeyEvent.KEYCODE_BACK: // HARDWARE BACK (4) // drop: issue 169
+      //   if ( ! saveSurvey( true ) ) return true;
+      //   TopoDroidApp.mSurveyWindow = null;
+      //   super.onBackPressed(); // FIXME issue 167
+      //   return true;
+      // ----- alternative-169
       case KeyEvent.KEYCODE_BACK: // HARDWARE BACK (4)
-        if ( ! saveSurvey( true ) ) return true;
         TopoDroidApp.mSurveyWindow = null;
-        super.onBackPressed();
-        return true;
+        saveSurvey( true );
+        return backKeyDown( code, event );
       case KeyEvent.KEYCODE_MENU:   // HARDWARE MENU (82)
         UserManualActivity.showHelpPage( mActivity, getResources().getString( HELP_PAGE ));
         return true;
@@ -813,12 +834,11 @@ public class SurveyWindow extends Activity
     closeMenu();
     int p = 0;
     if ( p++ == pos ) { // CLOSE
-      TopoDroidApp.mSurveyWindow = null;
-      super.onBackPressed();
+      super.onBackPressed(); // issue 167
     } else if ( p++ == pos ) { // EXPORT
       boolean diving = (mDatamode == SurveyInfo.DATAMODE_DIVING );
       String[] types = TDConst.surveyExportTypes( mApp_mData.hasFixed( TDInstance.sid, TDStatus.NORMAL) );
-      new ExportDialogShot( mActivity, this, types, R.string.title_survey_export, TDInstance.survey, diving, true ).show(); // with_name = true
+      new ExportDialogShot( mActivity, this, types, R.string.title_survey_export, TDInstance.survey, null, diving, true ).show(); // with_name = true
     } else if ( TDLevel.overExpert && p++ == pos ) { // RENAME
       new SurveyRenameDialog( mActivity, this ).show();
     } else if ( TDLevel.overNormal && p++ == pos ) { // DELETE
@@ -996,4 +1016,18 @@ public class SurveyWindow extends Activity
     }
   }
 
+  // ----------------------------------------------------------------
+  // TITLE BAR
+
+  @Override
+  public void setTitle( CharSequence t )
+  {
+    ((TextView)findViewById( R.id.title )).setText( t );
+  }
+
+  @Override
+  public void setTitleColor( int color )
+  {
+    ((TextView)findViewById( R.id.title )).setTextColor( color );
+  }
 }

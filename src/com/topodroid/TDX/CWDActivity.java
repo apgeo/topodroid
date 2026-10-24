@@ -15,12 +15,14 @@ import com.topodroid.util.CWDfolder;
 import com.topodroid.util.TDLog;
 import com.topodroid.util.TDTag;
 import com.topodroid.util.TDString;
+import com.topodroid.util.TDColor;
 // import com.topodroid.util.TDFile;
 import com.topodroid.prefs.TDSetting;
 import com.topodroid.help.UserManualActivity;
 
 // import java.io.File;
 import java.util.Locale;
+import java.util.Arrays;
 // import java.util.List;
 // import java.util.ArrayList;
 
@@ -49,7 +51,7 @@ import android.widget.AdapterView;
 import android.widget.AdapterView.OnItemClickListener;
 import android.widget.AdapterView.OnItemLongClickListener;
 
-public class CWDActivity extends Activity
+public class CWDActivity extends MyActivity
                          implements OnItemClickListener
                                   , OnItemLongClickListener
                                   , OnClickListener
@@ -117,6 +119,7 @@ public class CWDActivity extends Activity
   {
     // File[] dirs = TDPath.getTopoDroidFiles( mBaseName );
     String[] dirs = TDPath.getTopoDroidFiles( TDInstance.cbd );
+    Arrays.sort( dirs, 0, dirs.length );
     ArrayAdapter<String> adapter = new ArrayAdapter<>( this, R.layout.menu );
     if ( dirs != null ) {
       for ( String item : dirs ) {
@@ -216,6 +219,7 @@ public class CWDActivity extends Activity
     updateDisplay();
 
     setTitle( R.string.cwd );
+    // setTitleColor( TDColor.TITLE_NORMAL );
   }
 
   // @Override
@@ -224,20 +228,36 @@ public class CWDActivity extends Activity
   //   super.onStop();
   // }
 
+  @Override
+  protected void onDestroy()
+  { 
+    super.onDestroy();
+  }
+
+  @Override
+  public void onBackPressed()
+  {
+    // setCwdPreference();
+    super.onBackPressed();
+  }
+
+  // /** handle key up event // alternative-169
+  //  * @param code  key code
+  //  * @param ev    key event
+  //  */
   // @Override
-  // public void onBackPressed()
-  // {
-  //   // setCwdPreference();
-  //   finish();
-  // }
+  // public boolean onKeyUp( int code, KeyEvent event ) { return backKeyUp( code, event ); }
 
   @Override
   public boolean onKeyDown( int code, KeyEvent event )
   {
     switch ( code ) {
-      case KeyEvent.KEYCODE_BACK: // HARDWARE BACK (4)
-        super.onBackPressed();
-        return true;
+      // case KeyEvent.KEYCODE_BACK: // HARDWARE BACK (4)
+      //   onBackPressed(); // FIXME issue 167
+      //   return true;
+      // ----- alternative-169
+      // case KeyEvent.KEYCODE_BACK: // HARDWARE BACK (4)
+      //   return backKeyDown( code, event );
       case KeyEvent.KEYCODE_MENU:   // HARDWARE MENU (82)
         String help_page = getResources().getString( R.string.CWDActivity );
         /* if ( help_page != null ) always true */ UserManualActivity.showHelpPage( this, help_page );
@@ -251,4 +271,19 @@ public class CWDActivity extends Activity
     return false;
   }
 
+
+  // ----------------------------------------------------------------
+  // TITLE BAR
+
+  @Override
+  public void setTitle( CharSequence t )
+  {
+    ((TextView)findViewById( R.id.title )).setText( t );
+  }
+
+  // @Override
+  // public void setTitleColor( int color )
+  // {
+  //   ((TextView)findViewById( R.id.title )).setTextColor( color );
+  // }
 }

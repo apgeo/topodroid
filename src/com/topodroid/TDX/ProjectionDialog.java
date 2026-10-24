@@ -13,8 +13,8 @@ package com.topodroid.TDX;
 
 import com.topodroid.util.TDLog;
 import com.topodroid.util.TDMath;
-import com.topodroid.util.TDStatus;
 import com.topodroid.util.TDUtil;
+import com.topodroid.types.TDStatus;
 import com.topodroid.num.TDNum;
 import com.topodroid.num.NumStation;
 import com.topodroid.num.NumShot;
@@ -294,7 +294,8 @@ class ProjectionDialog extends MyDialog
       if ( ! blk.isCommented() ) {
         NumStation st1 = sh.from;
         NumStation st2 = sh.to;
-        if ( st1.show() && st2.show() ) {
+        // if ( st1.show( true ) && st2.show( true ) )
+        {
           double x1 = (st1.e - e0) * cx + (st1.s - s0) * sx; // - dx;
           double x2 = (st2.e - e0) * cx + (st2.s - s0) * sx; // - dx;
           double y1 = st1.v - v0; // - dy;
@@ -309,7 +310,8 @@ class ProjectionDialog extends MyDialog
     } 
     // for ( NumSplay sp : splays ) {
     //   NumStation st = sp.from;
-    //   if ( st.show() ) {
+    //   // if ( st.show( true ) )
+    //   {
     //     double x1 = (st.e - e0) * cx + (st.s - s0) * sx; // - dx;
     //     double x2 = (sp.e - e0) * cx + (sp.s - s0) * sx; // - dx;
     //     double y1 = st.v - v0; // - dy;
@@ -322,7 +324,8 @@ class ProjectionDialog extends MyDialog
     //   }
     // }
     for ( NumStation st : stations ) {
-      if ( st.show() ) {
+      // if ( st.show( true ) )
+      {
 	double x1 = (st.e -e0) * cx + (st.s - s0) * sx; // - dx;
 	double y1 = st.v - v0; // - dy;
         h1 = DrawingUtil.toSceneX( x1, y1 );
@@ -843,6 +846,7 @@ class ProjectionDialog extends MyDialog
 
   /** react to a user tap on BACK: stop drawing and close the dialog with no further action
    */
+  @SuppressWarnings("deprecated")
   @Override
   public void onBackPressed()
   {

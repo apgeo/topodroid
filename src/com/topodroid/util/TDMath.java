@@ -34,6 +34,7 @@ public class TDMath
   static public float acosd( float x )  { return (float)( RAD2DEG * Math.acos( x ) ); }
   static public float asind( float x )  { return (float)( RAD2DEG * Math.asin( x ) ); }
   static public float sqrt( float x )   { return (float)Math.sqrt( x ); }
+  static public float pow( float x, float y ) { return (float)Math.pow( x, y ); }
 
   static public double cosD(  double x  ) { return Math.cos( x ); }
   static public double cosDd( double xd ) { return Math.cos( xd * DEG2RAD ); }
@@ -48,6 +49,12 @@ public class TDMath
   static public float atan2F(  double y, double x ) { return (float)Math.atan2( y, x ); }
   static public float atan2Fd( double y, double x ) { return (float)( RAD2DEG * Math.atan2( y, x ) ); }
   static public float sqrtF( double x )   { return (float)Math.sqrt( x ); }
+
+  static public float averageDegrees( float d1, float d2 )
+  {
+    if ( Math.abs( d1 - d2 ) < 180 ) return (d1 + d2)/2;
+    return in360( (d1 + 360 + d2)/2 );
+  }
 
   /** @return the difference between two angles [degrees]
    * @param a1   first angle [deg.]
@@ -68,6 +75,16 @@ public class TDMath
     while ( f < 0 )    f += 360;
     return f;
   }
+
+  /** @return the value of an angle mod( 2 PI )
+   * @param x  angle [radians]
+   */
+  static public double in2PI( double x )
+  { 
+    while ( x >= 2*Math.PI ) x -= 2*Math.PI;
+    while ( x < 0 ) x += 2*Math.PI;
+    return x;
+  } 
 
   /** @return the value of an angle mod(360)
    * @param f  angle [deg.]

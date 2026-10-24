@@ -17,10 +17,11 @@ import com.topodroid.util.TDLog;
 import com.topodroid.util.TDFeedback;
 import com.topodroid.util.TDTag;
 import com.topodroid.util.TDString;
-import com.topodroid.util.TDStatus;
 import com.topodroid.util.TDRequest;
 import com.topodroid.util.TDLocale;
 import com.topodroid.util.TDUtil;
+import com.topodroid.util.TDColor;
+import com.topodroid.util.TDAnalytics;
 // import com.topodroid.util.TDVersion;
 import com.topodroid.math.TDMatrix;
 import com.topodroid.math.TDVector;
@@ -39,6 +40,7 @@ import com.topodroid.dev.DataType;
 import com.topodroid.types.PlotType;
 import com.topodroid.types.LegType;
 import com.topodroid.types.ExtendType;
+import com.topodroid.types.TDStatus;
 import com.topodroid.calib.CalibInfo;
 import com.topodroid.calib.CalibAlgo;
 import com.topodroid.calib.CalibTransform;
@@ -83,6 +85,7 @@ import android.widget.ListView;
 import android.widget.EditText;
 import android.widget.AbsListView;
 import android.widget.AbsListView.OnScrollListener;
+import android.widget.TextView;
 
 
 // import android.provider.MediaStore;
@@ -104,7 +107,7 @@ import java.util.TreeSet;
 // import androidx.recyclerview.widget.RecyclerView;
 // import androidx.recyclerview.widget.LinearLayoutManager;
 
-public class ShotWindow extends Activity
+public class ShotWindow extends MyActivity
                         implements OnItemClickListener
                         , OnItemLongClickListener
                         , OnClickListener
@@ -113,8 +116,8 @@ public class ShotWindow extends Activity
                         , INewPlot
                         , IPhotoInserter
 {
+  private static final boolean LOG = false;
   private final static String TAG = "SHOT ";
-  private final static boolean LOG = false;
 
   static boolean mWaitPlot = false; // global flag to prevent opening a plot
 
@@ -163,7 +166,7 @@ public class ShotWindow extends Activity
                           // R.drawable.iz_bedding,    // compute bedding
                         R.drawable.iz_delete,     // cut shots 
                         R.drawable.iz_copy,       // copy shots 
-                        R.drawable.iz_clear       // cancel
+                        R.drawable.iz_clear_blue  // cancel
 			// R.drawable.iz_empty // EMPTY
                       };
   private static final int BTN_MULTISHOT = 4; // index of iz_highlight
@@ -237,7 +240,7 @@ public class ShotWindow extends Activity
    */
   private boolean testFlagSplayLegBlank() 
   { 
-    // TDLog.v("Flags splay " + mFlagSplay + " leg " + mFlagLeg + " blank " + mFlagBlank );
+    // TDLog.v( TAG + "Flags splay " + mFlagSplay + " leg " + mFlagLeg + " blank " + mFlagBlank );
     return mFlagSplay || mFlagLeg || mFlagBlank || mFlagScan; 
   }
 
@@ -253,7 +256,7 @@ public class ShotWindow extends Activity
     mFlagLeg    = leg;
     mFlagBlank  = blank;
     saveInstanceToData();
-    // TDLog.v("update display : set flags");
+    // TDLog.v( TAG + "update display : set flags");
     updateDisplay();
   }
 
@@ -355,7 +358,7 @@ public class ShotWindow extends Activity
    */
   public void setRefAzimuth( float azimuth, long fixed_extend )
   {
-    // TDLog.v( TAG + "set Ref Azimuth " + TDAzimuth.mFixedExtend + " -> " + fixed_extend + " azimuth " + azimuth );
+    // if ( LOG ) TDLog.v( TAG + "set ref azimuth " + TDAzimuth.mFixedExtend + " -> " + fixed_extend + " azimuth " + azimuth );
     TDAzimuth.mFixedExtend = fixed_extend;
     TDAzimuth.mRefAzimuth  = azimuth;
     setRefAzimuthButton();
@@ -398,12 +401,12 @@ public class ShotWindow extends Activity
   @Override
   public void refreshDisplay( int nr, boolean toast ) 
   {
-    // TDLog.v( "Shot Window refresh display " + nr + " toast " + toast );
+    // TDLog.v(  TAG + "Shot Window refresh display " + nr + " toast " + toast );
     setConnectionStatus( mDataDownloader.getStatus() );
     if ( nr >= 0 ) {
       if ( nr > 0 ) {
         // mLastShotId = mApp_mData.getLastShotId( TDInstance.sid );
-        // TDLog.v("update display : refresh display");
+        // TDLog.v( TAG + "update display : refresh display");
         updateDisplay( );
       }
       if ( toast ) {
@@ -431,6 +434,7 @@ public class ShotWindow extends Activity
    */
   int updateDisplay( )
   {
+    // TDLog.v("Shot window update display");
     int ret = 0;
     // highlightBlocks( null );
     if ( mApp_mData != null && TDInstance.sid >= 0 ) {
@@ -440,12 +444,12 @@ public class ShotWindow extends Activity
       // if ( mMyBlocks.size() > 4 ) SurveyAccuracy.setBlocks( mMyBlocks );
       mMyPhotos = mApp_mData.selectAllPhotosShot( TDInstance.sid, TDStatus.NORMAL );
       if ( ! mDataAdapter.isMultiSelect() ) { // FIXME 2024-11-15 check if causes errors
-        // TDLog.v("update display updates shot list: " + mMyBlocks.size() );
+        // TDLog.v( "shot window: update display updates shot list: " + mMyBlocks.size() );
         updateShotList( mMyBlocks, mMyPhotos );
         // mSurveyAccuracy.debug();
         ret = 2;
       } else {
-        // TDLog.v("update display updates shot list: " + mMyBlocks.size() + " adapter is multiselect" );
+        // TDLog.v( TAG + "update display updates shot list: " + mMyBlocks.size() + " adapter is multiselect" );
         ret = 1;
       }
       setTheTitle( );
@@ -460,10 +464,8 @@ public class ShotWindow extends Activity
   public void setTheTitle()
   {
     StringBuilder sb = new StringBuilder();
-    if ( TDSetting.isConnectionModeMulti() /* || TDSetting.isConnectionModeDouble() */ ) {
-      sb.append( "{" );
-      if ( TDInstance.getDeviceA() != null ) sb.append( TDInstance.getDeviceA().getNickname() );
-      sb.append( "} " );
+    if ( TDInstance.getDeviceA() != null && TDSetting.canSwitchDevice() ) {
+      sb.append( "{" ).append( TDInstance.getDeviceA().getNickname() ).append( "} " );
     }
     // sb.append( mApp.getConnectionStateTitleStr() ); // IF_COSURVEY
     sb.append( TDInstance.survey );
@@ -473,7 +475,7 @@ public class ShotWindow extends Activity
     }
 
     if ( TDSetting.WITH_IMMUTABLE && ! TDInstance.isSurveyMutable ) { // IMMUTABLE
-      mActivity.setTitleColor( 0xffff3333 );
+      mActivity.setTitleColor( TDColor.TITLE_MUTABLE );
     } else {
       setTitleColor( StationPolicy.mTitleColor );
     }
@@ -512,10 +514,10 @@ public class ShotWindow extends Activity
     if ( ! blk.isScan() ) { // normal data
       mSurveyAccuracy.addBlockAMD( blk );
       mDataAdapter.updateBlockAMD( blk ); // copy blk AMD to the block in the adapter
-      // TDLog.v( "update block AMD " + ret );
+      // TDLog.v(  TAG + "update block AMD " + ret );
       mList.post( new Runnable() {
         @Override public void run() {
-          // TDLog.v( "list runnable: notify data set AMD changed " + mDataAdapter.getCount() );
+          // TDLog.v(  TAG + "list runnable: notify data set AMD changed " + mDataAdapter.getCount() );
           // if ( TDSetting.mBlunderShot )  mDataAdapter.dropBlunders(); // BLUNDER uncomment to drop the blunder from the shot list immediately
           mDataAdapter.notifyDataSetChanged(); // THIS IS IMPORTANT TO REFRESH THE DATA LIST
           mList.setSelection( mDataAdapter.getCount() - 1 );
@@ -534,7 +536,7 @@ public class ShotWindow extends Activity
   @Override
   synchronized public void updateBlockList( long blk_id )
   {
-    // TDLog.v( "shot window: update block list " + blk_id );
+    // TDLog.v(  TAG + "update block list " + blk_id );
     DBlock blk = mApp_mData.selectTheShot( blk_id, TDInstance.sid );
     if ( blk == null || mDataAdapter == null ) {
       // TDLog.v( TAG + "data null block");
@@ -547,7 +549,7 @@ public class ShotWindow extends Activity
     boolean add_block = mDataAdapter.addDataBlock( blk ); // avoid double block-adding
     if ( add_block ) {
       boolean scan = blk.isScan();
-      // TDLog.v(" update block list. Id: " + blk_id + " type " + blk.getBlockType() + " is scan: " + scan );
+      // TDLog.v( TAG + "update block list. Id: " + blk_id + " type " + blk.getBlockType() + " is scan: " + scan );
       boolean ret = false;
       if ( ! scan ) { // normal data
         // 2025-11-04 moved to updateBlockAMDList for X2 and XBLE
@@ -573,7 +575,7 @@ public class ShotWindow extends Activity
       if ( ! ( TDInstance.deviceType() == Device.DISTO_X310 || TDInstance.deviceType() == Device.DISTO_XBLE  ) ) {
         mList.post( new Runnable() {
           @Override public void run() {
-            // TDLog.v( "list runnable: notify data set changed " + mDataAdapter.getCount() );
+            // TDLog.v( TAG + "list runnable: notify data set changed " + mDataAdapter.getCount() );
             // if ( TDSetting.mBlunderShot )  mDataAdapter.dropBlunders(); // BLUNDER uncomment to drop the blunder from the shot list immediately
             mDataAdapter.notifyDataSetChanged(); // THIS IS IMPORTANT TO REFRESH THE DATA LIST
             mList.setSelection( mDataAdapter.getCount() - 1 );
@@ -606,7 +608,7 @@ public class ShotWindow extends Activity
   private void updateShotList( List< DBlock > list, List< PhotoInfo > photos )
   {
     if ( list == null ) return;
-    // TDLog.v( "update shot list: shots " + list.size() + " photos " + photos.size() );
+    // TDLog.v( TAG + "update shot list: shots " + list.size() + " photos " + photos.size() );
     mDataAdapter.clear();
     // mList.setAdapter( mDataAdapter );
     if ( TDUtil.isEmpty(list) ) {
@@ -614,9 +616,26 @@ public class ShotWindow extends Activity
       return;
     }
     processShotList( list );
+    if ( checkMultiBadShots( list ) ) {
+      mDataAdapter.notifyDataSetChanged(); // THIS IS USED TO REFRESH THE DATA LIST
+    }
     if ( photos != null && ! photos.isEmpty() ) {
       mDataAdapter.reviseBlockWithPhotos( photos );
     }
+  }
+
+  private boolean checkMultiBadShots( List< DBlock > list )
+  {
+    boolean ret = false;
+    for ( DBlock blk : list ) {
+      if ( blk.isLeg() ) {
+        if ( mApp_mData.checkSiblings( blk.mId, TDInstance.sid, blk.mFrom, blk.mTo, blk.mLength, blk.mBearing, blk.mClino ) ) {
+          blk.setMultiBad( true );
+          ret = true;
+        }
+      }
+    }
+    return ret;
   }
 
   /** process the list of shot data and fill the adapter for the display list
@@ -626,6 +645,7 @@ public class ShotWindow extends Activity
    */
   private void processShotList( List< DBlock > list )
   {
+    // TDLog.v("Shot window: process shot list " + list.size() );
     int cnt = 0;
     DBlock prev = null;
     long scan_idx = -1L;
@@ -636,7 +656,7 @@ public class ShotWindow extends Activity
       DBlock cur = item;
       // int t = cur.type();
       // TDLog.Log( TDLog.LOG_SHOT, "item " + cur.mLength + " " + cur.mBearing + " " + cur.mClino );
-      // TDLog.v(" update block list. Id: " + cur.mId + " type " + cur.getBlockType() + " is scan: " + cur.isScan() );
+      // TDLog.v(TAG + " update block list. Id: " + cur.mId + " type " + cur.getBlockType() + " is scan: " + cur.isScan() );
       if ( cur.isScan() ) {
         if ( /* prev_is_scan && */ scan_idx == cur.mIndex ) { // skip
           continue;
@@ -650,29 +670,48 @@ public class ShotWindow extends Activity
         scan_idx = -1L;
         // prev_is_scan = false;
         if ( cur.isSecLeg() || cur.isRelativeDistance( prev ) ) {
-          // TDLog.v( TAG + "item close " + cur.type() + " " + cur.mLength + " " + cur.mBearing + " " + cur.mClino );
+          // TDLog.v( TAG + "item " + cur.mId + " close - type " + cur.getBlockType() + " close " + cur.isRelativeDistance( prev ) );
           if ( cur.isBlank() ) {   // FIXME 20140612
+            // TDLog.v( TAG + "item " + cur.mId + " blank -> sec_leg");
             cur.setTypeSecLeg();
             mApp_mData.updateShotLeg( cur.mId, TDInstance.sid, LegType.EXTRA ); // cur.mType ); // FIXME 20140616
-          }
-          else if ( ! cur.isSecLeg() ) { // FIXME 20201118
+          } else if ( ! cur.isSecLeg() ) { // FIXME 20201118 : cur isRelativeDistance from prev
             // if ( prev != null && prev.isBlank() ) prev.setBlockTypeFromLegType( DBlock.BLOCK_BLANK_LEG );
-            if ( prev != null ) prev.setTypeBlankLeg();
+            if ( prev != null ) {
+              // prev.setTypeBlankToLeg(); // 20260922-begin replaced with
+              // the following if-else that handles consecutive close shot with repeated/different FROM-TO
+              boolean empty_from = TDString.isNullOrEmpty( cur.mFrom );
+              boolean empty_to   = TDString.isNullOrEmpty( cur.mTo );
+              if ( ! ( empty_from || empty_to ) ) {
+                TDLog.v("mark " + cur.mId + " as leg");
+                mApp_mData.updateShotLeg( cur.mId, TDInstance.sid, LegType.NORMAL );
+                cur.setTypeLeg();
+              } else if ( ! ( empty_from && empty_to ) ) {
+                TDLog.v("mark " + cur.mId + " as splay");
+                mApp_mData.updateShotLeg( cur.mId, TDInstance.sid, LegType.NORMAL );
+                cur.setTypeSplay();
+              } else {
+                prev.setTypeBlankToLeg();
+              } // 20260922-end
+              // TDLog.v( TAG + "item prev " + prev.mId + " set blank-leg ");
+            }
           }
 
           if ( mFlagLeg ) { // flag: hide leg extra shots
-            // TDLog.Log( TDLog.LOG_SHOT, "close distance");
-
             if ( mFlagBlank && prev != null && prev.isTypeBlank() ) {
-              // prev was skipped: draw it now
               if ( ! prev_is_leg ) {
+                // TDLog.v("  prev " + prev.mId + " (blank not leg) set prev to current " + cur.mId ); 
                 cur = prev;
                 prev_is_leg = true;
               } else {
+                // TDLog.v("  prev " + prev.mId + "(blank type) is leg: continue");
                 continue;
               }
             } else {
-              continue;
+              if ( cur.isSecLeg() ) { // 20260922 inserted if-test
+                // TDLog.v("  prev null or not-blank: continnue");
+                continue;
+              }
             }
           } else { // do not hide extra leg-shots
             if ( mFlagBlank && prev != null && prev.isTypeBlank() ) {
@@ -680,6 +719,7 @@ public class ShotWindow extends Activity
                 ++cnt;
                 mDataAdapter.add( prev );
                 prev_is_leg = true;
+                // TDLog.v("  prev (blank not leg) was skipped: increased counter " + cnt );
               // } else {
                 /* nothing */
               }
@@ -689,7 +729,6 @@ public class ShotWindow extends Activity
           }
         } else {
           // TDLog.v( TAG + "item not close " + cur.type() + " " + cur.mLength + " " + cur.mBearing + " " + cur.mClino );
-          // TDLog.Log( TDLog.LOG_SHOT, "not close distance");
           prev_is_leg = false;
           if ( cur.isTypeBlank() ) { // DBlock.isTypeBlank(t)
             prev = cur;
@@ -709,12 +748,11 @@ public class ShotWindow extends Activity
           }
         }
       }
-      // TDLog.Log( TDLog.LOG_SHOT, "adapter add " + cur.mLength + " " + cur.mBearing + " " + cur.mClino );
       // TDLog.v( TAG + "adapter add " + cur.mLength + " " + cur.mBearing + " " + cur.mClino );
       ++cnt;
       mDataAdapter.add( cur );
     }
-    // TDLog.v( "process shot list added " + cnt );
+    // TDLog.v( TAG + "process shot list added " + cnt );
   }
 
   // ---------------------------------------------------------------
@@ -733,6 +771,7 @@ public class ShotWindow extends Activity
       mListView.setAdapter( mButtonViewF.mAdapter );
       mListView.invalidate();
       onMultiselect = true;
+      TopoDroidApp.updateAnalytic( TDAnalytics.SHOT_MULTI );
       // FIXME this should not be necessary but it is (???)
       // if ( pos == 0 ) mDataAdapter.notifyDataSetChanged(); // THIS IS USED TO REFRESH THE DATA LIST
     } else {
@@ -746,6 +785,7 @@ public class ShotWindow extends Activity
 
   void addOffset( float offset )
   {
+    TopoDroidApp.updateAnalytic( TDAnalytics.DIST_OFFSET );
     mDataAdapter.addOffset( mApp_mData, offset );
     clearMultiSelect();
   }
@@ -771,7 +811,7 @@ public class ShotWindow extends Activity
   @Override 
   public void onItemClick(AdapterView<?> parent, View view, int pos, long id)
   {
-    // TDLog.v( "shot window: on item click pos " + pos );
+    // TDLog.v( TAG + "on item click pos " + pos );
     if ( CutNPaste.dismissPopupBT() ) return;
     if ( mSkipItemClick ) {
       mSkipItemClick = false;
@@ -784,6 +824,26 @@ public class ShotWindow extends Activity
     if ( closeMenu() ) return;
   }
 
+  /** react to a user long-tap on an item (menu entry)
+   * @param parent   ...
+   * @param view     tapped view
+   * @param pos      item position
+   * @param id       ...
+   */
+  @Override 
+  public boolean onItemLongClick(AdapterView<?> parent, View view, int pos, long id)
+  {
+    if ( CutNPaste.dismissPopupBT() ) return true;
+    if ( mSkipItemClick ) {
+      mSkipItemClick = false;
+      return true;
+    }
+    if ( parent != null && mMenu == (ListView)parent ) {
+      return handleMenuLongClick( pos );
+    }
+    return false;
+  }
+
   /** implement user tap on a shot data
    * @param view  tapped view
    * @param pos   item position
@@ -793,10 +853,9 @@ public class ShotWindow extends Activity
    */
   public void itemClick( View view, int pos )
   {
-    // TDLog.v( "shot window: item click pos " + pos );
+    // TDLog.v( TAG + "item click pos " + pos );
     if ( mDataAdapter.isMultiSelect() ) {
-      if ( ! TDInstance.isSurveyMutable ) {  // IMMUTABLE
-        TDToast.makeWarn("Immutable survey");
+      if ( TDInstance.isSurveyImmutable() ) {  // IMMUTABLE
         clearMultiSelect();
         return;
       }
@@ -813,7 +872,7 @@ public class ShotWindow extends Activity
    */
   void onBlockClick( DBlock blk, int pos )
   {
-    // TDLog.v( "shot window: block click pos " + pos );
+    // TDLog.v( TAG + "block click pos " + pos );
     if ( mOnOpenDialog ) return;
     mOnOpenDialog = true;
     mShotPos = pos;
@@ -828,21 +887,6 @@ public class ShotWindow extends Activity
     }
   }
 
-  /** react to a user long-tap on an item (menu entry)
-   * @param parent   ...
-   * @param view     tapped view
-   * @param pos      item position
-   * @param id       ...
-   */
-  @Override 
-  public boolean onItemLongClick(AdapterView<?> parent, View view, int pos, long id)
-  {
-    // TDLog.v( "shot window: on item long click " + pos );
-    if ( closeMenu() ) return true;
-    if ( CutNPaste.dismissPopupBT() ) return true;
-    return false;
-  }
-
   /** implement a user long-tap of a shot data item: start a multiselection
    * @param view     tapped view
    * @param pos      item position
@@ -850,7 +894,7 @@ public class ShotWindow extends Activity
    */
   public boolean itemLongClick( View view, int pos )
   {
-    // TDLog.v( "shot window: item long click " + pos );
+    // TDLog.v( TAG + "item long click " + pos );
     if ( ! TDInstance.isSurveyMutable ) {  // IMMUTABLE
       // TDToast.makeWarn("Immutable survey");
       return false;
@@ -871,18 +915,18 @@ public class ShotWindow extends Activity
   // @param leg1   new leg type
   void updateSplayLeg( int pos, long leg0, long leg1 ) // pos = mDataAdapter pos
   {
-    // TDLog.v( TAG + "toggle splays " + leg0 + " -> " + leg1 );
+    // TDLog.v( TAG + "update splay leg " + leg0 + " -> " + leg1 );
     DBlock blk = mDataAdapter.get(pos);
     if ( blk == null || ! blk.isSplay() ) return;
     do {
-      // TDLog.v( TAG + "toggle splay type " + pos + " is splay " + blk.isSplay() + " leg " + blk.getLegType() );
+      if ( LOG ) TDLog.v( TAG + "update splay leg " + pos + " is splay " + blk.isSplay() + " leg " + blk.getLegType() + " : " + leg0 + " " + leg1 );
       blk.setBlockTypeFromLegType( (int)leg1 );
       mApp_mData.updateShotLeg( blk.mId, TDInstance.sid, leg1 );
       mDataAdapter.updateBlockView( blk.mId );
       if ( (--pos) < 0 ) break;
       blk = mDataAdapter.get(pos);
     } while ( blk != null && blk.isSplay() && blk.getLegType() == leg0 );
-    // TDLog.v("update display : update splay leg");
+    // TDLog.v(TAG + "update display : update splay leg");
     updateDisplay();
   }
 
@@ -930,7 +974,7 @@ public class ShotWindow extends Activity
       blk = mDataAdapter.get(pos);
     } while ( blk != null && blk.isSplay() );
 
-    // TDLog.v("update display : set splay class");
+    // TDLog.v(TAG + "update display : set splay class");
     updateDisplay();
   }
 
@@ -946,7 +990,7 @@ public class ShotWindow extends Activity
     // // long leg_type = DBlock.legOfBlockType[ block_type ];
     // blk.setBlockType( block_type ); // FIXME 20240716
     blk.setBlockTypeFromLegType( (int)leg1 );
-    // TDLog.v("update display : update splay leg type");
+    // TDLog.v(TAG + "update display : update splay leg type");
     updateDisplay();
   }
 
@@ -960,7 +1004,7 @@ public class ShotWindow extends Activity
       // blk.setBlockType( block_type ); // FIXME 20240716
       mApp_mData.updateShotLegFlag( blk.mId, TDInstance.sid, leg_type, f );
     }
-    // TDLog.v("update display : update splays leg type");
+    // TDLog.v(TAG + "update display : update splays leg type");
     updateDisplay();
     clearMultiSelect();
   }
@@ -979,16 +1023,39 @@ public class ShotWindow extends Activity
   // ----------------------------------------------------------------------------
   // MENU
 
+  private boolean handleMenuLongClick( int pos )
+  {
+    int p = 0;
+    if ( p++ == pos ) { // CLOSE
+    } else if ( p++ == pos ) { // SURVEY ACTIVITY
+    } else if ( TDLevel.overBasic && p++ == pos ) { // RECOVER | PASTE
+      if ( LOG ) TDLog.v(TAG + "menu long click: Shot Paste Dialog");
+      if ( TDLevel.overAdvanced && mDBlockBuffer.size() > 0 ) {
+        closeMenu();
+        ( new ShotPasteDialog( this, this, mApp_mData, TDInstance.sid, mDBlockBuffer ) ).show();
+        return true;
+      }
+    // } else if ( TDLevel.overNormal && p++ == pos ) { // PHOTO
+    // } else if ( TDLevel.overExpert && p++ == pos ) { // AUDIO
+    // } else if ( TDSetting.mWithSensors && TDLevel.overNormal && p++ == pos ) { // SENSORS
+    // } else if ( TDLevel.overBasic && p++ == pos ) { // 3D
+    // } else if ( TDLevel.overNormal && (! TDInstance.isDivingMode()) && p++ == pos ) { // DEVICE
+    // } else  if ( p++ == pos ) { // OPTIONS
+    // } else if ( p++ == pos ) { // HELP
+    }
+    return false;
+  }
+
   private void handleMenu( int pos )
   {
     closeMenu();
     int p = 0;
     if ( p++ == pos ) { // CLOSE
-      // TDLog.v("Shot activity close");
+      // TDLog.v(TAG + "Shot activity close");
       // if ( TDSetting.mDataBackup ) TopoDroidApp.doExportDataAsync( getApplicationContext(), TDSetting.mExportShotsFormat, false, false ); // try_save
       // new DataStopTask( mApp, this, mDataDownloader ).immediateExecute(); // 20251217
       TopoDroidApp.mShotWindow = null;
-      super.onBackPressed();
+      super.onBackPressed(); // FIXME issue 167
 
     } else if ( p++ == pos ) { // SURVEY ACTIVITY
       Intent intent = new Intent( this, SurveyWindow.class );
@@ -1006,19 +1073,19 @@ public class ShotWindow extends Activity
       List< DBlock > shots4 = (TDLevel.overExpert && TDSetting.mBlunderShot)? mApp_mData.selectAllShots( TDInstance.sid, TDStatus.BLUNDER ) : null;
       List< PlotInfo > plots   = mApp_mData.selectAllPlots( TDInstance.sid, TDStatus.DELETED );
       // the list of deleted plots contains an even number of items: plan-profile pairs
-      if (  TDLevel.overAdvanced ) {
-        if ( TDUtil.isEmpty(shots1) && TDUtil.isEmpty(shots2) && TDUtil.isEmpty(shots3) && TDUtil.isEmpty(shots4) && TDUtil.isEmpty(plots) && mDBlockBuffer.size() == 0 ) {
-          TDToast.makeWarn( R.string.no_undelete_paste );
-        } else {
-          (new UndeleteDialog(mActivity, this, mApp_mData, TDInstance.sid, shots1, shots2, shots3, shots4, plots, mDBlockBuffer ) ).show();
-        }
-      } else {
-        if ( TDUtil.isEmpty(shots1) && TDUtil.isEmpty(shots2) && TDUtil.isEmpty(shots3) && TDUtil.isEmpty(shots4) && TDUtil.isEmpty(plots) ) {
-          TDToast.makeWarn( R.string.no_undelete );
-        } else {
-          (new UndeleteDialog(mActivity, this, mApp_mData, TDInstance.sid, shots1, shots2, shots3, shots4, plots, null ) ).show();
-        }
-      }
+      // if (  TDLevel.overAdvanced ) {
+      //   if ( TDUtil.isEmpty(shots1) && TDUtil.isEmpty(shots2) && TDUtil.isEmpty(shots3) && TDUtil.isEmpty(shots4) && TDUtil.isEmpty(plots) && mDBlockBuffer.size() == 0 ) {
+      //     TDToast.makeWarn( R.string.no_undelete_paste );
+      //   } else {
+      //     (new UndeleteDialog(mActivity, this, mApp_mData, TDInstance.sid, shots1, shots2, shots3, shots4, plots, mDBlockBuffer ) ).show();
+      //   }
+      // } else {
+      //   if ( TDUtil.isEmpty(shots1) && TDUtil.isEmpty(shots2) && TDUtil.isEmpty(shots3) && TDUtil.isEmpty(shots4) && TDUtil.isEmpty(plots) ) {
+      //     TDToast.makeWarn( R.string.no_undelete );
+      //   } else {
+          (new UndeleteDialog(mActivity, this, mApp_mData, TDInstance.sid, shots1, shots2, shots3, shots4, plots /* , null */ ) ).show();
+      //   }
+      // }
       // updateDisplay( );
     } else if ( TDLevel.overNormal && p++ == pos ) { // PHOTO
       // mActivity.startActivity( new Intent( mActivity, PhotoActivity.class ) );
@@ -1100,15 +1167,16 @@ public class ShotWindow extends Activity
    */
   long doTakePhoto( Context ctx, long shot_id, String title, String comment, int camera, String code, int reftype )
   {
+    TopoDroidApp.updateAnalytic( TDAnalytics.PHOTO );
     // camera = 1;
-    // TDLog.v("shot window do take photo: shot id " + shot_id + " title " + title + " reftype " + reftype );
+    // TDLog.v(TAG + "do take photo: shot id " + shot_id + " title " + title + " reftype " + reftype );
     long ret = mMediaManager.prepareNextPhoto( shot_id, title, comment, 1, camera, code, reftype ); // size 1 m
 
     // imageFile := PHOTO_DIR / surveyId / photoId .jpg
     // TDLog.Log( TDLog.LOG_SHOT, "photo " + imagefile.toString() );
 
     // if ( mMediaManager.isTopoDroidCamera() ) {
-      // TDLog.v( "take photo with TopoDroid - prepare next photo returns " + ret + " path " + mMediaManager.getImageFilepath() );
+      // TDLog.v( TAG + "take photo with TopoDroid - prepare next photo returns " + ret + " path " + mMediaManager.getImageFilepath() );
       // new QCamCompass( this, this, (new MyBearingAndClino( mApp, mMediaManager.getImageFilepath()) ), this, false, false).show();  // false = with_box, false=with_delay
       MyBearingAndClino bearing_clino = new MyBearingAndClino( mApp, mMediaManager.getImageFilepath());
       new QCamCompass( ctx, this, bearing_clino, this, false, false, camera, mMediaManager).show();  // false = with_box, false=with_delay
@@ -1133,6 +1201,9 @@ public class ShotWindow extends Activity
     return ret;
   }
 
+  /** start the sensor acquisition activity at a shot
+   * @param blk  shot
+   */
   void askSensor( DBlock blk )
   {
     mSensorId = mApp_mData.nextSensorId( TDInstance.sid );
@@ -1140,6 +1211,22 @@ public class ShotWindow extends Activity
     // TDLog.Log( TDLog.LOG_SENSOR, "sensor " + mSensorId );
     Intent intent = new Intent( mActivity, SensorActivity.class );
     startActivityForResult( intent, TDRequest.SENSOR_ACTIVITY_SHOTWINDOW );
+  }
+
+  /** clear the backsight flag of a shot
+   * @param blk  shot
+   */
+  void clearBacksightFlag( DBlock blk )
+  {
+    blk.clearBackSplay();
+    mApp_mData.updateShotFlag( blk.mId, TDInstance.sid, blk.getFlagFully() );
+    // blk.invalidate();
+    // redraw blk.getView();
+    View v = blk.getView();
+    if ( v != null ) { 
+      EditText from = (EditText)v.findViewById( R.id.from );
+      from.setBackgroundColor( 0xff000000 );
+    }
   }
 
   // void askExternal( )
@@ -1155,7 +1242,7 @@ public class ShotWindow extends Activity
   //  */
   // void dialogInsertShotAt( DBlock blk )
   // {
-  //   (new ShotNewDialog( this, mApp, this, blk, blk.mId )).show();
+  //   (new ShotNewDialog( this, this, mApp, this, blk, blk.mId )).show();
   // }
 
   // /** insert a manual intermediate leg - called by ShotEditDialog// INTERMEDIATE_DATA
@@ -1266,7 +1353,7 @@ public class ShotWindow extends Activity
         }
       }
     }
-    // TDLog.v("update display : do delete shot");
+    // TDLog.v( TAG + "update display : do delete shot");
     updateDisplay( ); 
   }
 
@@ -1280,7 +1367,7 @@ public class ShotWindow extends Activity
     mApp_mData.insertPhotoRecord( TDInstance.sid, mMediaManager.getPhotoId(), mMediaManager.getItemId(), "", TDUtil.currentDateTime(),
       mMediaManager.getComment(), mMediaManager.getCamera(), mMediaManager.getCode(), mMediaManager.getRefType(), PhotoInfo.FORMAT_JPEG );
     // FIXME NOTIFY ? no
-    // TDLog.v("update display : insert phoito");
+    // TDLog.v( TAG + "update display : insert photo");
     updateDisplay( ); 
     return true;
   }
@@ -1289,7 +1376,7 @@ public class ShotWindow extends Activity
   {
     long photo_id = mApp_mData.nextPhotoId( TDInstance.sid );
     String file_path = TDPath.getSurveyNextImageFilepath( photo_id, PhotoInfo.FORMAT_PNG );
-    // TDLog.v("Shot window: insert bitmap photo PNG " + file_path + " reftype " + mMediaManager.getRefType() );
+    // TDLog.v( TAG + "insert bitmap photo PNG " + file_path + " reftype " + mMediaManager.getRefType() );
     try {
       FileOutputStream fos = new FileOutputStream( file_path );
       bitmap.compress( Bitmap.CompressFormat.PNG, 0, fos );
@@ -1485,7 +1572,7 @@ public class ShotWindow extends Activity
       @Override public void onScrollStateChanged( AbsListView list_view, int state )
       { 
         if ( OnScrollListener.SCROLL_STATE_TOUCH_SCROLL == state ) {
-          // TDLog.v("list on scroll state changed");
+          // TDLog.v( TAG + "list on scroll state changed");
           View focus_view = getCurrentFocus();
           if ( focus_view != null ) focus_view.clearFocus();
         }
@@ -1497,7 +1584,7 @@ public class ShotWindow extends Activity
       @Override
       public void onMovedToScrapHeap( View view )
       {
-        // TDLog.v("list on moved to scrap heap");
+        // TDLog.v( TAG + "list on moved to scrap heap");
         if ( view.hasFocus() ) {
           //Optional: also hide keyboard in that case
           if ( view instanceof EditText ) {
@@ -1513,7 +1600,7 @@ public class ShotWindow extends Activity
       }
     });
 
-    // TDLog.v("list set adapter");
+    // TDLog.v( TAG + "list set adapter");
     mList.setAdapter( mDataAdapter );
     // mList.setOnItemClickListener( this );
     // mList.setLongClickable( true );
@@ -1533,6 +1620,7 @@ public class ShotWindow extends Activity
 
     mMenu = (ListView) findViewById( R.id.menu );
     mMenu.setOnItemClickListener( this );
+    mMenu.setOnItemLongClickListener( this );
     // setMenuAdapter( getResources() );
     // onMenu = true; // force close menu
     // closeMenu();
@@ -1545,15 +1633,24 @@ public class ShotWindow extends Activity
 
     // mSearch = new SearchResult();
     // TDLog.v( TAG + "on create sid " + TDInstance.sid );
+
+    if ( TDSetting.isConnectionModeContinuous() ) {
+      TopoDroidApp.updateAnalytic( TDAnalytics.DOWN_C );
+    } else if ( TDSetting.isConnectionModeMulti() ) {
+      TopoDroidApp.updateAnalytic( TDAnalytics.DOWN_M );
+    } else if ( TDSetting.mSecondDistoX ) {
+      TopoDroidApp.updateAnalytic( TDAnalytics.DOWN_2 );
+    } else {
+      TopoDroidApp.updateAnalytic( TDAnalytics.DOWN_B );
+    }
   }
 
   @Override
   public void onStart() 
   {
     super.onStart();
-    // TDLog.v( "Shot Activity on Start " );
+    // TDLog.v(  TAG + "on Start " );
     // Debug.startMethodTracing( "distox" );
-    // TDLog.v( TAG + "on Start() " );
     TDLocale.resetTheLocale();
     setMenuAdapter( getResources() );
     onMenu = true; // force close menu
@@ -1561,23 +1658,11 @@ public class ShotWindow extends Activity
   }
 
   @Override
-  public synchronized void onDestroy() 
-  {
-    super.onDestroy();
-    TDLog.v( "Shot activity on Destroy" );
-    new DataStopTask( mApp, this, mDataDownloader ).immediateExecute(); // 20251217
-
-    if ( doubleBackHandler != null ) {
-      doubleBackHandler.removeCallbacks( doubleBackRunnable );
-    }
-  }
-
-  @Override
   public synchronized void onStop() 
   {
     // Debug.stopMethodTracing( );
     super.onStop();
-    TDLog.v( "Shot activity on Stop" );
+    if ( LOG ) TDLog.v( TAG + "on Stop" );
     // // if ( TDSetting.mDataBackup && TDSetting.mExportShotsFormat >= 0 ) TopoDroidApp.doExportDataAsync( TDInstance.context, TDSetting.mExportShotsFormat, false, false );
   }
 
@@ -1585,7 +1670,7 @@ public class ShotWindow extends Activity
   public synchronized void onPause() 
   {
     super.onPause();
-    TDLog.v( "Shot activity on Pause" );
+    if ( LOG ) TDLog.v( TAG + "on Pause" );
     // saveInstanceToData();
 
     // mApp.unregisterConnListener( mHandler );
@@ -1597,18 +1682,16 @@ public class ShotWindow extends Activity
   public synchronized void onResume() 
   {
     super.onResume();
-    TDLog.v( "Shot Activity on Resume SID " + TDInstance.sid );
+    if ( LOG ) TDLog.v( TAG + "on Resume SID " + TDInstance.sid );
     // FIXME NOTIFY register ILister
     // if ( mApp.mComm != null ) { mApp.mComm.resume(); }
-    // TDLog.v( TAG + "on Resume()" );
-    
     if ( TDSetting.WITH_IMMUTABLE ) {
       // if ( mApp_mData != null ) 
       mApp_mData.checkSurveyInfoImmutable( TDInstance.sid ); 
     }
 
     restoreInstanceFromData();
-    TDLog.v("update display : on resume");
+    // TDLog.v( TAG + "update display : on resume");
     updateDisplay( );
     TDFeedback.reset();
 
@@ -1619,6 +1702,8 @@ public class ShotWindow extends Activity
     }
     setRefAzimuthButton( );
     // TDLog.v( TAG + "Multiselect [3] " + onMultiselect + " " + mDataAdapter.getMultiSelectSize() );
+
+    if ( TDSetting.mBacksightSplay ) mDataAdapter.refreshBacksightFlag(); // FORSE REFRESH OF BACKSIGHT CHECK SPLAYS
   }
 
   /** @return the name (ILister interface)
@@ -1645,40 +1730,6 @@ public class ShotWindow extends Activity
     new DataStopTask( mApp, this, mDataDownloader ).immediateExecute();
     TopoDroidApp.mShotWindow = null;
     finish();
-  }
-
-  // back pressed puts the activty on pause
-  @Override
-  public void onBackPressed () // askClose
-  {
-    if ( closeMenu() ) return;
-    if ( CutNPaste.dismissPopupBT() ) return;
-    if ( onMultiselect ) {
-      clearMultiSelect();
-      return;
-    }
-    if ( TDSetting.mSingleBack ) {
-      // TDLog.v("Shot activity on back pressed - single back");
-      DrawingSurface.clearManagersCache();
-      // new DataStopTask( mApp, this, mDataDownloader ).immediateExecute(); // 20251217 
-      // if ( TDSetting.mDataBackup ) TopoDroidApp.doExportDataAsync( getApplicationContext(), TDSetting.mExportShotsFormat, false, false ); // try_save
-      TopoDroidApp.mShotWindow = null;
-      super.onBackPressed(); 
-    } else if ( doubleBack ) {
-      // TDLog.v("Shot activity on back pressed - double back execute");
-      if ( doubleBackToast != null ) doubleBackToast.cancel();
-      doubleBackToast = null;
-      DrawingSurface.clearManagersCache();
-      // new DataStopTask( mApp, this, mDataDownloader ).immediateExecute(); // 20251217 
-      // if ( TDSetting.mDataBackup ) TopoDroidApp.doExportDataAsync( getApplicationContext(), TDSetting.mExportShotsFormat, false, false ); // try_save
-      TopoDroidApp.mShotWindow = null;
-      super.onBackPressed();
-    } else {
-      // TDLog.v("Shot activity on back pressed - double back post runnable");
-      doubleBack = true;
-      doubleBackToast = TDToast.makeToast( R.string.double_back );
-      doubleBackHandler.postDelayed( doubleBackRunnable, 1000 );
-    }
   }
 
   // --------------------------------------------------------------
@@ -1732,7 +1783,7 @@ public class ShotWindow extends Activity
   @Override 
   public boolean onLongClick( View view )
   {
-    // TDLog.v( "shot window: on long click " );
+    // TDLog.v(  TAG + "on long click " );
     if ( closeMenu() ) return true;
     if ( CutNPaste.dismissPopupBT() ) return true;
 
@@ -1747,29 +1798,30 @@ public class ShotWindow extends Activity
       ret = true;
     } else {
       mDataAdapter.clearSearch();
-      if ( ! TDInstance.isDivingMode() && b == mButton1[ BTN_DOWNLOAD ] ) { // MULTI-DEVICE or SECOND-DEVICE
-        if ( ! TDInstance.isSurveyMutable ) {  // IMMUTABLE
-          TDToast.makeWarn("Immutable survey");
-          return true;
+      if ( TDSetting.canSwitchDevice() && Device.canSwitch( TDInstance.getDeviceA() ) ) {
+        if ( ! TDInstance.isDivingMode() && b == mButton1[ BTN_DOWNLOAD ] ) { // MULTI-DEVICE or SECOND-DEVICE
+          if ( TDInstance.isSurveyImmutable() ) return true;  // IMMUTABLE
+          mApp.showSurveyDeviceSwitch( this, this ); // MM SWITCH replaces the following if-then-else
+          // if ( TDInstance.isDeviceDistoX() ) {
+          //   if ( ! mDataDownloader.isDownloading() && TDSetting.isConnectionModeMulti() && TopoDroidApp.knownDevices().size() > 1 ) {
+          //     if ( TDSetting.mSecondDistoX && TDInstance.getDeviceB() != null ) {
+          //       mApp.switchSecondDevice();
+          //       setTheTitle();
+          //       // TDToast.make( String.format( getResources().getString(R.string.using), TDInstance.deviceNickname() ) );
+          //     } else {
+          //       (new DeviceSelectDialog( this, mApp, mDataDownloader, this )).show();
+          //     }
+          //   } else {
+          //     mDataDownloader.toggleDownloading();
+          //     mDataDownloader.doDataDownload( mApp.mListerSet, DataType.DATA_SHOT );
+          //   }
+          // } else { // TODO something cleverer than falling back to short click
+          //   mDataDownloader.toggleDownloading();
+          //   mDataDownloader.doDataDownload( mApp.mListerSet, DataType.DATA_SHOT );
+          // }
+          ret = true;
         }
-        if ( TDInstance.isDeviceDistoX() ) {
-          if ( ! mDataDownloader.isDownloading() && TDSetting.isConnectionModeMulti() && TopoDroidApp.mDData.getDevices().size() > 1 ) {
-            if ( TDSetting.mSecondDistoX && TDInstance.getDeviceB() != null ) {
-              mApp.switchSecondDevice();
-              setTheTitle();
-              // TDToast.make( String.format( getResources().getString(R.string.using), TDInstance.deviceNickname() ) );
-            } else {
-              (new DeviceSelectDialog( this, mApp, mDataDownloader, this )).show();
-            }
-          } else {
-            mDataDownloader.toggleDownloading();
-            mDataDownloader.doDataDownload( mApp.mListerSet, DataType.DATA_SHOT );
-          }
-        } else { // TODO something cleverer than falling back to short click
-          mDataDownloader.toggleDownloading();
-          mDataDownloader.doDataDownload( mApp.mListerSet, DataType.DATA_SHOT );
-        }
-        ret = true;
+        // ret = false
       } else if ( isButton1( b, BTN_PLOT ) ) {
         if ( mWaitPlot ) {
           TDToast.make( R.string.pleasewait );
@@ -1783,10 +1835,7 @@ public class ShotWindow extends Activity
         }
         ret = true;
       } else if ( isButton1( b, BTN_MANUAL ) ) {
-        if ( ! TDInstance.isSurveyMutable ) {  // IMMUTABLE
-          TDToast.makeWarn("Immutable survey");
-          return true;
-        }
+        if ( TDInstance.isSurveyImmutable() ) return true;  // IMMUTABLE
         new SurveyCalibrationDialog( mActivity /*, mApp */ ).show();
         ret = true;
       }
@@ -1797,7 +1846,7 @@ public class ShotWindow extends Activity
   @Override 
   public void onClick(View view)
   {
-    // TDLog.v( "shot window: on click " );
+    // TDLog.v( TAG + "on click " );
     if ( closeMenu() ) return;
     if ( CutNPaste.dismissPopupBT() ) return;
 
@@ -1825,10 +1874,7 @@ public class ShotWindow extends Activity
       if ( ! TDInstance.isDivingMode() ) {
         if ( k1 < mNrButton1 && b == mButton1[k1++] ) {        // DOWNLOAD
           // TDLog.v( TAG + "pressed download button");
-          if ( ! TDInstance.isSurveyMutable ) {  // IMMUTABLE
-            TDToast.makeWarn("Immutable survey");
-            return;
-          }
+          if ( TDInstance.isSurveyImmutable() ) return;  // IMMUTABLE
           if ( TDInstance.getDeviceA() != null ) {
             // mSearch = null; // invalidate search
             // if ( mBTstatus == ConnectionState.CONN_DISCONNECTED ) {
@@ -1836,12 +1882,14 @@ public class ShotWindow extends Activity
             // }
             // TDLog.v( TAG + "Download button, mode " + TDSetting.getConnectionMode() );
             // toggle must come first
+            TDLog.v("Shot window toggle downloading");
             boolean downloading = mDataDownloader.toggleDownloading();
             TDFeedback.notifyFeedback( this, downloading && mBTstatus == ConnectionState.CONN_DISCONNECTED );
-            // TDLog.v("SHOT download button");
+            // TDLog.v( TAG + "download button");
             mApp.notifyListerStatus( mApp.mListerSet, downloading ? ConnectionState.CONN_WAITING : ConnectionState.CONN_DISCONNECTED );
-            // TDLog.v( "Download, conn mode " + TDSetting.getConnectionMode() + " download status " + mDataDownloader.getStatus() );
+            // TDLog.v( TAG + "Download, conn mode " + TDSetting.getConnectionMode() + " download status " + mDataDownloader.getStatus() );
             // setConnectionStatus( mDataDownloader.getStatus() );
+            TDLog.v("Shot window do download data");
             mDataDownloader.doDataDownload( mApp.mListerSet, DataType.DATA_SHOT );
           } else {
             TDLog.e( TAG + "null device A");
@@ -1867,22 +1915,19 @@ public class ShotWindow extends Activity
         }
 
       } else if ( k1 < mNrButton1 && b == mButton1[k1++] ) { // ADD MANUAL SHOT
-        if ( ! TDInstance.isSurveyMutable ) {  // IMMUTABLE
-          TDToast.makeWarn("Immutable survey");
-          return;
-        }
+        if ( TDInstance.isSurveyImmutable() ) return;  // IMMUTABLE
         if ( TDLevel.overBasic ) {
           // mSearch = null; // invalidate search
           DBlock last_blk = mApp_mData.selectLastShotWithFromStation( TDInstance.sid );
-          (new ShotNewDialog( mActivity, mApp, this, last_blk, -1L )).show();
+          (new ShotNewDialog( mActivity, mActivity, mApp, this, last_blk, -1L )).show();
         }
       } else if ( k1 < mNrButton1 && b == mButton1[k1++] ) { // AZIMUTH
         if ( TDLevel.overNormal ) {
           if ( TDSetting.mAzimuthManual ) { // toggle between LEFT and RIGHT "extend"
             setRefAzimuth( TDAzimuth.mRefAzimuth, - TDAzimuth.mFixedExtend );
           } else {
-            (new AzimuthDialog( mActivity, this, TDAzimuth.mRefAzimuth, mBMdial )).show();
-            // FIXME_AZIMUTH_DIAL (new AzimuthDialog( mActivity, this, TDAzimuth.mRefAzimuth, mDialBitmap )).show();
+            (new AzimuthDialog( mActivity, mActivity, this, TDAzimuth.mRefAzimuth, mBMdial )).show();
+            // FIXME_AZIMUTH_DIAL (new AzimuthDialog( mActivity, mActivity, this, TDAzimuth.mRefAzimuth, mDialBitmap )).show();
           }
         }
 
@@ -1901,7 +1946,7 @@ public class ShotWindow extends Activity
         }
       } else if ( k1 < mNrButton1 && b == mButton1[k1++] ) { // REFRESH
         if ( TDLevel.overExpert ) {
-          // TDLog.v("update display : refresh");
+          // TDLog.v( TAG + "update display : refresh");
           if ( updateDisplay() > 1 ) {
             TDToast.make( R.string.shot_refreshed );
           }
@@ -1986,6 +2031,7 @@ public class ShotWindow extends Activity
 
   void searchStation( String name, boolean splays )
   {
+    TopoDroidApp.updateAnalytic( TDAnalytics.SEARCH_STATION );
     // if ( mSearch != null ) {
       // mSearch.set( name, mDataAdapter.searchStation( name, splays ) );
       mDataAdapter.searchStation( name, splays );
@@ -2001,6 +2047,7 @@ public class ShotWindow extends Activity
    */
   void searchShot( long flag ) 
   {
+    TopoDroidApp.updateAnalytic( TDAnalytics.SEARCH_SHOT );
     // if ( mSearch != null ) {
       // mSearch.set( null, mDataAdapter.searchShot( flag ) );
       mDataAdapter.searchShot( flag );
@@ -2016,6 +2063,7 @@ public class ShotWindow extends Activity
    */
   void searchLeg( String names )
   {
+    TopoDroidApp.updateAnalytic( TDAnalytics.SEARCH_LEG );
     String[] vals = TDString.splitOnSpaces( names );
     // if ( mSearch != null ) {
       // mSearch.set( null, mDataAdapter.searchLeg( names ) );
@@ -2033,7 +2081,7 @@ public class ShotWindow extends Activity
     mList.post( new Runnable() {
       @Override
       public void run() {
-        // TDLog.v("list jump to pos " + pos );
+        // TDLog.v( TAG + "list jump to pos " + pos );
         mList.setSelection( pos );
         View v = mList.getChildAt( pos );
         if ( v != null ) v.requestFocus();
@@ -2101,7 +2149,7 @@ public class ShotWindow extends Activity
     }
     // TDLog.v( TAG + "BUFFER after cut: size " + mDBlockBuffer.size() );
     clearMultiSelect( );
-    // TDLog.v("update display : do multiselect");
+    // TDLog.v( TAG + "update display : do multiselect");
     updateDisplay( ); 
   }
 
@@ -2110,6 +2158,7 @@ public class ShotWindow extends Activity
    */
   void doMultiCopy()
   {
+    TopoDroidApp.updateAnalytic( TDAnalytics.MULTICOPY );
     if ( TDLevel.overAdvanced ) {
       mDBlockBuffer.clear();
       for ( DBlock blk : mDataAdapter.getMultiSelect() ) {
@@ -2185,8 +2234,8 @@ public class ShotWindow extends Activity
     } else {
       mNextPos = mShotPos;
     }
-	// OLD CODE
-	// while ( mNextPos < mDataAdapter.getCount() && blk != mDataAdapter.get(mNextPos) ) ++ mNextPos;
+    // OLD CODE
+    // while ( mNextPos < mDataAdapter.getCount() && blk != mDataAdapter.get(mNextPos) ) ++ mNextPos;
     // ++ mNextPos; // one position after blk
     // while ( mNextPos < mDataAdapter.getCount() ) {
     //   DBlock b = mDataAdapter.get(mNextPos);
@@ -2234,8 +2283,8 @@ public class ShotWindow extends Activity
     } else {
       mPrevPos = mShotPos;
     }
-	// OLD CODE
-	// while ( mPrevPos >= 0 && blk != mDataAdapter.get(mPrevPos) ) -- mPrevPos;
+    // OLD CODE
+    // while ( mPrevPos >= 0 && blk != mDataAdapter.get(mPrevPos) ) -- mPrevPos;
     // while ( mPrevPos > 0 ) {
     //   -- mPrevPos;
     //   DBlock b = mDataAdapter.get(mPrevPos);
@@ -2271,7 +2320,7 @@ public class ShotWindow extends Activity
     if ( Math.abs( blk.mLength - d ) < 0.1 && Math.abs( blk.mBearing - b ) < 0.2 && Math.abs( blk.mClino - c ) < 0.2 ) return;
     if ( ! blk.isManual() ) {
       if ( ! blk.isTampered() ) {
-        // TDLog.v( "update shot DBC tampered " + blk.mLength + " " + blk.mBearing + " " + blk.mClino + " -> " + d + " " + b + " " + c );
+        // TDLog.v(  TAG + "update shot DBC tampered " + blk.mLength + " " + blk.mBearing + " " + blk.mClino + " -> " + d + " " + b + " " + c );
         blk.setTampered();
         // mApp_mData.saveShotDistanceBearingClino( TDInstance.sid, blk.mId, blk.mFlag, blk.mLength, blk.mBearing, blk.mClino, 0 ); // 0: mode normal
         mApp_mData.saveShotDistanceBearingClino( TDInstance.sid, blk );
@@ -2324,13 +2373,79 @@ public class ShotWindow extends Activity
    */
   void updateShotNameAndFlags( String from, String to, int extend, float stretch, long flag, long leg, String comment, DBlock blk, final boolean renumber )
   {
-    // TDLog.v( TAG + "update shot " + from + "-" + to + " leg " + leg + "/" + blk.getLegType() + " blk type " + blk.getBlockType() + " comment " + comment );
+    // if ( ! TDString.isNullOrEmpty( from ) ) {
+    //   if ( ! TDString.isNullOrEmpty( to ) ) {
+    //     if ( ! ( leg == LegType.BACK || leg == LegType.BLUNDER ) ) leg = LegType.NORMAL;
+    //   } else {
+    //     if ( leg == LegType.INVALID || leg == LegType.EXTRA || leg == LegType.BACK ) leg = LegType.NORMAL;
+    //   }
+    // } else if ( ! TDString.isNullOrEmpty( to ) ) {
+    //   if ( leg == LegType.INVALID || leg == LegType.EXTRA || leg == LegType.BACK ) leg = LegType.NORMAL;
+    // } else {
+    //   if ( ! ( leg == LegType.NORMAL || leg == LegType.EXTRA ) ) {
+    //     // at this stage it is not clear whether to assign LegType.NORMAL or LegType.EXTRA
+    //   }
+    // }
+
+    // TDLog.v( TAG + "update shot name " + from + "-" + to + " and flags " + flag + " leg " + leg + "/" + blk.getLegType() + " blk type " + blk.getBlockType() + " renumber " + renumber );
     String sts = checkXSections( blk, from, to );
     if ( sts == null ) {
+      boolean multi_bad = blk.isMultiBad();
+      List< Integer > old_siblings = multi_bad ? mApp_mData.getBadSiblings( blk, TDInstance.sid, blk.mFrom, blk.mTo ) : null;
       doUpdateShotNameAndFlags( from, to, extend, stretch, flag, leg, comment, blk );
       if ( renumber ) renumberShotsAfter( blk );
+      if ( multi_bad ) {
+        List< Integer > new_siblings = mApp_mData.getBadSiblings( blk, TDInstance.sid, from, to );
+        if ( new_siblings.isEmpty() ) {
+          // TDLog.v("no new bad sibling");
+          blk.setMultiBad( false );
+          mDataAdapter.updateBlockView( blk.mId );
+          for ( Integer id : old_siblings ) {
+            DBlock b = mDataAdapter.getBlockById( id );
+            if ( b != null && ! mApp_mData.hasBadSiblings( b,  TDInstance.sid ) ) {
+              // TDLog.v("check old bad sibling " + id + " no longer bad");
+              b.setMultiBad( false );
+              mDataAdapter.updateBlockView( id );
+            // } else {
+            //   TDLog.v("check old bad sibling " + id + " no block or still bad");
+            }
+          }
+        } else {
+          // blk.setMultiBad( true ); not-neceessary
+          // TDLog.v("new bad sibling");
+          for ( Integer id : new_siblings ) { // mark block ID as bad
+            DBlock b = mDataAdapter.getBlockById( id );
+            if ( b != null ) {
+              // TDLog.v("ID " + id + " set bad block");
+              b.setMultiBad( true );
+              mDataAdapter.updateBlockView( id );
+            // } else {
+            //   TDLog.v("ID " + id + " no block");
+            }
+          }
+        }
+      } else { // no old sibling
+        List< Integer > new_siblings = mApp_mData.getBadSiblings( blk, TDInstance.sid, from, to );
+        if ( ! new_siblings.isEmpty() ) {
+          // TDLog.v("block " + blk.mId + " got bad siblings");
+          blk.setMultiBad( true );
+          mDataAdapter.updateBlockView( blk.mId );
+          for ( Integer id : new_siblings ) { // mark block ID as bad
+            DBlock b = mDataAdapter.getBlockById( id );
+            if ( b != null ) {
+              // TDLog.v("ID " + id + " set bad block");
+              b.setMultiBad( true );
+              mDataAdapter.updateBlockView( id );
+            // } else {
+            //   TDLog.v("ID " + id + " no block");
+            }
+          }
+        }
+        // TDLog.v("REFRESH THE DATA LIST");
+      }
     } else {
       Resources res = getResources();
+      final long leg0 = leg;
       TopoDroidAlertDialog.makeAlert( mActivity, res,
         String.format( res.getString( R.string.shot_rename_unsafe ), sts ),
         res.getString(R.string.button_ok), 
@@ -2338,8 +2453,13 @@ public class ShotWindow extends Activity
         new DialogInterface.OnClickListener() { // ok handler
           @Override
           public void onClick( DialogInterface dialog, int btn ) {
-            doUpdateShotNameAndFlags( from, to, extend, stretch, flag, leg, comment, blk );
+            doUpdateShotNameAndFlags( from, to, extend, stretch, flag, leg0, comment, blk );
             if ( renumber ) renumberShotsAfter( blk );
+            boolean multi_bad = blk.isMultiBad();
+            boolean check_sibling = mApp_mData.checkSiblings( blk.mId, TDInstance.sid, from, to, blk.mLength, blk.mBearing, blk.mClino );
+            if ( multi_bad != check_sibling ) {
+              TDLog.v("REFRESH THE DATA LIST");
+            }
           } },
         null
       );
@@ -2357,9 +2477,10 @@ public class ShotWindow extends Activity
    * @param blk     shot data block
    * @note package because called (only) by alert dialog callback
    */
-  void doUpdateShotNameAndFlags( String from, String to, int extend, float stretch, long flag, long leg, String comment, DBlock blk )
+  private void doUpdateShotNameAndFlags( String from, String to, int extend, float stretch, long flag, long leg, String comment, DBlock blk )
   {
-    // TDLog.v( "SHOT WINDOW do update name and flags " + blk.mId + " flag " + flag + " leg " + leg + " / " + blk.getLegType() );
+    // boolean same_name = TDString.equals( blk.mFrom, from ) && TDString.equals( blk.mTo, to );
+    // TDLog.v(  TAG + "do update shot name and flags " + blk.mId + " flag " + flag + " leg " + leg + " / " + blk.getLegType() );
     blk.setBlockName( from, to, (leg == LegType.BACK) );
     blk.setBlockTypeFromLegType( (int)leg );
 
@@ -2398,6 +2519,7 @@ public class ShotWindow extends Activity
       // FIXME if ( leg == LegType.EXTRA ) blk3.setBlockTypeFromLegType( DBlock.BLOCK_SEC_LEG );
       mDataAdapter.updateBlockView( blk3.mId );
     }
+    // if ( ! same_name ) processShotList( mMyBlocks ); // 20260922 not needed
   }
 
   // FIXME_HIGHLIGHT
@@ -2405,19 +2527,17 @@ public class ShotWindow extends Activity
   //  * @param blks  data blocks list
   //  * @note called by MultishotDialog
   //  */
-  /*
-  void highlightBlocks( List< DBlock > blks )  // HIGHLIGHT
-  {
-    mApp.setHighlighted( blks );
-    // TDLog.v( TAG + "highlight blocks [0] " + ( (blks==null)? "null" : blks.size() ) );
-    if ( blks == null || blks.size() == 0 ) return; // TDUtil.isEmpty(blks)
-    // now if there is a plot open it
-    if ( TDInstance.recentPlot != null ) {
-      startExistingPlot( TDInstance.recentPlot, TDInstance.recentPlotType, blks.get(0).mFrom );
-    }
-    clearMultiSelect( );
-  }
-  */
+  // void highlightBlocks( List< DBlock > blks )  // HIGHLIGHT
+  // {
+  //   mApp.setHighlighted( blks );
+  //   // TDLog.v( TAG + "highlight blocks [0] " + ( (blks==null)? "null" : blks.size() ) );
+  //   if ( blks == null || blks.size() == 0 ) return; // TDUtil.isEmpty(blks)
+  //   // now if there is a plot open it
+  //   if ( TDInstance.recentPlot != null ) {
+  //     startExistingPlot( TDInstance.recentPlot, TDInstance.recentPlotType, blks.get(0).mFrom );
+  //   }
+  //   clearMultiSelect( );
+  // }
 
   /** open the sketch and highlight block in the sketch
    * @param blks  data blocks list
@@ -2438,7 +2558,7 @@ public class ShotWindow extends Activity
     // }
     clearMultiSelect( );
     // ... and refresh list
-    // TDLog.v("update display : color blocks");
+    // TDLog.v( TAG + "update display : color blocks");
     updateDisplay();
   }
 
@@ -2447,10 +2567,11 @@ public class ShotWindow extends Activity
    * @param from   FROM station
    * @param to     TO station
    * @note package because called by the alert dialog callback
+   *       called by updateDBlockName, doRenumberBlocks, updateSplayShots
    */
   void updateShotBlockName( DBlock b, String from, String to )
   {
-    // TDLog.v("update shot " + b.mId );
+    // TDLog.v( TAG + "update shot block name " + b.mId );
     if ( b.isScan() ) {
       TDLog.e("THIS SHOULD NOT HAPPEN");
       long leg_type = b.getLegType();
@@ -2458,8 +2579,11 @@ public class ShotWindow extends Activity
       b.mFrom = from;
       // b.mBlockType remains unchanged
     } else {
+      boolean clear_backsight_flag = b.isBackSplay() && ! TDString.equals( b.mFrom, from );
+      // TDLog.v( TAG + "update shot block " + b.mId + " name " +  b.mFrom + "-" + b.mTo + " -> " + from + "-" + to + " clear_backsight_flag " + clear_backsight_flag );
       mApp_mData.updateShotName( b.mId, TDInstance.sid, from, to );
-      b.setBlockName( from, to, b.isBackLeg() ); 
+      b.setBlockName( from, to, b.isBackLeg() );
+      if ( clear_backsight_flag ) clearBacksightFlag( b );
     }
   }
 
@@ -2471,7 +2595,7 @@ public class ShotWindow extends Activity
    */
   void updateDBlockName( DBlock blk, String from, String to )
   {
-    // TDLog.v( "update Block Name " + blk.mId + " : " + from + " - " + to );
+    // TDLog.v(  TAG + "update Block Name " + blk.mId + " : " + from + " - " + to );
     String sts = checkXSections( blk, from, to );
     if ( sts == null ) {
       updateShotBlockName( blk, from, to );
@@ -2504,15 +2628,28 @@ public class ShotWindow extends Activity
    */
   private void checkSiblings( DBlock blk,  String from, String to, float d, float b, float c )
   {
-    if ( ! blk.isLeg() ) { // if ( from.length() == 0 || to.length() == 0 )
+    if ( ! blk.isLeg() ) { 
       // TDLog.v( TAG + "check siblings: block " + blk.mId + " is not a leg");
       return;
     }
+    if ( TDString.isNullOrEmpty( from ) ) return;
+    if ( TDString.isNullOrEmpty( to ) ) return;
     if ( mApp_mData.checkSiblings( blk.mId, TDInstance.sid, from, to, d, b, c ) ) { // bad sibling
       TDToast.makeWarn( R.string.bad_sibling );
+      blk.setMultiBad( true );
     // } else {
     //   // TDLog.v( TAG + "no bad sibling for " + blk.mId );
     }
+  }
+
+  /** check if a block has siblings
+   * @param blk  data block
+   * @param from FROM station
+   * @param to   TO station
+   */
+  private void checkSiblings( DBlock blk, String from, String to )
+  {
+    checkSiblings( blk, from, to, blk.mLength, blk.mBearing, blk.mClino );
   }
 
   /** @return true if no xsection refer to a station of the block, or to FROM / TO
@@ -2619,7 +2756,7 @@ public class ShotWindow extends Activity
    */
   private void doRenumberBlocks( List< DBlock > blks, String from, String to )  // RENUMBER SELECTED BLOCKS
   {
-    // TDLog.v( "do Renumber Blocks - size " + blks.size() + " FROM <" + from + "> TO <" + to + ">" );
+    // TDLog.v(  TAG + "do Renumber Blocks - size " + blks.size() + " FROM <" + from + "> TO <" + to + ">" );
     if ( from.length() == 0 && to.length() == 0 ) {
       for ( DBlock b : blks ) {
         updateShotBlockName( b, from, to );
@@ -2638,15 +2775,15 @@ public class ShotWindow extends Activity
     }
     if ( blk.isLeg() ) {
       mApp.assignStationsAfter( blk, blks /*, stations */ );
-      // TDLog.v("update display : renumber assign stations after");
+      // TDLog.v( TAG + "update display : renumber assign stations after");
       updateDisplay();
       // mList.invalidate();
-      checkSiblings( blk, from, to, blk.mLength, blk.mBearing, blk.mClino );
+      checkSiblings( blk, from, to );
     } else if ( blk.isSplay() ) { // FIXME RENUMBER ONLY SPLAYS
-      // TDLog.v("Block splay " + blk.mId );
+      // TDLog.v( TAG + "Block splay " + blk.mId );
       for ( DBlock b : blks ) {
         if ( b == blk ) continue;
-        // TDLog.v("Block " + b.mId );
+        // TDLog.v( TAG + "Block " + b.mId );
         updateShotBlockName( b, from, to );
         // b.setBlockName( from, to );
       }
@@ -2658,6 +2795,9 @@ public class ShotWindow extends Activity
     clearMultiSelect( ); // can move inside ?
   }
 
+  /** swap from-to stations for a set of blocks - interface function
+   * @param blks   list of data blocks
+   */
   void swapBlocksName( List< DBlock > blks )  // SWAP SELECTED BLOCKS STATIONS
   {
     String sts = checkXSections( blks, null, null );
@@ -2679,7 +2819,7 @@ public class ShotWindow extends Activity
     }
   }
 
-  /** swap from-to stations for a set of blocks
+  /** swap from-to stations for a set of blocks - work function
    * @param blks   list of data blocks
    * @note package for the alert dialog callback
    */
@@ -2690,9 +2830,9 @@ public class ShotWindow extends Activity
       String from = blk.mTo;
       String to   = blk.mFrom;
       // TDLog.v( TAG + "swap block to <" + from + "-" + to + ">" );
-      blk.setBlockName( from, to );
-      // updateShotBlockName( blk, from, to );
-      checkSiblings( blk, from, to, blk.mLength, blk.mBearing, blk.mClino );
+      // blk.setBlockName( from, to ); // 2026064 was this instead on the next line
+      updateShotBlockName( blk, from, to );
+      checkSiblings( blk, from, to );
     }
     mApp_mData.updateShotsName( blks, TDInstance.sid );
     // updateDisplay();
@@ -2738,6 +2878,7 @@ public class ShotWindow extends Activity
    */
   String computeBedding( List< DBlock > blks ) // BEDDING
   {
+    TopoDroidApp.updateAnalytic( TDAnalytics.BED_FITTING );
     String strike_dip = getResources().getString(R.string.few_points);
     if ( blks != null && blks.size() > 2 ) {
       DBlock b0 = blks.get(0);
@@ -2763,7 +2904,7 @@ public class ShotWindow extends Activity
             ++ nn;
           }
         }
-        // TDLog.v("BED [1] center " + st + " points " + nn );
+        // TDLog.v( TAG + "BED [1] center " + st + " points " + nn );
       } else {
         st = b0.mTo;
         if ( st != null && st.length() > 0 ) {
@@ -2786,7 +2927,7 @@ public class ShotWindow extends Activity
             }
           }
 	}
-        // TDLog.v("BED [2] center " + st + " points " + nn );
+        // TDLog.v( TAG + "BED [2] center " + st + " points " + nn );
       }
       if ( nn >= 3 ) {
 	String strike_fmt = getResources().getString( R.string.strike_dip );
@@ -2812,7 +2953,7 @@ public class ShotWindow extends Activity
         float adip = 90 - TDMath.asind( n1.z );   // dip inclination
 
         strike_dip = String.format( Locale.US, strike_fmt, astk, adip );
-        // TDLog.v("BED strike/dip " + strike_dip );
+        // TDLog.v( TAG + "BED strike/dip " + strike_dip );
         // TDToast.make( strike_dip );
         if ( b0.mComment != null && b0.mComment.length() > 0 ) {
 	  if ( b0.mComment.matches( ".*" + strike_regex + ".*" ) ) {
@@ -2843,6 +2984,7 @@ public class ShotWindow extends Activity
   //
   public void updateSplayShots( String from, String to, long extend, long flag, long leg, String comment, DBlock blk )
   {
+    if ( LOG ) TDLog.v( TAG + "update splay shots " + from + "-" + to + " flag " + flag + " leg " + leg + " block id " + blk.mId );
     ArrayList< DBlock > splays = mDataAdapter.getSplaysAtId( blk.mId, blk.mFrom );
     for ( DBlock b : splays ) {
       if ( b.mId == blk.mId ) {
@@ -2876,12 +3018,67 @@ public class ShotWindow extends Activity
   // ------------------------------------------------------------------------
 
   @Override
+  protected synchronized void onDestroy()
+  {
+    if ( LOG ) TDLog.v( TAG + "on Destroy" );
+    new DataStopTask( mApp, this, mDataDownloader ).immediateExecute(); // 20251217
+
+    if ( doubleBackHandler != null ) {
+      doubleBackHandler.removeCallbacks( doubleBackRunnable );
+    }
+    super.onDestroy();
+  }
+
+  // back pressed puts the activty on pause
+  @Override
+  public void onBackPressed () // askClose
+  {
+    if ( closeMenu() ) return;
+    if ( CutNPaste.dismissPopupBT() ) return;
+    if ( onMultiselect ) {
+      clearMultiSelect();
+      return;
+    }
+    if ( TDSetting.mSingleBack ) {
+      // TDLog.v( TAG + "on back pressed - single back");
+      DrawingSurface.clearManagersCache();
+      // new DataStopTask( mApp, this, mDataDownloader ).immediateExecute(); // 20251217 
+      // if ( TDSetting.mDataBackup ) TopoDroidApp.doExportDataAsync( getApplicationContext(), TDSetting.mExportShotsFormat, false, false ); // try_save
+      TopoDroidApp.mShotWindow = null;
+      super.onBackPressed();  // FIXME issue 167
+    } else if ( doubleBack ) {
+      // TDLog.v( TAG + "on back pressed - double back execute");
+      if ( doubleBackToast != null ) doubleBackToast.cancel();
+      doubleBackToast = null;
+      DrawingSurface.clearManagersCache();
+      // new DataStopTask( mApp, this, mDataDownloader ).immediateExecute(); // 20251217 
+      // if ( TDSetting.mDataBackup ) TopoDroidApp.doExportDataAsync( getApplicationContext(), TDSetting.mExportShotsFormat, false, false ); // try_save
+      TopoDroidApp.mShotWindow = null;
+      super.onBackPressed(); // FIXME issue 167
+    } else {
+      // TDLog.v( TAG + "on back pressed - double back post runnable");
+      doubleBack = true;
+      doubleBackToast = TDToast.makeToast( R.string.double_back );
+      doubleBackHandler.postDelayed( doubleBackRunnable, 1000 );
+    }
+  }
+
+  /** handle key up event // alternative-169
+   * @param code  key code
+   * @param ev    key event
+   */
+  @Override
+  public boolean onKeyUp( int code, KeyEvent event ) { return backKeyUp( code, event ); }
+
+  @Override
   public boolean onKeyDown( int code, KeyEvent event )
   {
     switch ( code ) {
-      case KeyEvent.KEYCODE_BACK: // HARDWARE BACK (4)
-        onBackPressed();
-        return true;
+      // case KeyEvent.KEYCODE_BACK: // HARDWARE BACK (4) issue 167
+      //   onBackPressed();
+      //   return true;
+      case KeyEvent.KEYCODE_BACK: // HARDWARE BACK (4) // alternative-169
+        return backKeyDown( code, event );
       case KeyEvent.KEYCODE_MENU:   // HARDWARE MENU (82)
         UserManualActivity.showHelpPage( mActivity, getResources().getString( HELP_PAGE ));
         return true;
@@ -2938,12 +3135,12 @@ public class ShotWindow extends Activity
    */
   void recomputeItems( String st, int pos )
   {
-    // TDLog.v("list recompute items");
+    // TDLog.v( TAG + "list recompute items");
     if ( mFlagSplay ) {
       if ( ! mShowSplay.remove( st ) ) {
         mShowSplay.add( st );
       }
-      // TDLog.v("update display : recompute items");
+      // TDLog.v( TAG + "update display : recompute items");
       updateDisplay( );
       mList.setSelection( (pos>5)? pos-5 : 0 );
     }
@@ -2997,7 +3194,7 @@ public class ShotWindow extends Activity
       if ( status != mBTstatus ) {
         mBTstatus = status;
         // mButton1[ BTN_DOWNLOAD ].setVisibility( View.VISIBLE );
-        boolean isBricOrCavway = TDInstance.isDeviceBric() || TDInstance.isDeviceCavway();
+        boolean isBricOrCavway = TDInstance.isDeviceCavway() || TDInstance.isDeviceXBLE() || TDInstance.isDeviceBric();
         switch ( status ) {
           case ConnectionState.CONN_CONNECTED:
             TDFeedback.notifyFeedback( this, true );
@@ -3020,7 +3217,9 @@ public class ShotWindow extends Activity
   public void enableBluetoothButton( boolean enable )
   {
     if ( TDInstance.isDivingMode() ) return;
-    if ( TDInstance.hasBleDevice() ) enable = true;
+    TDLog.v("enable Bluetooth Button");
+    // if ( TDInstance.hasBleDevice() ) enable = true; // MM replaced with
+    enable = enable && ! mApp.isDeviceOperationBusy( );
     TDandroid.setButtonBackground( mButton1[BTN_BLUETOOTH], (enable ? mBMbluetooth : mBMbluetooth_no) );
     mButton1[BTN_BLUETOOTH].setEnabled( enable );
   }
@@ -3041,17 +3240,17 @@ public class ShotWindow extends Activity
   {
     NativeName native_name = NativeName.get();
     List< DBlock > shots = mApp_mData.selectAllShotsAfter( bid, TDInstance.sid, TDStatus.NORMAL );
-    // TDLog.v("Renumber: shots from " + bid + " size " + shots.size() );
+    // TDLog.v( TAG + "Renumber: shots from " + bid + " size " + shots.size() );
     if ( shots.isEmpty() ) return;
     // N.B. this set is the leg stations, but it should be ok
     Set< String > stations = mApp_mData.selectAllStationsBefore(  bid, TDInstance.sid );  
-    // TDLog.v("Renumber: stations before" + bid + " size " + stations.size() );
+    // TDLog.v( TAG + "Renumber: stations before" + bid + " size " + stations.size() );
     if ( ! stations.isEmpty() ) {
       String last_station = null;
       for ( String station : stations ) {
         if ( last_station == null || StationName.compareNames( last_station, station ) > 0 ) last_station = station;
       }
-      // TDLog.v("Renumber: max station " + last_station );
+      // TDLog.v( TAG + "Renumber: max station " + last_station );
       HashMap< String, String > station_map = new HashMap<>();
       for ( DBlock b : shots ) {
         String fi = null;
@@ -3060,7 +3259,7 @@ public class ShotWindow extends Activity
         if ( ! TDString.isNullOrEmpty( f ) ) {
           fi = station_map.get( f );
           if ( fi == null ) {
-            fi = ( native_name != null )? native_name.incrementName( last_station, stations ) : DistoXStationName.incrementName( last_station, stations );
+            fi = NativeName.nextName( native_name, last_station, stations );
             last_station = fi;
             stations.add( fi );
             station_map.put( f, fi );
@@ -3070,7 +3269,7 @@ public class ShotWindow extends Activity
         if ( ! TDString.isNullOrEmpty( t ) ) {
           ti = station_map.get( t );
           if ( ti == null ) {
-            ti = ( native_name != null )? native_name.incrementName( last_station, stations ): DistoXStationName.incrementName( last_station, stations );
+            ti = NativeName.nextName( native_name, last_station, stations );
             last_station = ti;
             stations.add( ti );
             station_map.put( t, ti );
@@ -3108,7 +3307,7 @@ public class ShotWindow extends Activity
     // List< DBlock > shots = mApp_mData.selectAllShots( TDInstance.sid, TDStatus.NORMAL );
     // mApp.assign Stations( shots );
 
-    // TDLog.v("update display : renumber shots after");
+    // TDLog.v( TAG + "update display : renumber shots after");
     updateDisplay();
   }
 
@@ -3121,7 +3320,7 @@ public class ShotWindow extends Activity
     // TDLog.v( TAG + "merge next leg: block " + blk.mId + " leg " + id );
     if ( id >= 0 && id != blk.mId ) {
       // mDataAdapter.updateBlockName( id, "", "" ); // name has already been updated in DB
-      // TDLog.v("update display : merge to next leg");
+      // TDLog.v( TAG + "update display : merge to next leg");
       updateDisplay(); // FIXME change only block with id and blk.mId
     }
     return id;
@@ -3165,6 +3364,7 @@ public class ShotWindow extends Activity
    */
   public void makeNewPlot( String name, String start, boolean extended, int azimuth, int oblique )
   {
+    TopoDroidApp.updateAnalytic( TDAnalytics.PLOT_NEW );
     long mPIDp = mApp.insert2dPlot( TDInstance.sid, name, start, extended, azimuth, oblique );
 
     if ( mPIDp >= 0 ) {
@@ -3362,7 +3562,7 @@ public class ShotWindow extends Activity
    */
   void doRecalibrate( long shot_id, String calib_name, float acc_thr, float mag_thr, float dip_thr )
   {
-    TDLog.v("Recompute shots - Threshold A " + acc_thr + " M " + mag_thr + " Dip " + dip_thr );
+    // TDLog.v( TAG + "Recompute shots - Threshold A " + acc_thr + " M " + mag_thr + " Dip " + dip_thr );
     CalibInfo ci = mApp.mDData.selectCalibInfo( calib_name );
     if ( ci == null ) {
       TDToast.make( R.string.recalibrate_none );
@@ -3378,7 +3578,7 @@ public class ShotWindow extends Activity
       return;
     }
     byte[] coeff1 = CalibAlgo.stringToCoeff( coeff_str, 1 ); // 1: first set
-    // TDLog.v("coeff size " + coeff1.length );
+    // TDLog.v( TAG + "coeff size " + coeff1.length );
     TDMatrix mG1 = new TDMatrix();
     TDMatrix mM1 = new TDMatrix();
     TDVector vG1 = new TDVector();
@@ -3455,7 +3655,7 @@ public class ShotWindow extends Activity
   /** calibrate a vector
    * @param mG    AG calibration matrix
    * @param vG    BG calibration vector
-   * @param nL    non-linear coeffs (unused)
+   * @param nL    non-linear coeffs (FIXME to-be-used)
    * @param g0    in-out vector
    */
   private void computeV( TDMatrix mG, TDVector vG, TDVector nL, TDVector g0 )
@@ -3487,7 +3687,7 @@ public class ShotWindow extends Activity
   void refreshShotViews()
   {
     int cnt = mList.getChildCount();
-    // TDLog.v("refresh shot child views " + cnt );
+    // TDLog.v( TAG + "refresh shot child views " + cnt );
     for ( int i = 0; i < cnt; ++i ) { // refresh view colors
       mDataAdapter.refreshViewColors( mList.getChildAt( i ) );
     } 
@@ -3501,9 +3701,9 @@ public class ShotWindow extends Activity
   //     if ( ev.getAction() == MotionEvent.ACTION_DOWN ) {
   //       View v = getCurrentFocus();
   //       if ( v != null ) {
-  //         TDLog.v("Motion event ACTION DOWN " + v.toString() );
+  //         TDLog.v( TAG + "Motion event ACTION DOWN " + v.toString() );
   //       } else {
-  //         TDLog.v("Motion event ACTION DOWN no view on focus" );
+  //         TDLog.v( TAG + "Motion event ACTION DOWN no view on focus" );
   //       }
   //       // if ( v instanceof EditText ) {
   //       //   return v.performClick();
@@ -3516,19 +3716,20 @@ public class ShotWindow extends Activity
   // this is for onClick defined in the res file - no help
   // public void doStationClick( View v ) 
   // {
-  //   TDLog.v("do station click " );
+  //   TDLog.v( TAG + "do station click " );
   // }
 
-  /** 
+  /** update a scan-set
    * @param blk    first scan block
    * @param from   new station name
    * @param pos    position in the list (unused)
    * @param block_type block_type (BLOCK_SCAN: none, BLOCK_HSCAN: plan, BLOCK_VSCAN2: profile, BLOCK_XSCAN3: xsection)
+   * @note called only be ScanShotEditDialog
    */
   void updateScanSet( DBlock blk, String from, int pos, int block_type )
   {
     long leg_type = LegType.BlockToLeg[ block_type ]; // DBlock.getLegType( block_type );
-    // TDLog.v("update scan set from " + blk.mId + " block type " + block_type + " leg type " + leg_type );
+    // TDLog.v( TAG + "update scan set from " + blk.mId + " block type " + block_type + " leg type " + leg_type );
     mApp_mData.updateScanSetName( blk.mId, TDInstance.sid, blk.mFrom, from, blk.getLegType(), leg_type );
     blk.mFrom = from;
     blk.resetBlockType( block_type );
@@ -3562,4 +3763,18 @@ public class ShotWindow extends Activity
     }
   }
 
+  // ----------------------------------------------------------------
+  // TITLE BAR
+
+  @Override
+  public void setTitle( CharSequence t )
+  {
+    ((TextView)findViewById( R.id.title )).setText( t );
+  }
+
+  @Override
+  public void setTitleColor( int color )
+  {
+    ((TextView)findViewById( R.id.title )).setTextColor( color );
+  }
 }

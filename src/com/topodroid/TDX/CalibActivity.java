@@ -15,6 +15,7 @@ import com.topodroid.util.TDLog;
 import com.topodroid.util.TDLocale;
 import com.topodroid.util.TDUtil;
 import com.topodroid.util.TDString;
+import com.topodroid.util.TDColor;
 import com.topodroid.math.TDMatrix;
 import com.topodroid.math.TDVector;
 import com.topodroid.ui.MyButton;
@@ -32,6 +33,7 @@ import com.topodroid.calib.CalibCoeffDialog;
 
 // import java.util.ArrayList;
 import java.util.Locale;
+import java.util.List;
 
 import android.os.Bundle;
 import android.app.Activity;
@@ -60,7 +62,7 @@ import android.view.KeyEvent;
 // import android.graphics.BitmapFactory;
 import android.graphics.drawable.BitmapDrawable;
 
-public class CalibActivity extends Activity
+public class CalibActivity extends MyActivity
                            implements OnItemClickListener
                            , View.OnClickListener
                            , IExporter
@@ -243,8 +245,10 @@ public class CalibActivity extends Activity
         mTVdip.setText( String.format(Locale.US, getResources().getString( R.string.calib_dip), info.dip ) );
       }
     } else {
-      mEditName.setHint( R.string.name );
-      mEditDate.setText( TDUtil.currentDate() );
+      // mEditName.setHint( R.string.name );
+      String today = TDUtil.currentDate();
+      mEditName.setText( today );
+      mEditDate.setText( today );
       mDeviceAddress = TDInstance.deviceAddress();
       // mEditDevice.setText( mDeviceAddress );
 
@@ -262,6 +266,9 @@ public class CalibActivity extends Activity
 
     mMenu = (ListView) findViewById( R.id.menu );
     mMenu.setOnItemClickListener( this );
+
+    setTitle( getResources().getString( R.string.title_calibration ) );
+    // setTitleColor( TDColor.TITLE_NORMAL );
   }
 
   @Override
@@ -456,6 +463,20 @@ public class CalibActivity extends Activity
     finish();
   }
 
+  @Override public void onBackPressed() { super.onBackPressed(); }
+
+  @Override protected void onDestroy() { super.onDestroy(); }
+
+  /** handle BACK key up event // alternative-169
+   * @param code  key code
+   * @param ev    key event
+   */
+  @Override public boolean onKeyUp(  int code, KeyEvent event )
+  {
+    TDLog.v("Calib Window key up: code " + code );
+    return backKeyUp( code, event );
+  }
+
   /** respond to a key event
    * @param code   key code
    * @param event  key event
@@ -465,9 +486,9 @@ public class CalibActivity extends Activity
   public boolean onKeyDown( int code, KeyEvent event )
   {
     switch ( code ) {
+      // ----- alternative-169
       case KeyEvent.KEYCODE_BACK: // HARDWARE BACK (4)
-        super.onBackPressed();
-        return true;
+        return backKeyDown( code, event ); // FIXME issue 167
       case KeyEvent.KEYCODE_MENU:   // HARDWARE MENU (82)
         UserManualActivity.showHelpPage( this, getResources().getString( HELP_PAGE ));
         return true;
@@ -513,8 +534,8 @@ public class CalibActivity extends Activity
     closeMenu();
     // TDToast.make( item.toString() );
     int p = 0;
-    if ( TDLevel.overNormal && p++ == pos ) { // CLOSE
-      super.onBackPressed();
+    if ( p++ == pos ) { // CLOSE
+      super.onBackPressed(); // FIXME issue 167
     } else if ( TDLevel.overNormal && p++ == pos ) { // EXPORT
       if ( TDInstance.calib != null ) {
         new ExportDialogCalib( this, this, TDConst.mCalibExportTypes, R.string.title_calib_export ).show();
@@ -541,9 +562,10 @@ public class CalibActivity extends Activity
    * @param prefix  station-prefix (not used)A
    * @param first   not-used
    * @param second  whether to export the second view (unused)
+   * @param shared  whether to share export (unused)
    * @note implements IExporter
    */
-  public void doExport( String type, String name, String prefix, long first, boolean second )
+  public void doExport( String type, String name, String prefix, long first, boolean second, List<String> unused, boolean shared )
   {
     int index = TDConst.calibExportIndex( type );
     if ( index >= 0 ) {
@@ -600,4 +622,19 @@ public class CalibActivity extends Activity
     TDLocale.resetTheLocale();
   }
 
+
+  // ----------------------------------------------------------------
+  // TITLE BAR
+
+  @Override
+  public void setTitle( CharSequence t )
+  {
+    ((TextView)findViewById( R.id.title )).setText( t );
+  }
+
+  // @Override
+  // public void setTitleColor( int color )
+  // {
+  //   ((TextView)findViewById( R.id.title )).setTextColor( color );
+  // }
 }

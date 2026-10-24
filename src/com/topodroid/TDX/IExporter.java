@@ -13,6 +13,8 @@ package com.topodroid.TDX;
 
 // import android.net.Uri;
 
+import java.util.List;
+
 public interface IExporter 
 {
   /**
@@ -21,8 +23,10 @@ public interface IExporter
    * @param prefix       station names export-prefix
    * @param first        index of first shot to export (-1: all)
    * @param second       whether to export the second view (only plot or profile in DrawingWindow)
+   * @param items        ...
+   * @param shared       whether to share export
    */
-  void doExport( String type, String filename, String prefix, long first, boolean second );
+  void doExport( String type, String filename, String prefix, long first, boolean second, List<String> items, boolean shared );
 
   // void doExport( Uri uri );
 }

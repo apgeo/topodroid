@@ -17,7 +17,7 @@
  *
  * 2016-06-16
  * control points coords renamed from mX1 to x1, etc.
- * following similar renaming for coords of Point2D (ie. BezierPoint)
+ * following similar renaming for coords of Point2D 
  */
 package com.topodroid.TDX;
 
@@ -46,6 +46,14 @@ public class LinePoint extends Point2D
   public LinePoint mPrev; // previous LinePoint on the line
   public LinePoint mNext; // next LinePoint on the line
 
+  /** @return the first control point - or null
+   */
+  public Point2D cp1() { return has_cp ? null : new Point2D( x1, y1 ); }
+
+  /** @return the second control point - or null
+   */
+  public Point2D cp2() { return has_cp ? null : new Point2D( x2, y2 ); }
+
   /** change presentation from landscape to portrait
    */
   void landscapeToPortrait()
@@ -57,10 +65,9 @@ public class LinePoint extends Point2D
   }
 
   /** flip horizontally
-   * @param z   unused
    * @note from ICanvasCommand
    */
-  public void flipXAxis(float z)
+  public void flipXAxis( )
   {
     float dx = 2 * DrawingUtil.CENTER_X;
     x1 = dx - x1;
@@ -298,7 +305,7 @@ public class LinePoint extends Point2D
         dos.write( 0 );
       }
     } catch ( IOException e ) {
-      TDLog.e( e.getMessage() );
+      TDLog.e( "Line point " + e.getMessage() );
     }
   }
 

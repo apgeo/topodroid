@@ -165,7 +165,7 @@ public class DistoXProtocol extends TopoDroidProtocol
         } catch ( IOException e ) {
           maybeException[0] = e;
         }
-        // TDLog.Log( TDLog.LOG_PROTO, "reader thread done " + dataRead[0] + "/" + toRead[0] );
+        // TDLog.v( "reader thread done " + dataRead[0] + "/" + toRead[0] );
       }
     };
     reader.start();
@@ -208,10 +208,31 @@ public class DistoXProtocol extends TopoDroidProtocol
     return dataRead[0];
   }
 
-  /**
+  /** RFCOMM readPacket
    * @param no_timeout  whether not to timeout
    * @param data_type   expected packet datatype (either shot or calib)
    * @return packet type (if successful)
+   *
+   * chain of call
+   *    DataDownloader.startDownloadData calls
+   *      ReconnectTask
+   *        --: DataDownloader.tryConnect()
+   *      tryConnect which calls TopoDroidApp.connectDevice()
+   *        --: TopoDroidComm.connectDevice() which must be overridden
+   *            DistoXComm.connectDevice calls startCommThread
+   *      tryDownloadData which calls DataDownloadTask
+   *        --: TopoDroidApp.downloadDataBatch()
+   *              --: TopoDroidComm.downloadData()
+   *
+   *    startCommThread is called in DistoXComm:
+   *        connectDevice()
+   *        downloadData()
+   *      and in DistoX310Comm: for setX310Laser()
+   *
+   *    DistoXComm.startCommThread creates CommThread and starts it
+   *    CommThread.run calls mComm.readingPacket() both for GATT and RFCOMM
+   *    TopoDroidComm.readingPacket call mProtocol.readPacket()
+   *      this is RFCOMM readPacket
    */
   @Override // TopoDroidProtocol
   public int readPacket( boolean no_timeout, int data_type )
@@ -234,7 +255,7 @@ public class DistoXProtocol extends TopoDroidProtocol
           // while ( ( available = mIn.available() ) == 0 && timeout < max_timeout )
           while ( ( available = mIn.available() ) < min_available && timeout < max_timeout ) {
             ++ timeout;
-            // TDLog.Log( TDLog.LOG_PROTO, "Proto read packet sleep " + timeout + "/" + max_timeout );
+            // TDLog.v( "Proto read packet sleep " + timeout + "/" + max_timeout );
             TDUtil.slowDown( 100, "Proto read packet InterruptedException" );
           }
         }
@@ -313,7 +334,7 @@ public class DistoXProtocol extends TopoDroidProtocol
     int ret = 0;
     mError = DistoX.DISTOX_ERR_OK;
     try {
-      // TDLog.v("send command " + command + " and read reply" );
+      // TDLog.v("readToRead: send command " + command + " and read reply" );
       byte[] buffer = new byte[8];
       mOut.write( command, 0, 3 );
       // if ( TDSetting.mPacketLog ) logPacket3( 1L, command );
@@ -512,7 +533,7 @@ public class DistoXProtocol extends TopoDroidProtocol
     try {
       int k = 0;
       while ( k < len ) {
-        // TDLog.Log( TDLog.LOG_PROTO, "write calibration " + k + " of " + len );
+        // TDLog.v( "distox write " + k + " of " + len );
         buffer[0] = MemoryOctet.BYTE_PACKET_REQST; // 0x39
         buffer[1] = (byte)( addr & 0xff );
         buffer[2] = (byte)( (addr>>8) & 0xff );
@@ -527,7 +548,7 @@ public class DistoXProtocol extends TopoDroidProtocol
         if ( TDSetting.mPacketLog ) logPacket( 0L, buffer );
         // checkDataType( buffer[0], data_type );
 
-        // TDLog.v( "write calibration " +
+        // TDLog.v( "distox write calib " +
         //   String.format(Locale.US, "%d (addr %04x) %02x %02x %02x %02x %02x %02x %02x %02x", (k-4), addr, buffer[0], buffer[1], buffer[2],
         //   buffer[3], buffer[4], buffer[5], buffer[6], buffer[7] ) );
         if ( buffer[0] != MemoryOctet.BYTE_PACKET_REPLY ) { return false; } // 0x38
@@ -536,10 +557,10 @@ public class DistoXProtocol extends TopoDroidProtocol
         addr += 4;
       }
     } catch ( EOFException e ) {
-      // TDLog.e( "write calibration EOF failed" );
+      TDLog.e( "distox write calib EOF " + e.getMessage() );
       return false;
     } catch (IOException e ) {
-      // TDLog.e( "write calibration IO failed" );
+      TDLog.e( "distox write calib i/o " + e.getMessage() );
       return false;
     }
     return true;  
@@ -555,6 +576,7 @@ public class DistoXProtocol extends TopoDroidProtocol
   public boolean readCalibration( byte[] calib )
   {
     if ( calib == null ) return false;
+    // TDLog.v("distox read calibration");
     int  len  = calib.length;
     if ( len > 52 ) len = 52; // FIXME force max length of calib coeffs
     byte[] buffer = new byte[8];
@@ -563,7 +585,7 @@ public class DistoXProtocol extends TopoDroidProtocol
     try {
       int k = 0;
       while ( k < len ) { 
-        // TDLog.Log( TDLog.LOG_PROTO, "read calibration " + k + " of 52");
+        // TDLog.v( "read calibration " + k + " of 52");
         buffer[0] = MemoryOctet.BYTE_PACKET_REPLY; // 0x38
         buffer[1] = (byte)( addr & 0xff );
         buffer[2] = (byte)( (addr>>8) & 0xff );

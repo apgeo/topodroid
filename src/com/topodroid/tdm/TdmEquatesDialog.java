@@ -17,7 +17,7 @@ import com.topodroid.TDX.TopoDroidAlertDialog;
 import com.topodroid.TDX.TDToast;
 import com.topodroid.TDX.R;
 
-import java.util.ArrayList;
+import java.util.List;
 // import java.io.File;
 
 import android.content.DialogInterface;
@@ -40,11 +40,11 @@ class TdmEquatesDialog extends MyDialog
                       implements OnItemClickListener
                       , OnClickListener
 {
-  TdmEquateAdapter mTdmEquateAdapter;
-  TdmConfig mConfig;
-  TdmViewActivity mActivity;
-  ListView mList;
-  ArrayList< TdmEquate > mEquates;
+  private TdmEquateAdapter mTdmEquateAdapter;
+  private TdmConfig mConfig;
+  private TdmViewActivity mActivity;
+  private ListView mList;
+  private List< TdmEquate > mEquates;
 
   TdmEquatesDialog( Context context, TdmConfig config, TdmViewActivity activity )
   {
@@ -66,7 +66,7 @@ class TdmEquatesDialog extends MyDialog
     initLayout( R.layout.tdequates_dialog, R.string.title_equates );
 
     // ( (Button)findViewById( R.id.button_add ) ).setOnClickListener( this );
-    ( (Button)findViewById( R.id.button_back ) ).setOnClickListener( this );
+    ( (Button)findViewById( R.id.button_cancel ) ).setOnClickListener( this );
     ( (Button)findViewById( R.id.button_clear ) ).setOnClickListener( this );
 
     mList = (ListView) findViewById(R.id.list);
@@ -134,7 +134,7 @@ class TdmEquatesDialog extends MyDialog
   @Override
   public void onClick( View v ) 
   {
-    // if ( v.getId() == R.id.button_back ) {
+    // if ( v.getId() == R.id.button_cancel ) {
     // } else if ( v.getId() == R.id.button_add ) {
     //   mActivity.doEquateAddDialog();
     // }

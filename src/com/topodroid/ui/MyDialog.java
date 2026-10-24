@@ -13,8 +13,9 @@ package com.topodroid.ui;
 
 import com.topodroid.help.UserManualActivity;
 import com.topodroid.util.TDUtil;
-// import com.topodroid.util.TDLog;
+import com.topodroid.util.TDLog;
 import com.topodroid.TDX.TopoDroidApp;
+import com.topodroid.TDX.TDandroid;
 import com.topodroid.TDX.R;
 
 // import android.app.Activity;
@@ -22,6 +23,9 @@ import android.app.Dialog;
 // import android.os.Bundle;
 import android.content.Context;
 // import android.content.Intent;
+
+import android.window.OnBackInvokedDispatcher;
+import android.window.OnBackInvokedCallback;
 
 import android.view.View;
 import android.view.ViewGroup.LayoutParams;
@@ -36,14 +40,43 @@ import android.view.WindowManager;
 import android.widget.LinearLayout;
 import android.widget.EditText;
 import android.widget.Button;
+import android.widget.TextView;
+
+import android.graphics.Color;
+import android.graphics.drawable.ColorDrawable;
+
+import androidx.annotation.RequiresApi;
 
 
-public class MyDialog extends Dialog
-                      // implements View.OnClickListener
+abstract public class MyDialog extends Dialog
+                               // implements View.OnClickListener
 {
   protected final Context mContext;
   protected final TopoDroidApp mApp;
   private String mHelpPage = null;
+
+  // issua 167 - this should be implemente from API 33 onward
+  @RequiresApi( 36 )
+  private static class Api33
+  {
+    private static final java.util.Map< MyDialog, OnBackInvokedCallback > sCallbacks = new java.util.WeakHashMap<>();
+
+    static void registerBack( MyDialog d )
+    {
+      OnBackInvokedCallback cb = d::onBackPressed;
+      sCallbacks.put( d, cb );
+      d.getOnBackInvokedDispatcher().registerOnBackInvokedCallback( OnBackInvokedDispatcher.PRIORITY_DEFAULT, cb );
+    }
+
+    static void unregisterBack( MyDialog d )
+    {
+      OnBackInvokedCallback cb = sCallbacks.remove( d );
+      if ( cb != null ) {
+        d.getOnBackInvokedDispatcher().unregisterOnBackInvokedCallback( cb );
+      }
+    }
+  }
+  
 
   /** cstr
    * @param context       context
@@ -98,6 +131,8 @@ public class MyDialog extends Dialog
     // } else {
     //   // TDLog.v( "null button help");
     }
+
+    if ( getWindow() != null ) getWindow().setBackgroundDrawable( new ColorDrawable( Color.TRANSPARENT ) );
   }
 
   /** initialize the layout - utility method for derived classes
@@ -155,17 +190,38 @@ public class MyDialog extends Dialog
   // public boolean onKeyLongPress( int code, KeyEvent ev )
   public boolean onKeyDown( int code, KeyEvent ev )
   {
-    // TDLog.v( "Key code " + code );
-    if ( code == KeyEvent.KEYCODE_BACK ) {
-      onBackPressed();
-      return true;
-    } else if ( code == KeyEvent.KEYCODE_MENU || code == KeyEvent.KEYCODE_VOLUME_UP ) {
+    // TDLog.v( "My Dialog key down: code " + code );
+    if ( code == KeyEvent.KEYCODE_MENU || code == KeyEvent.KEYCODE_VOLUME_UP ) {
       if ( mHelpPage != null ) {
         UserManualActivity.showHelpPage( mContext, mHelpPage );
       }
       return true;
+    } else if ( TDandroid.BELOW_API_36 && code == KeyEvent.KEYCODE_BACK ) { // issue 167
+      onBackPressed(); 
+      ev.startTracking();
+      return true;
     }
     return false;
+  }
+
+  @Override // issue 167
+  public boolean onKeyUp( int code, KeyEvent ev )
+  {
+    // TDLog.v("My Dialog key up: code " + code );
+    if ( TDandroid.BELOW_API_36 && code == KeyEvent.KEYCODE_BACK ) {
+      if ( ev.isTracking() && ! ev.isCanceled() ) {
+        return true;
+      }
+    }
+    return false;
+  }
+  
+
+  // override in subclases
+  @Override
+  public void onBackPressed()
+  {
+    dismiss();
   }
 
   // public void onWindowAttributesChanged(WindowManager.LayoutParams params)
@@ -189,16 +245,24 @@ public class MyDialog extends Dialog
   //   TDLog.v("DIALOG onContentChanged");
   // }
 
+  @Override
   public void onAttachedToWindow()
   {
     // TDLog.v("DIALOG onAttachedToWindow");
     if ( mApp != null ) mApp.pushDialog( this );
+    if ( TDandroid.AT_LEAST_API_36 ) {
+      Api33.registerBack( this );
+    }
   }
 
+  @Override
   public void onDetachedFromWindow()
   {
     // TDLog.v("DIALOG onDetachedFromWindow");
     if ( mApp != null ) mApp.popDialog( );
+    if ( TDandroid.AT_LEAST_API_36 ) {
+      Api33.unregisterBack( this );
+    }
   }
 
   /** (re)do the initialization
@@ -224,6 +288,38 @@ public class MyDialog extends Dialog
     if ( e2.getText() == null ) return false;
     return s1.equals( TDUtil.toStationToName( e2.getText().toString() ) );
   }
-    
+
+  @Override
+  public void setTitle( int res )
+  {
+    TextView t = (TextView)findViewById( R.id.title );
+    if ( t == null ) {
+      super.setTitle( res );
+    } else {
+      t.setText( mContext.getResources().getString( res ) );
+    }
+  }
+
+  @Override
+  public void setTitle( CharSequence tit )
+  {
+    TextView t = (TextView)findViewById( R.id.title );
+    if ( t == null ) {
+      super.setTitle( tit );
+    } else {
+      t.setText( tit );
+    }
+  }
+
+  /** set the state of a checkbox
+   * @param cb    checkbox
+   * @param state new checkbox state
+   */
+  protected void setState( MyCheckBox cb, boolean state ) { if ( cb != null ) cb.setState( state ); }
+
+  /** @return true if s checkbox is not null and checked
+   * @param cb    checkbox
+   */
+  protected boolean isChecked(  MyCheckBox cb ) { return cb != null && cb.isChecked(); }
 
 }

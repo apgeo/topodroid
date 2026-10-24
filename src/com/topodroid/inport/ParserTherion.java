@@ -17,13 +17,15 @@ import com.topodroid.util.TDLog;
 import com.topodroid.util.TDio;
 import com.topodroid.util.TDString;
 import com.topodroid.util.TDUtil;
+import com.topodroid.util.TDAnalytics;
 // import com.topodroid.prefs.TDSetting;
 
 import com.topodroid.types.LegType;
 import com.topodroid.types.StationFlag;
+import com.topodroid.TDX.TopoDroidApp;
 
 import java.io.IOException;
-// import java.io.FileInputStream;
+import java.io.FileInputStream;
 import java.io.InputStreamReader;
 import java.io.BufferedReader;
 import java.util.ArrayList;
@@ -99,19 +101,22 @@ class ParserTherion extends ImportParser
    * @param name   filename or surveyname ?
    * @param apply_declination whether to apply the declination correction
    * @param therionPath       whether to add survey-path to station names
+   * @param filepath          file path (absolute)
    */
-  ParserTherion( InputStreamReader isr, String name, boolean apply_declination, boolean therionPath ) throws ParserException
+  ParserTherion( InputStreamReader isr, String name, boolean apply_declination, boolean therionPath, String filepath ) throws ParserException
   {
     super( apply_declination );
+    TopoDroidApp.updateAnalytic( TDAnalytics.IMPORT_TH );
+    if ( mApplyDeclination ) mDeclination = 0.0f;
     fixes    = new ArrayList<>();
     stations = new ArrayList<>();
     // shots    = new ArrayList<>(); // FROM ImportParser
     // splays   = new ArrayList<>();
     // // mStates  = new Stack< ParserTherionState >();
-    // mApplyDeclination = apply_declination;
     ParserTherionState state = new ParserTherionState(); // root of the linked list of states
-    readFile( isr, name, "", state, therionPath );
+    mPartial = readFile( isr, name, "", state, therionPath, filepath );
     checkValid();
+    if ( mApplyDeclination ) mDeclination = 0.0f; // declination has been already applied to azimuths
   }
 
   // private String nextLine( BufferedReader br ) throws IOException // FROM ImportParser
@@ -155,9 +160,9 @@ class ParserTherion extends ImportParser
    * @param state    state of the parser
    * @param therionPath       whether to add survey-path to station names
    */
-  private void readFile( InputStreamReader isr, String filename, String basepath, ParserTherionState state, boolean therionPath ) throws ParserException
+  private boolean readFile( InputStreamReader isr, String filename, String basepath, ParserTherionState state, boolean therionPath, String filepath ) throws ParserException
   {
-    // TDLog.v("Parser TH file " + filename + " base " + basepath );
+    TDLog.v("Parser TH file " + filename + " base " + basepath );
 
     // StringBuilder path; // path = basepath;   // survey pathname(s)
     // int ks = 0;               // survey index
@@ -175,18 +180,23 @@ class ParserTherion extends ImportParser
     int jRight = -1;
     int jUp    = -1;
     int jDown  = -1;
-
+    boolean partial = false;
 
     Pattern pattern = Pattern.compile( "\\s+" );
     StringBuffer team = new StringBuffer();
     String surveyPath = therionPath? path.toString() : null;
 
+    String dirpath = "./";
+    int i = filepath.lastIndexOf('/');
+    if ( i > 0 ) dirpath = filepath.substring(0, i+1);
+    TDLog.v( "import read Therion dirpath <" + dirpath + ">"  );
+
     try {
       String dirname = "./";
-      int i = filename.lastIndexOf('/');
+      i = filename.lastIndexOf('/');
       if ( i > 0 ) dirname = filename.substring(0, i+1);
       // System.out.println("readFile dir " + dirname + " filename " + filename );
-      // TDLog.v( "import read Therion file <" + filename + ">" );
+      TDLog.v( "import read Therion file <" + filename + "> dir " + dirname );
 
       BufferedReader br = TDio.getBufferedReader( isr, filename );
       String line = nextLine( br );
@@ -195,7 +205,7 @@ class ParserTherion extends ImportParser
         line = line.trim();
         int pos = line.indexOf( '#' );
         if ( pos >= 0 ) {
-          line = line.substring( 0, pos );
+          line = line.substring( 0, pos ).trim();
         }
         if ( line.length() > 0 ) {
           String[] vals = pattern.split(line); // line.split( "\\s+" );
@@ -216,9 +226,11 @@ class ParserTherion extends ImportParser
             } else if ( cmd.equals("import") ) {
               // TDLog.v("Warning: therion import ignored");
             } else if ( ! state.in_centerline && cmd.equals("grade") ) {
-              // TDLog.v("Warning: therion grade ignored");
+              TDLog.v("TH grade not in centerline ignored");
+              partial = true;
             } else if ( cmd.equals("revise") ) {
-              // TDLog.v("Warning: therion revise ignored");
+              TDLog.v("TH revise ignored");
+              partial = true;
             } else if ( cmd.equals("join") ) {
               // TDLog.v("Warning: therion join ignored");
             } else if ( cmd.equals("grade") ) {
@@ -226,19 +238,19 @@ class ParserTherion extends ImportParser
               state.in_grade = true;
             } else if ( cmd.equals("input") ) { // ignore
               // TDLog.v("Warning: therion input ignored");
-              // int j = 1;
-              // while ( vals[j] != null ) {
-              //   if ( vals[j].length() > 0 ) {
-              //     filename = vals[j];
-              //     if ( filename.endsWith( ".th" ) ) {
-              //       readFile( dirname + '/' + filename, 
-              //           path,
-              //           use_survey_declination, survey_declination,
-              //           units_len, units_ber, units_cln );
-              //     }
-              //     break;
-              //   }
-              // }
+              int j = 1;
+              while ( vals[j] != null ) {
+                if ( vals[j].length() > 0 ) {
+                  String filename1 = vals[j];
+                  if ( filename1.endsWith( ".th" ) ) {
+                    String filename2 = dirpath + filename1;
+                    TDLog.v("Warning: therion input " + filename1 + " basepath " + filename2 );
+                    InputStreamReader isr1 = new InputStreamReader( new FileInputStream( filename2 ) );
+                    if ( readFile( isr1, filename1, path.toString(), state, therionPath, filename2 ) ) partial = true;
+                  }
+                  break;
+                }
+              }
             } else if ( cmd.equals("surface") ) {
               // TODO check not already in_surface
               state.in_surface = true;
@@ -316,7 +328,8 @@ class ParserTherion extends ImportParser
                       }
                       if ( ! mApplyDeclination ) mDeclination = state.mDeclination;
                     } catch ( NumberFormatException e ) {
-                      TDLog.e( "Error therion: -declination " + line );
+                      TDLog.e( "TH declination " + line );
+                      partial = true;
                     }
 		  }
                 } else if ( vals[j].equals("-title") && j+1 < vals_len ) {
@@ -384,7 +397,8 @@ class ParserTherion extends ImportParser
                     zero = Float.parseFloat( vals[kk] );
 		    break;
                   } catch ( NumberFormatException e ) {
-                    TDLog.e("Non-number zero");
+                    TDLog.e("TH Non-number zero");
+                    partial = true;
                   }
 		}
                 while ( kk<vals_len-1 ) {
@@ -393,7 +407,8 @@ class ParserTherion extends ImportParser
                     scale  = Float.parseFloat( vals[kk] );
 		    break;
                   } catch ( NumberFormatException e ) {
-                    TDLog.e("Non-number scale");
+                    TDLog.e("TH Non-number scale");
+                    partial = true;
                   }
                 }
 
@@ -439,9 +454,11 @@ class ParserTherion extends ImportParser
                   if ( u_cln ) state.mUnitCln = angle;
                 }
               } else if ( cmd.equals("sd") ) {
-                // TDLog.v("Warning: therion sd ignored" );
+                TDLog.v("TH sd ignored" );
+                partial = true;
               } else if ( cmd.equals("grade") ) {
-                // TDLog.v("Warning: therion grade ignored" );
+                TDLog.v("TH grade ignored" );
+                partial = true;
               } else if ( cmd.equals("declination") ) { 
                 // TDLog.v("Therion declination " + line );
                 if ( 1 < vals_len ) {
@@ -456,25 +473,32 @@ class ParserTherion extends ImportParser
                       state.mDeclination = declination;
                       if ( ! mApplyDeclination ) mDeclination = state.mDeclination;
                     } catch ( NumberFormatException e ) {
-                      TDLog.e( "Error therion declination " + line );
+                      TDLog.e( "TH declination " + line );
+                      partial = true;
                     }
 		  }
                 }      
               } else if ( cmd.equals("instrument") ) {
-                // TDLog.v("Warning: therion instrument ignored" );
+                TDLog.v("TH instrument ignored" );
+                partial = true;
               } else if ( cmd.equals("flags") ) {
                 // TDLog.v("Therion flags");
-                if ( vals_len >= 2 ) {
-                  if ( vals[1].startsWith("dup") || vals[1].startsWith("splay") ) {
-                    state.mDuplicate = true;
-                  } else if ( vals[1].startsWith("surf") ) {
-                    state.mSurface = true;
-                  } else if ( vals[1].equals("not") && vals_len >= 3 ) {
-                    if ( vals[2].startsWith("dup") || vals[2].startsWith("splay") ) {
-                      state.mDuplicate = false;
-                    } else if ( vals[2].startsWith("surf") ) {
-                      state.mSurface = false;
+                boolean yes = true;
+                for ( int ii = 1; ii < vals_len; ++ii ) {
+                  if ( vals[ii].equals("not") ) {
+                    yes = false;
+                  } else {
+                    if ( vals[ii].startsWith("splay") ) {
+                      state.mSplay = yes;
+                    } else if ( vals[ii].startsWith("dup") ) {
+                      state.mSurface = yes;
+                    } else if ( vals[ii].startsWith("surf") ) {
+                      state.mDuplicate = yes;
+                    } else {
+                      TDLog.e("TH unknown flag " + vals[ii] );
+                      partial = true;
                     }
+                    yes = true;
                   }
                 }
               } else if ( cmd.equals("mark") ) { // ***** fix station east north Z (ignored std-dev's)
@@ -485,12 +509,15 @@ class ParserTherion extends ImportParser
                   flag = StationFlag.STATION_PAINTED;
                 } else if ( "fixed".equals( vals[ vals_len-1 ] ) ) {
                   flag = StationFlag.STATION_FIXED;
+                } else {
+                  TDLog.e("TH unknown mark " + vals[ vals_len-1 ] );
+                  partial = true;
                 }
                 // TDLog.v( "Therion parser: mark flag " + flag + " " + flag_str );
                 if ( flag != 0 ) {
                   for ( int k=1; k<vals_len-1; ++k ) {
                     String name = therionPath ? vals[k] : extractStationName( vals[k], surveyPath );
-                    TDLog.v("Therion mark " + name );
+                    // TDLog.v("Therion mark " + name );
                     // TDLog.v( "mark station " + name );
                     boolean must_add = true;
                     for ( Station st : stations ) if ( st.name.equals( name ) ) {
@@ -505,7 +532,7 @@ class ParserTherion extends ImportParser
                 // TDLog.v("Therion station");
                 if ( vals_len > 2 ) {
                   String name = therionPath ? vals[1] : extractStationName( vals[1], surveyPath );
-                  TDLog.v("Therion station " + name );
+                  // TDLog.v("Therion station " + name );
                   String comment = vals[2];
                   if ( comment.startsWith( "\"" ) ) {
                     if ( comment.endsWith( "\"" ) ) {
@@ -539,11 +566,14 @@ class ParserTherion extends ImportParser
                 }
 
               } else if ( cmd.startsWith("explo") ) { // explo-date explo-team
-                // TDLog.v("Warning therion explo ignored");
+                TDLog.v("TH explo ignored");
+                partial = true;
               } else if ( cmd.equals("break") ) {
-                // TDLog.v("Warning therion break ignored");
+                TDLog.v("TH break ignored");
+                partial = true;
               } else if ( cmd.equals("infer") ) {
-                // TDLog.v("Warning therion infer ignored");
+                TDLog.v("TH infer ignored");
+                partial = true;
 
               } else if ( cmd.equals("group") ) {
                 // TDLog.v("Therion group");
@@ -555,13 +585,17 @@ class ParserTherion extends ImportParser
                 if ( state.mParent != null ) state = state.mParent;
 
               } else if ( cmd.equals("walls") ) {
-                // TDLog.v("Warning therion walls ignored");
+                TDLog.v("TH walls ignored");
+                partial = true;
               } else if ( cmd.equals("vthreshold") ) {
-                // TDLog.v("Warning therion vthreshold ignored");
+                TDLog.v("TH vthreshold ignored");
+                partial = true;
               } else if ( cmd.equals("extend") ) { 
                 if ( vals_len == 2 ) {
                   state.mExtend = ParserUtil.parseExtend( vals[1], state.mExtend );
-                } else { // not implemented "extend value station [station]
+                } else { 
+                  TDLog.v("TH not implemented extend value station [station]");
+                  partial = true;
                 }
                 // TDLog.v("Therion extend " + state.mExtend );
               } else if ( cmd.equals("station_names") ) {
@@ -648,9 +682,7 @@ class ParserTherion extends ImportParser
 
                     len = (len - zLen) * sLen;
                     ber = (ber - state.mZeroBer) * state.mScaleBer * state.mUnitBer;
-                    if ( mApplyDeclination ) ber += state.mDeclination;
-		    // if ( ber < 0 ) { ber += 360; } else if ( ber >= 360 ) { ber -= 360; }
-                    ber = TDMath.in360( ber );
+                    ber = checkApplyDeclination( ber, state.mDeclination );
                     cln = (cln - state.mZeroCln) * state.mScaleCln * state.mUnitCln;
 
                     if ( to.equals("-") || to.equals(".") ) { to = "-"; }
@@ -690,7 +722,7 @@ class ParserTherion extends ImportParser
                     }
 
                     // TODO add shot
-                    if ( to.equals("-") || to.equals(".") ) { // splay shot
+                    if ( state.mSplay || to.equals("-") || to.equals(".") || to.equals("_") ) { // splay shot
                       // FIXME splays
                       // TDLog.v( "Therion add shot " + from + " -- ");
                       shots.add( new ParserShot( from, TDString.EMPTY, len, ber, cln, 0.0f, state.mExtend, LegType.NORMAL, state.mDuplicate, state.mSurface, false, "" ) );
@@ -699,7 +731,8 @@ class ParserTherion extends ImportParser
                       shots.add( new ParserShot( from, to, len, ber, cln, 0.0f, state.mExtend, LegType.NORMAL, state.mDuplicate, state.mSurface, false, "" ) );
                     }
                   } catch ( NumberFormatException e ) {
-                    TDLog.e( "therion parser error: data " + line );
+                    TDLog.e( "TH data " + line );
+                    partial = true;
                   }
                 }
                 // FIXME other data types
@@ -709,6 +742,9 @@ class ParserTherion extends ImportParser
                 handleFix( vals, vals_len, surveyPath, therionPath, path  );
               } else if ( cmd.equals("cs") ) { 
                 handleCs( vals, vals_len, surveyPath, therionPath, path  );
+              } else {
+                TDLog.v("TH unknown cmd " + cmd + " in centerline");
+                partial = true;
               }
             } else if ( state.in_survey ) { // && ! state.in_centerline
               if ( cmd.equals("centerline") || cmd.equals("centreline") ) {
@@ -741,23 +777,31 @@ class ParserTherion extends ImportParser
                 handleFix( vals, vals_len, surveyPath, therionPath, path  );
               } else if ( cmd.equals("cs") ) { 
                 handleCs( vals, vals_len, surveyPath, therionPath, path  );
+              } else {
+                TDLog.v("TH unknown cmd " + cmd + " in survey");
+                partial = true;
               }
+            } else {
+              TDLog.v("TH unknown cmd " + cmd );
+              partial = true;
             }
-          }
-        }
+          } // empty vals 
+        } // empty line
         line = nextLine( br );
       }
       mTeam = team.toString();
 
     } catch ( IOException e ) {
       // TODO
-      TDLog.e("IO error " + e.getMessage() );
+      TDLog.e("TH IO " + e.getMessage() );
+      partial = true;
       throw new ParserException();
     }
     if ( mDate == null ) {
       mDate = TDUtil.currentDate();
     }
     // TDLog.v( "Parser TH shots "+ shots.size() + " splays "+ splays.size() +" fixes "+  fixes.size() );
+    return partial;
   }
 
   private void handleEquate(String[] vals, int vals_len, String surveyPath, boolean therionPath, TherionPath path, ParserTherionState state )

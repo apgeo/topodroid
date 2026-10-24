@@ -21,7 +21,7 @@
   <string name="gpx" translatable="false">GPX</string>
   <!-- string name="geojason" translatable="false">GeoJSOM</string -->
   <string name="shapefile" translatable="false">Shapefile</string>
-  <string name="jean_botazzi" translatable="false">J. Botazzi</string>
+  <string name="jean_botazzi" translatable="false">J. Bottazzi</string>
   <string name="with_prefix" translatable="false">WITH-PREFIX</string>
 
   <string name="epsg" translatable="false">EPSG</string>
@@ -33,6 +33,9 @@
   <!-- UNUSED string name="char_less" translatable="false">&lt;</string -->
   <!-- UNUSED string name="char_more" translatable="false">&gt;</string -->
   <string name="char_hyphen" translatable="false">&#x2010;</string>
+  <!-- string name="char_red_cross" translatable="false">&#x274c;</string -->
+  <string name="char_cross" translatable="false">&#x2715;</string>
+  <!-- string name="char_heavy_cross" translatable="false">&#x2716;</string -->
 
   <string name="zero" translatable="false">0</string>
   <string name="zerod" translatable="false">0.0</string>
@@ -76,6 +79,7 @@
   <string name="greater_than" translatable="false">&gt;</string>
   <string name="proj4" translatable="false">Proj4</string>
   <string name="swap" translatable="false">&lt;-&gt;</string>
+  <string name="ellipsis" translatable="false">&#x2026;</string>
 
   <string name="level_b" translatable="false">B</string>
   <string name="level_f" translatable="false">F</string>

@@ -15,6 +15,7 @@ package com.topodroid.TDX;
 import com.topodroid.util.TDLog;
 import com.topodroid.util.TDString;
 import com.topodroid.util.TDUtil;
+import com.topodroid.util.TDAnalytics;
 import com.topodroid.ui.MyKeyboard;
 import com.topodroid.ui.MyDialog;
 import com.topodroid.prefs.TDSetting;
@@ -48,7 +49,6 @@ import android.widget.Button;
 
 import android.view.View;
 // import android.widget.ListView;
-// import android.inputmethodservice.KeyboardView;
 
 import android.location.Location;
 import android.location.LocationListener;
@@ -85,7 +85,7 @@ class FixedGpsDialog extends MyDialog
   private Button   mBtnView;
 
   private Button   mBtnStatus;
-  // private Button   mBtnCancel;
+  private Button   mBtnCancel;
 
   private double mLat = 0;  // decimal degrees
   private double mLng = 0;  // decimal degrees
@@ -121,6 +121,7 @@ class FixedGpsDialog extends MyDialog
   FixedGpsDialog(Context context, FixedActivity parent )
   {
     super( context, null, R.string.FixedGpsDialog ); // null app
+    TopoDroidApp.updateAnalytic( TDAnalytics.GNSS );
     mParent = parent;
     if ( TDandroid.checkLocation( context ) ) { // CHECK_PERMISSIONS
       mLocManager = (LocationManager) mContext.getSystemService( Context.LOCATION_SERVICE );
@@ -166,15 +167,16 @@ class FixedGpsDialog extends MyDialog
     mBtnStatus = mBtnLoc;
     mBtnAdd = (Button) findViewById(R.id.button_add );
     mBtnView = (Button) findViewById( R.id.button_view );
+    mBtnCancel = (Button) findViewById( R.id.button_cancel );
 
     mBtnLoc.setOnClickListener( this );
     mBtnAdd.setOnClickListener( this );
     mBtnView.setOnClickListener( this );
+    mBtnCancel.setOnClickListener( this );
 
     mLocating = false;
     mWMM = new WorldMagneticModel( mContext );
 
-    // mKeyboard = new MyKeyboard( mContext, (KeyboardView)findViewById( R.id.keyboardview ), R.xml.my_keyboard_base, R.xml.my_keyboard_qwerty );
     mKeyboard = MyKeyboard.getMyKeyboard( mContext, findViewById( R.id.keyboardview ), R.xml.my_keyboard_base, R.xml.my_keyboard_qwerty );
 
     if ( TDSetting.mKeyboard ) {
@@ -294,6 +296,8 @@ class FixedGpsDialog extends MyDialog
         errOk  = false;
         retStart = -1L;
       }
+    } else if ( b == mBtnCancel ) {
+      dismiss();
     }
     if ( do_toast ) {
       TDToast.makeBad( R.string.no_location_data );
@@ -568,6 +572,7 @@ class FixedGpsDialog extends MyDialog
 
   // -----------------------------------------------------------
 
+  @SuppressWarnings("deprecated")
   @Override
   public void onBackPressed()
   {

@@ -16,10 +16,10 @@ import com.topodroid.util.TDRequest;
 import com.topodroid.util.TDLog;
 import com.topodroid.util.TDLocale;
 import com.topodroid.util.TDsafUri;
+import com.topodroid.util.TDAnalytics;
 import com.topodroid.prefs.TDSetting;
 import com.topodroid.ui.MyColorPicker;
 import com.topodroid.ui.MyColorPicker.IColorChanged;
-import com.topodroid.TDX.TDLevel;
 
 import com.topodroid.ui.MyButton;
 import com.topodroid.ui.MyHorizontalListView;
@@ -34,8 +34,10 @@ import com.topodroid.TDX.TDPath;
 import com.topodroid.TDX.R;
 import com.topodroid.TDX.ExportDialogTdm;
 import com.topodroid.TDX.IExporter;
+import com.topodroid.TDX.TDLevel;
 // import com.topodroid.TDX.TDandroid;
 import com.topodroid.TDX.TDConst;
+import com.topodroid.TDX.MyActivity;
 
 import java.util.List;
 import java.util.ArrayList;
@@ -48,6 +50,7 @@ import java.io.PrintWriter;
 import android.net.Uri;
 
 import android.view.View;
+import android.view.KeyEvent;
 // import android.view.ViewGroup.LayoutParams;
 import android.view.View.OnClickListener;
 
@@ -57,6 +60,7 @@ import android.widget.Button;
 import android.widget.ArrayAdapter;
 import android.widget.AdapterView;
 import android.widget.AdapterView.OnItemClickListener;
+import android.widget.TextView;
 // import android.widget.LinearLayout;
 // import android.widget.LinearLayout.LayoutParams;
 
@@ -70,7 +74,7 @@ import android.os.Bundle;
 import android.app.Activity;
 import android.os.ParcelFileDescriptor;
 
-public class TdmConfigActivity extends Activity
+public class TdmConfigActivity extends MyActivity
                               implements OnClickListener
                               , OnItemClickListener
                               , IExporter
@@ -141,12 +145,12 @@ public class TdmConfigActivity extends Activity
     Bundle extras = getIntent().getExtras();
     if ( extras != null ) {
       String path = extras.getString( TDRequest.TDCONFIG_PATH );
-      // TDLog.v("TDM config " + path );
+      // TDLog.v("TDM-config " + path );
       if ( path != null ) {
         mTdmConfig = new TdmConfig( path, false ); // false: no save 
         if ( mTdmConfig != null ) {
           mTdmConfig.readTdmConfig();
-          setTitle( String.format( getResources().getString(R.string.project),  mTdmConfig.toString() ) );
+          // setTitle( String.format( getResources().getString(R.string.project),  mTdmConfig.toString() ) );
         } else {
           TDToast.make( R.string.no_file );
         }
@@ -160,6 +164,7 @@ public class TdmConfigActivity extends Activity
     } else {
       // TDLog.v( "TdmConfig " + mTdmConfig.toString() );
       setContentView(R.layout.tdconfig_activity);
+      setTitle( String.format( getResources().getString(R.string.project),  mTdmConfig.toString() ) );
       // getWindow().setLayout( LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT );
 
       mList = (ListView) findViewById(R.id.th_list);
@@ -197,7 +202,7 @@ public class TdmConfigActivity extends Activity
   protected void onPause()
   {
     super.onPause();
-    // TDLog.v( "TdmConfig activity on pause");
+    TDLog.v( "TdmConfig activity on pause");
     if ( mTdmConfig != null ) mTdmConfig.writeTdmConfig( false ); // no check on return value
   }
 
@@ -289,6 +294,8 @@ public class TdmConfigActivity extends Activity
     closeMenu();
     int p = 0;
     if ( p++ == pos ) {        // CLOSE
+      TDLog.v("CLOSE menu");
+      // if ( mTdmConfig != null ) mTdmConfig.writeTdmConfig( false ); // already done by onPause
       onBackPressed();
     } else if ( p++ == pos ) {  // EXPORT
       if ( mTdmConfig != null ) {
@@ -308,7 +315,7 @@ public class TdmConfigActivity extends Activity
   {
     TdmSurvey mySurvey = new TdmSurvey( "." );
 
-    // TDLog.v( "start Config activity. inputs " + mTdmConfig.getInputsSize() );
+    // TDLog.v( "Tdm start config activity. inputs " + mTdmConfig.getInputsSize() );
     for ( TdmInput input : mTdmConfig.getInputs() ) {
       if ( input.isChecked() ) {
         // DataHelper mAppData = TopoDroidApp.mData;
@@ -326,6 +333,7 @@ public class TdmConfigActivity extends Activity
       return;
     }
     // list of display surveys
+    // TDLog.v("Tdm config activity surveys " + mySurvey.mSurveys.size() );
     mTdmConfig.populateViewSurveys( mySurvey.mSurveys );
 
     // TODO start drawing activity with reduced surveys
@@ -371,6 +379,7 @@ public class TdmConfigActivity extends Activity
    */
   void doDelete()
   {
+    TopoDroidApp.updateAnalytic( TDAnalytics.TDM_DELETE );
     // if ( ! TdManagerApp.deleteTdmConfigFile( mTdmConfig.getFilepath() ) ) { 
     //   TDToast.make( "delete FAILED" );
     // } else {
@@ -461,15 +470,38 @@ public class TdmConfigActivity extends Activity
 
   // ---------------------- SAVE -------------------------------------
 
+  @Override public void onDestroy() { super.onDestroy(); }
+
   /** react to a BACK press
    */
   @Override
   public void onBackPressed()
   {
-    // TDLog.v( "TdmConfig activity back pressed");
+    TDLog.v( "TdmConfig activity back pressed");
     // if ( mTdmConfig != null ) mTdmConfig.writeTdmConfig( false ); // already done by onPause
     doFinish( TDRequest.RESULT_TDCONFIG_OK );
   }
+
+  /** handle key up event // alternative-169
+   * @param code  key code
+   * @param ev    key event
+   */
+  @Override public boolean onKeyUp( int code, KeyEvent event )
+  {
+    TDLog.v("Tdm Config Window key up: code " + code );
+    return backKeyUp( code, event );
+  }
+
+  @Override public boolean onKeyDown( int code, KeyEvent event )
+  {
+    TDLog.v("Tdm Config Window key down: code " + code );
+    if ( code == KeyEvent.KEYCODE_BACK ) {
+      // if ( mTdmConfig != null ) mTdmConfig.writeTdmConfig( false ); // already done by onPause
+      return backKeyDown( code, event );
+    }
+    return false;
+  }
+
 
   /** react to a user tap 
    * @param view   tapped view
@@ -547,9 +579,11 @@ public class TdmConfigActivity extends Activity
    * @param prefix     station names prefix (not used)
    * @param first      not used
    * @param second     whether to export the second view (unused: only for plan or profile in DrawingWindow)
+   * @param unused
+   * @param shared     wheter to share export (unused)
    * @note implements IExporter
    */
-  public void doExport( String type, String surveyname, String prefix, long first, boolean second )
+  public void doExport( String type, String surveyname, String prefix, long first, boolean second, List<String> unused, boolean shared )
   {
     String filename = null;
     int pos = surveyname.lastIndexOf('.');
@@ -670,6 +704,21 @@ public class TdmConfigActivity extends Activity
   {
     super.onConfigurationChanged( new_cfg );
     TDLocale.resetTheLocale();
+  }
+
+  // ----------------------------------------------------------------
+  // TITLE BAR
+
+  @Override
+  public void setTitle( CharSequence t )
+  {
+    ((TextView)findViewById( R.id.title )).setText( t );
+  }
+
+  @Override
+  public void setTitleColor( int color )
+  {
+    ((TextView)findViewById( R.id.title )).setTextColor( color );
   }
 
 }

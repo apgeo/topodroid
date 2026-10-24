@@ -34,6 +34,7 @@ class DrawingModeDialog extends MyDialog
     private CheckBox mCBsplay;    // whether to show splays
     private CheckBox mCBlatest;   // whether to show latest shots
     private CheckBox mCBstation;  // whether to show stations
+    // private CheckBox mCBelevation;  // whether to show station elevations
     private CheckBox mCBgrid;     // whether to show the grid
     private CheckBox mCBfixed;    // whether to keep centerline fixed, ie, shift the drawing
     private CheckBox mCBscrap;    // whether to shift only the current scrap
@@ -49,6 +50,7 @@ class DrawingModeDialog extends MyDialog
     // private CheckBox mCBtext  = null;
 
     private CheckBox mCBscaleRef; // whether to show the scale reference bar
+    private CheckBox mCBsections; // whether to show the xsections outline
 
     // private Button mBtnOK;
     // private Button mBtnBack;
@@ -74,9 +76,11 @@ class DrawingModeDialog extends MyDialog
       mCBsplay   = (CheckBox) findViewById(R.id.cb_mode_splay);
       mCBlatest  = (CheckBox) findViewById(R.id.cb_mode_latest);
       mCBstation = (CheckBox) findViewById(R.id.cb_mode_station);
+      // mCBelevation = (CheckBox) findViewById(R.id.cb_mode_elevation);
       mCBgrid    = (CheckBox) findViewById(R.id.cb_mode_grid);
       mCBfixed   = (CheckBox) findViewById(R.id.cb_mode_fixed);
       mCBscrap   = (CheckBox) findViewById(R.id.cb_mode_scrap);
+      mCBsections= (CheckBox) findViewById(R.id.cb_mode_sections);
 
       if ( TDSetting.mWithLevels > 0 ) {
         mCBfloor = (CheckBox) findViewById(R.id.cb_layer_floor);
@@ -102,10 +106,11 @@ class DrawingModeDialog extends MyDialog
       }
 
       mCBscaleRef = (CheckBox) findViewById(R.id.cb_mode_scale_ref);
+      mCBsections = (CheckBox) findViewById(R.id.cb_mode_sections);
       // mCBscrap = (CheckBox) findViewById(R.id.cb_scrap);
 
       ((Button) findViewById(R.id.button_ok)).setOnClickListener( this );
-      ((Button) findViewById(R.id.button_back)).setOnClickListener( this );
+      ((Button) findViewById(R.id.button_cancel)).setOnClickListener( this );
 
       int mode = mSurface.getDisplayMode();
       if ( mParent != null && mParent.isAnySection() ) {
@@ -113,6 +118,7 @@ class DrawingModeDialog extends MyDialog
         mCBlatest.setVisibility( View.GONE );
         mCBfixed.setVisibility( View.GONE );
         mCBscrap.setVisibility( View.GONE );
+        mCBsections.setVisibility( View.GONE );
         // mCBscrap.setVisibility( View.GONE );
       } else {
         mCBsplay.setChecked(   (mode & DisplayMode.DISPLAY_SPLAY) != 0 );
@@ -132,8 +138,10 @@ class DrawingModeDialog extends MyDialog
       }
       mCBleg.setChecked(     (mode & DisplayMode.DISPLAY_LEG) != 0 );
       mCBstation.setChecked( (mode & DisplayMode.DISPLAY_STATION) != 0 );
+      // mCBelevation.setChecked( (mode & DisplayMode.DISPLAY_ELEVATION) != 0 );
       mCBgrid.setChecked(    (mode & DisplayMode.DISPLAY_GRID) != 0 );
       mCBscaleRef.setChecked((mode & DisplayMode.DISPLAY_SCALEBAR) != 0);
+      mCBsections.setChecked((mode & DisplayMode.DISPLAY_SECTIONS) != 0);
     }
 
     // called only if mWithLevels > 0
@@ -167,15 +175,17 @@ class DrawingModeDialog extends MyDialog
         }
         if ( mCBleg.isChecked() )     mode |= DisplayMode.DISPLAY_LEG;
         if ( mCBstation.isChecked() ) mode |= DisplayMode.DISPLAY_STATION;
+        // if ( mCBelevation.isChecked() ) mode |= DisplayMode.DISPLAY_ELEVATION;
         if ( mCBgrid.isChecked() )    mode |= DisplayMode.DISPLAY_GRID;
         if ( mCBscaleRef.isChecked() )mode |= DisplayMode.DISPLAY_SCALEBAR;
+        if ( mCBsections.isChecked() )mode |= DisplayMode.DISPLAY_SECTIONS;
         // TDLog.e( "Mode " + mode );
-        mSurface.setDisplayMode( mode );
+        DrawingSurface.setDisplayMode( mode );
         // if ( TDLevel.overNormal && mCBscrap.isChecked() && mParent != null ) {
         //   mParent.scrapOutlineDialog();
         // }
         if ( TDSetting.mWithLevels > 0 ) setLevels();
-      } else if ( vid == R.id.button_back ) {
+      } else if ( vid == R.id.button_cancel ) {
       //   /* nothing */
       // } else if ( vid == R.id.button_mode_cancel ) {
       //   /* nothing */
@@ -183,18 +193,20 @@ class DrawingModeDialog extends MyDialog
       dismiss();
     }
 
-    // @Override
-    // public void onBackPressed ()
-    // {
-    //   int mode = DisplayMode.DISPLAY_NONE;
-    //   if ( mCBleg.isChecked() )     mode |= DisplayMode.DISPLAY_LEG;
-    //   if ( mCBsplay.isChecked() )   mode |= DisplayMode.DISPLAY_SPLAY;
-    //   if ( mCBlatest.isChecked() )  mode |= DisplayMode.DISPLAY_LATEST;
-    //   if ( mCBstation.isChecked() ) mode |= DisplayMode.DISPLAY_STATION;
-    //   if ( mCBgrid.isChecked() )    mode |= DisplayMode.DISPLAY_GRID;
-    //   mSurface.setDisplayMode( mode );
-    //   cancel();
-    // }
+  // @SuppressWarnings("deprecated")
+  // @Override
+  // public void onBackPressed ()
+  // {
+  //   int mode = DisplayMode.DISPLAY_NONE;
+  //   if ( mCBleg.isChecked() )     mode |= DisplayMode.DISPLAY_LEG;
+  //   if ( mCBsplay.isChecked() )   mode |= DisplayMode.DISPLAY_SPLAY;
+  //   if ( mCBlatest.isChecked() )  mode |= DisplayMode.DISPLAY_LATEST;
+  //   if ( mCBstation.isChecked() ) mode |= DisplayMode.DISPLAY_STATION;
+  //   if ( mCBelevation.isChecked() ) mode |= DisplayMode.DISPLAY_ELEVATION;
+  //   if ( mCBgrid.isChecked() )    mode |= DisplayMode.DISPLAY_GRID;
+  //   DrawingSurface.setDisplayMode( mode );
+  //   cancel();
+  // }
 }
         
 

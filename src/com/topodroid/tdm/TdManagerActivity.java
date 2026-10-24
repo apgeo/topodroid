@@ -19,6 +19,7 @@ import com.topodroid.util.TDLog;
 import com.topodroid.util.TDFile;
 import com.topodroid.util.TDRequest;
 import com.topodroid.util.TDLocale;
+import com.topodroid.util.TDAnalytics;
 import com.topodroid.ui.MyButton;
 import com.topodroid.ui.MyHorizontalListView;
 import com.topodroid.ui.MyHorizontalButtonView;
@@ -28,6 +29,7 @@ import com.topodroid.TDX.TDandroid;
 import com.topodroid.TDX.TopoDroidApp;
 import com.topodroid.TDX.TDPath;
 import com.topodroid.TDX.TDToast;
+import com.topodroid.TDX.MyActivity;
 import com.topodroid.TDX.R;
 
 // import java.io.File;
@@ -53,6 +55,7 @@ import android.widget.Button;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.View.OnClickListener;
+import android.view.KeyEvent;
 // import android.view.ViewGroup.LayoutParams;
 // import android.widget.AdapterView.OnItemLongClickListener;
 import android.widget.AdapterView;
@@ -69,7 +72,7 @@ import android.app.Activity;
 // import android.view.MenuItem;
 // import android.view.MenuInflater;
 
-public class TdManagerActivity extends Activity
+public class TdManagerActivity extends MyActivity
                        implements OnItemClickListener
                        // , OnItemLongClickListener
                        , OnClickListener
@@ -233,6 +236,29 @@ public class TdManagerActivity extends Activity
   // {
   //   super.onResume();
   // }
+
+  @Override public void onDestroy() { super.onDestroy(); }
+
+  @Override public void onBackPressed() { super.onBackPressed(); }
+
+  /** handle key up event // alternative-169
+   * @param code  key code
+   * @param ev    key event
+   */
+  @Override public boolean onKeyUp( int code, KeyEvent event )
+  {
+    TDLog.v("Tdm Window key up: code " + code );
+    return backKeyUp( code, event );
+  }
+
+  @Override public boolean onKeyDown( int code, KeyEvent event )
+  {
+    TDLog.v("Tdm Window key down: code " + code );
+    if ( code == KeyEvent.KEYCODE_BACK ) {
+      return backKeyDown( code, event );
+    }
+    return false;
+  }
     
   /** update the list of projects configuration
    */
@@ -254,7 +280,7 @@ public class TdManagerActivity extends Activity
     String[] td_configs = TDPath.scanTdconfigDir(); // full pathnames
     if ( td_configs != null ) {
       for ( String td_config : td_configs ) {
-        // TDLog.v( "activity update: path <" + td_config + ">" );
+        // TDLog.v( "TDM update: path <" + td_config + ">" );
         mTdmConfigAdapter.add( new TdmConfig( td_config, false ) ); // false: no save
       }
     } else {
@@ -270,6 +296,7 @@ public class TdManagerActivity extends Activity
   void startTdmConfigActivity( TdmConfig tdconfig )
   {
     // TDLog.v( "start tdconfig activity for " + tdconfig.toString() );
+    TopoDroidApp.updateAnalytic( TDAnalytics.TDM_OPEN );
     Intent intent = new Intent( this, TdmConfigActivity.class );
     intent.putExtra( TDRequest.TDCONFIG_PATH, tdconfig.getFilepath() );
     try {
@@ -297,6 +324,7 @@ public class TdManagerActivity extends Activity
       TDToast.make( R.string.error_name_exists );
       return;
     }
+    TopoDroidApp.updateAnalytic( TDAnalytics.TDM_NEW );
     TdmConfig tdconfig = new TdmConfig( path, true ); // true: save
     // updateTdmConfigList();
     mTdmConfigAdapter.add( tdconfig );
@@ -448,4 +476,19 @@ public class TdManagerActivity extends Activity
     TDLocale.resetTheLocale();
   }
 
+
+  // ----------------------------------------------------------------
+  // TITLE BAR
+
+  @Override
+  public void setTitle( CharSequence t )
+  {
+    ((TextView)findViewById( R.id.title )).setText( t );
+  }
+
+  @Override
+  public void setTitleColor( int color )
+  {
+    ((TextView)findViewById( R.id.title )).setTextColor( color );
+  }
 }
