@@ -36,6 +36,7 @@ import com.topodroid.TDX.DrawingWindow;
 import com.topodroid.TDX.DistoXStationName;
 import com.topodroid.TDX.StationPolicy;
 import com.topodroid.TDX.SurveyInfo;
+import com.topodroid.TDX.SilexGisClient;
 import com.topodroid.TDX.TDToast;
 import com.topodroid.TDX.TopoGL;
 import com.topodroid.TDX.GlRenderer;
@@ -2667,11 +2668,7 @@ public class TDSetting
   /** @return the SilexGIS access key masked for display: its first eight characters followed by an ellipsis
    * @param key   access key
    */
-  public static String maskSilexGisKey( String key )
-  {
-    if ( TDString.isNullOrEmpty( key ) ) return TDString.EMPTY;
-    return ( key.length() <= 8 )? key : key.substring( 0, 8 ) + "\u2026";
-  }
+  public static String maskSilexGisKey( String key ) { return SilexGisClient.maskKey( key ); }
 
   private static String updatePrefTh( TDPrefHelper hlp, String k, String v )
   {
