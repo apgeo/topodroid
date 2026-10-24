@@ -2589,6 +2589,7 @@ public class TDSetting
     String ret = null;
     if ( k.equals( key[ 0].key ) ) {        // DISTOX_SILEXGIS_URL
       String url = ( v == null )? "" : v.trim();
+      if ( ! url.equals( mSilexGisUrl ) ) setSilexGisAccount( "" ); // the account was found on the old server
       mSilexGisUrl = tryStringValue( hlp, k, url, key[ 0].dflt );
       if ( ! mSilexGisUrl.equals( v ) ) ret = mSilexGisUrl;
     } else if ( k.equals( key[ 1].key ) ) { // DISTOX_SILEXGIS_KEY
@@ -2644,13 +2645,13 @@ public class TDSetting
   /** set the SilexGIS server URL and access key
    * @param url   server base URL
    * @param key   personal access key
-   * @note the account label is cleared if the key changes
+   * @note the account label is cleared if the URL or the key changes
    */
   public static void setSilexGisAccess( String url, String key )
   {
     url = ( url == null )? "" : url.trim();
     key = ( key == null )? "" : key.trim();
-    if ( ! key.equals( mSilexGisKey ) ) setSilexGisAccount( "" );
+    if ( ! key.equals( mSilexGisKey ) || ! url.equals( mSilexGisUrl ) ) setSilexGisAccount( "" );
     mSilexGisUrl = url;
     mSilexGisKey = key;
     TDPrefHelper.update( "DISTOX_SILEXGIS_URL", mSilexGisUrl, "DISTOX_SILEXGIS_KEY", mSilexGisKey );
@@ -4433,6 +4434,7 @@ B DISTOX_SAP5_BIT16_BUG true
               break;
             case "DISTOX_SILEXGIS_URL":
               mSilexGisUrl = value; setPreference( editor, kay, mSilexGisUrl );
+              if ( ! value.equals( mSilexGisUrl ) ) { mSilexGisAccount = ""; setPreference( editor, "DISTOX_SILEXGIS_ACCOUNT", mSilexGisAccount ); } // the account was found on the old server
               break;
             case "DISTOX_SILEXGIS_WITH_TH":
               mSilexGisWithTh  = Boolean.parseBoolean( value ); setPreference( editor, kay, mSilexGisWithTh );
