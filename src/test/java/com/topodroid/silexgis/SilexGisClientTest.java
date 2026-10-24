@@ -9,7 +9,9 @@ import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
 import com.topodroid.TDX.SilexGisClient;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -18,6 +20,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+import org.json.JSONObject;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -36,6 +39,12 @@ public class SilexGisClientTest
   private final Map<String, String[]> answers = new ConcurrentHashMap<>();
   private final Map<String, String> seenAuthorization = new ConcurrentHashMap<>();
   private final Map<String, String> seenContract = new ConcurrentHashMap<>();
+  private final Map<String, String> seenAccept = new ConcurrentHashMap<>();
+  private final Map<String, String> seenMethod = new ConcurrentHashMap<>();
+  private final Map<String, String> seenContentType = new ConcurrentHashMap<>();
+  private final Map<String, String> seenBody = new ConcurrentHashMap<>();
+  /** extra response headers per path */
+  private final Map<String, String[]> extraHeaders = new ConcurrentHashMap<>();
 
   @Before
   public void start() throws IOException
@@ -56,16 +65,34 @@ public class SilexGisClientTest
     if ( auth != null ) seenAuthorization.put( path, auth );
     String contract = ex.getRequestHeaders().getFirst( "X-SilexGis-Contract" );
     if ( contract != null ) seenContract.put( path, contract );
+    String accept = ex.getRequestHeaders().getFirst( "Accept" );
+    if ( accept != null ) seenAccept.put( path, accept );
+    String ctype = ex.getRequestHeaders().getFirst( "Content-Type" );
+    if ( ctype != null ) seenContentType.put( path, ctype );
+    seenMethod.put( path, ex.getRequestMethod() );
+    byte[] in = readAll( ex.getRequestBody() );
+    if ( in.length > 0 ) seenBody.put( path, new String( in, StandardCharsets.UTF_8 ) );
     String[] a = answers.get( path );
     if ( a == null ) a = new String[] { "404", "application/problem+json",
         "{\"type\":\"about:blank\",\"title\":\"Not Found\",\"status\":404,\"code\":\"route.not_found\"}" };
     byte[] body = a[2].getBytes( StandardCharsets.UTF_8 );
     ex.getResponseHeaders().add( "Content-Type", a[1] );
+    String[] h = extraHeaders.get( path );
+    if ( h != null ) ex.getResponseHeaders().add( h[0], h[1] );
     ex.sendResponseHeaders( Integer.parseInt( a[0] ), body.length == 0 ? -1 : body.length );
     if ( body.length > 0 ) {
       try ( OutputStream os = ex.getResponseBody() ) { os.write( body ); }
     }
     ex.close();
+  }
+
+  private static byte[] readAll( InputStream is ) throws IOException
+  {
+    ByteArrayOutputStream bos = new ByteArrayOutputStream();
+    byte[] buf = new byte[4096];
+    int n;
+    while ( ( n = is.read( buf ) ) > 0 ) bos.write( buf, 0, n );
+    return bos.toByteArray();
   }
 
   private void json( String path, int status, String body )
@@ -95,6 +122,27 @@ public class SilexGisClientTest
     assertEquals( "Ion A. <ion.a@example.org>", SilexGisClient.accountLabel( r ) );
     assertEquals( "Bearer " + KEY, seenAuthorization.get( "/api/v1/me" ) );
     assertEquals( "1", seenContract.get( "/api/v1/me" ) );
+    assertEquals( "GET", seenMethod.get( "/api/v1/me" ) );
+    assertTrue( seenAccept.get( "/api/v1/me" ).contains( "application/problem+json" ) );
+    assertTrue( seenAccept.get( "/api/v1/me" ).contains( "application/json" ) );
+  }
+
+  @Test
+  public void requestWithABodySendsJson() throws Exception
+  {
+    json( "/api/v1/survey-uploads", 201, "{\"id\":\"0190a000-0000-7000-8000-0000000000aa\"}" );
+    JSONObject body = new JSONObject();
+    body.put( "source", "topodroid" );
+    body.put( "title", "Pestera Inventata" );
+    SilexGisClient.Result r = client().request( "POST", "/api/v1/survey-uploads", body );
+    assertTrue( r.isOk() );
+    assertEquals( 201, r.status );
+    assertEquals( "POST", seenMethod.get( "/api/v1/survey-uploads" ) );
+    assertEquals( "application/json; charset=utf-8", seenContentType.get( "/api/v1/survey-uploads" ) );
+    JSONObject sent = new JSONObject( seenBody.get( "/api/v1/survey-uploads" ) );
+    assertEquals( "topodroid", sent.getString( "source" ) );
+    assertEquals( "Pestera Inventata", sent.getString( "title" ) );
+    assertEquals( "Bearer " + KEY, seenAuthorization.get( "/api/v1/survey-uploads" ) );
   }
 
   @Test
@@ -198,8 +246,72 @@ public class SilexGisClientTest
   }
 
   @Test
+  public void redirectIsNotFollowedAndTheKeyDoesNotMove() throws IOException
+  {
+    HttpServer other = HttpServer.create( new InetSocketAddress( InetAddress.getLoopbackAddress(), 0 ), 0 );
+    final Map<String, String> otherSaw = new ConcurrentHashMap<>();
+    other.createContext( "/", ex -> {
+      otherSaw.put( "request", ex.getRequestURI().getPath() );
+      String auth = ex.getRequestHeaders().getFirst( "Authorization" );
+      if ( auth != null ) otherSaw.put( "Authorization", auth );
+      byte[] b = "{\"userName\":\"elsewhere\"}".getBytes( StandardCharsets.UTF_8 );
+      ex.sendResponseHeaders( 200, b.length );
+      try ( OutputStream os = ex.getResponseBody() ) { os.write( b ); }
+      ex.close();
+    } );
+    other.start();
+    try {
+      for ( int status : new int[] { 302, 307 } ) {
+        answers.put( "/api/v1/me", new String[] { Integer.toString( status ), "text/plain", "" } );
+        extraHeaders.put( "/api/v1/me", new String[] { "Location", "http://127.0.0.1:" + other.getAddress().getPort() + "/api/v1/me" } );
+        SilexGisClient.Result r = client().me();
+        assertFalse( r.isOk() );
+        assertEquals( SilexGisClient.PROBLEM, r.kind );
+        assertEquals( status, r.status );
+      }
+      assertTrue( "the second server was reached: " + otherSaw, otherSaw.isEmpty() );
+    } finally {
+      other.stop( 0 );
+    }
+  }
+
+  @Test
+  public void keyThatCannotGoInAHeaderIsAResultNotACrash()
+  {
+    for ( String bad : new String[] { "sgx_TestKey\nAAAABBBB", "sgx_TestKey\tAAAA", "sgx_TestKey\u200bAAAA", "sgx_Test Key", "sgx_TestKéy", "TestKeyAAAA", "sgx_" } ) {
+      SilexGisClient.Result r = new SilexGisClient( base, bad ).me();
+      assertEquals( bad, SilexGisClient.BAD_KEY, r.kind );
+      assertEquals( 0, r.status );
+    }
+    assertTrue( seenAuthorization.isEmpty() );
+  }
+
+  @Test
+  public void keyFormCheck()
+  {
+    assertTrue( SilexGisClient.checkKey( KEY ) );
+    assertTrue( SilexGisClient.checkKey( "  sgx_Ab-9_z  " ) ); // the ends are trimmed
+    assertFalse( SilexGisClient.checkKey( null ) );
+    assertFalse( SilexGisClient.checkKey( "sgx_" ) );
+    assertFalse( SilexGisClient.checkKey( "sgx_ab\ncd" ) );
+    assertFalse( SilexGisClient.checkKey( "sgx_ab+cd/ef=" ) ); // base64, not base64url
+    assertFalse( SilexGisClient.checkKey( "Bearer sgx_abcd" ) );
+  }
+
+  @Test
+  public void runtimeErrorOfTheConnectionIsNetwork()
+  {
+    // java.net.URL accepts this port, the connection refuses it with an IllegalArgumentException
+    SilexGisClient.Result r = new SilexGisClient( "http://127.0.0.1:99999", KEY ).me();
+    assertEquals( SilexGisClient.NETWORK, r.kind );
+    assertEquals( 0, r.status );
+  }
+
+  @Test
   public void unreachableServerIsNetwork() throws IOException
   {
+    // a port just released by a socket of our own: another process could take it before the call,
+    // a race accepted here (it would make the test fail with a non-network result, not pass wrongly)
     int port;
     try ( ServerSocket s = new ServerSocket( 0, 1, InetAddress.getLoopbackAddress() ) ) { port = s.getLocalPort(); }
     SilexGisClient.Result r = new SilexGisClient( "http://127.0.0.1:" + port, KEY ).me();
@@ -250,9 +362,11 @@ public class SilexGisClientTest
   }
 
   @Test
-  public void keyIsMaskedToEightCharacters()
+  public void keyIsMaskedToTheServerPrefix()
   {
-    assertEquals( "sgx_Test…", SilexGisClient.maskKey( KEY ) );
+    assertEquals( 12, SilexGisClient.KEY_PREFIX_LENGTH );
+    assertEquals( "sgx_TestKeyA…", SilexGisClient.maskKey( KEY ) );
+    assertEquals( "sgx_TestKeyA", SilexGisClient.maskKey( "sgx_TestKeyA" ) );
     assertEquals( "", SilexGisClient.maskKey( null ) );
     assertEquals( "sgx_", SilexGisClient.maskKey( "sgx_" ) );
   }
