@@ -133,7 +133,9 @@ public class SilexGisClient
 
   /** @return the check of a base URL: URL_OK, URL_EMPTY, URL_INVALID, or URL_CLEARTEXT
    * @param url   base URL
-   * @note http is accepted only towards the emulator host alias and the loopback, for development
+   * @note http is accepted only towards the emulator host alias and the loopback, for development:
+   *       the connection succeeds only in a build whose network security config allows cleartext
+   *       to those hosts (the app's own config allows cleartext only to marcocorvi.altervista.org)
    */
   public static int checkBaseUrl( String url )
   {

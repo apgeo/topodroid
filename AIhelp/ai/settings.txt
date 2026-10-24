@@ -130,7 +130,7 @@ DISTOX_PLY_LRUD: N, Bool, "Polygon splays", "Add the splays in the Polygon expor
 DISTOX_PLY_MINUS: N, Bool, "Polygon minus", "Use '-' for splays instead of 'S_N' with N incrementing number"
 }
 EXPORT_SILEXGIS {
-DISTOX_SILEXGIS_URL: N, String, "Server URL", "Address of the SilexGIS server; https is required, except for the local addresses 10.0.2.2, 127.0.0.1 and localhost"
+DISTOX_SILEXGIS_URL: N, String, "Server URL", "Address of the SilexGIS server; https is required; http to the local addresses 10.0.2.2, 127.0.0.1 and localhost is accepted only for development, in builds that allow cleartext to them"
 DISTOX_SILEXGIS_KEY: N, String, "Access key", "Personal access key created in SilexGIS (Settings, Access keys); it is not exported with the settings"
 DISTOX_SILEXGIS_ACCOUNT: N, Button, "Account", "Open a dialog to test the access to the SilexGIS server, or to forget the access key"
 DISTOX_SILEXGIS_WITH_TH: N, Bool, "Therion files", "Upload also the Therion survey file and the sketches (th, th2) to SilexGIS"
