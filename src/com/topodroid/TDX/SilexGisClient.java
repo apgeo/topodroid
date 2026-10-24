@@ -53,6 +53,8 @@ public class SilexGisClient
   public static final int BAD_RESPONSE     = 7; // the answer is not a JSON object
   public static final int BAD_KEY          = 8; // the access key is not of the form sgx_... (refused without connecting)
 
+  public static final int KEY_PREFIX_LENGTH = 12; // characters of the key shown, as the server lists the keys by their first 12 characters
+
   public static final String CODE_KEY_NOT_ACCEPTED = "auth.access_key_not_accepted";
 
   /** result of a call
@@ -172,14 +174,14 @@ public class SilexGisClient
     return true;
   }
 
-  /** @return the access key masked for display: the first eight characters followed by an ellipsis
+  /** @return the access key masked for display: its prefix (the first 12 characters) followed by an ellipsis
    * @param key   access key
    */
   public static String maskKey( String key )
   {
     if ( key == null ) return "";
     key = key.trim();
-    return ( key.length() <= 8 )? key : key.substring( 0, 8 ) + "…";
+    return ( key.length() <= KEY_PREFIX_LENGTH )? key : key.substring( 0, KEY_PREFIX_LENGTH ) + "…";
   }
 
   // ---------------------------------------------------------------------

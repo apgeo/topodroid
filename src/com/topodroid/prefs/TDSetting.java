@@ -2665,7 +2665,7 @@ public class TDSetting
     TDPrefHelper.update( "DISTOX_SILEXGIS_ACCOUNT", mSilexGisAccount );
   }
 
-  /** @return the SilexGIS access key masked for display: its first eight characters followed by an ellipsis
+  /** @return the SilexGIS access key masked for display: its prefix (first 12 characters) followed by an ellipsis
    * @param key   access key
    */
   public static String maskSilexGisKey( String key ) { return SilexGisClient.maskKey( key ); }
