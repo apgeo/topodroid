@@ -61,6 +61,8 @@ public class SilexGisImportDialog extends MyDialog
   private Button      mBtnTh;
   private RowAdapter  mAdapter;
 
+  private int mTotal = -1;   // number of uploads the server holds (-1 if not known), of which the first page is listed
+
   private ListTask     mListTask = null;
   private DownloadTask mDownload = null;
 
@@ -130,22 +132,38 @@ public class SilexGisImportDialog extends MyDialog
   // ---------------------------------------------------------------
   // the list
 
+  /** @return whether the callbacks of the background tasks can still use the dialog
+   */
+  private boolean isAlive()
+  {
+    return isShowing() && ! mParent.isFinishing();
+  }
+
   /** rebuild the rows of the list from the uploads and the filter text, grouped by cave
+   * @note the status line is left alone while a file is downloaded: it shows the progress
    */
   private void updateRows()
   {
     mRows.clear();
     if ( mUploads != null ) {
-      String cave = null;
+      String cave = null; // key of the cave: its name is not unique
       for ( SilexGisClient.Upload up : SilexGisClient.filterUploads( mUploads, mETfilter.getText().toString() ) ) {
-        if ( cave == null || ! cave.equals( up.caveName ) ) {
-          cave = up.caveName;
-          mRows.add( cave );
+        if ( cave == null || ! cave.equals( up.caveKey() ) ) {
+          cave = up.caveKey();
+          mRows.add( up.caveName );
         }
         mRows.add( up );
       }
-      mTVstatus.setText( mRows.isEmpty()? resString( R.string.silexgis_import_empty ) : "" );
-      mTVstatus.setVisibility( mRows.isEmpty()? View.VISIBLE : View.GONE );
+      if ( mDownload == null ) {
+        if ( mRows.isEmpty() ) {
+          mTVstatus.setText( R.string.silexgis_import_empty );
+        } else if ( mTotal > mUploads.size() ) { // the server holds more than the page that has been read
+          mTVstatus.setText( String.format( resString( R.string.silexgis_import_partial ), mUploads.size(), mTotal ) );
+        } else {
+          mTVstatus.setText( "" );
+        }
+        mTVstatus.setVisibility( ( mRows.isEmpty() || mTotal > mUploads.size() )? View.VISIBLE : View.GONE );
+      }
     }
     if ( mSelected != null && ! mRows.contains( mSelected ) ) mSelected = null;
     mAdapter.notifyDataSetChanged();
@@ -184,6 +202,8 @@ public class SilexGisImportDialog extends MyDialog
     }
     SilexGisClient.sortUploads( uploads );
     mUploads = uploads;
+    int total = SilexGisClient.totalUploads( res.json );
+    mTotal = ( total > SilexGisClient.countItems( res.json ) )? total : -1;
     updateRows();
   }
 
@@ -209,7 +229,7 @@ public class SilexGisImportDialog extends MyDialog
     @Override
     protected void onPostExecute( SilexGisClient.Result res )
     {
-      if ( mDialog.isShowing() ) mDialog.showList( res );
+      if ( mDialog.isAlive() ) mDialog.showList( res );
     }
   }
 
@@ -248,6 +268,7 @@ public class SilexGisImportDialog extends MyDialog
   @Override
   public void onItemClick( AdapterView< ? > parent, View view, int pos, long id )
   {
+    if ( mDownload != null ) return; // the file of the selected upload is being downloaded
     Object row = mRows.get( pos );
     if ( row instanceof SilexGisClient.Upload ) {
       mSelected = (SilexGisClient.Upload) row;
@@ -277,7 +298,7 @@ public class SilexGisImportDialog extends MyDialog
     if ( id == R.id.button_ok ) {
       File dir = new File( TDPath.getZipFile( "" ) ); // the zip folder
       String name = SilexGisClient.safeFileName( mSelected.archiveName.isEmpty()? mSelected.surveyName : mSelected.archiveName, ".zip" );
-      startDownload( mSelected.archiveUrl, SilexGisClient.newFile( dir, name ), false );
+      startDownload( SilexGisClient.newFile( dir, name ), -1 );
     } else if ( id == R.id.button_th ) {
       if ( mSelected.therion.isEmpty() ) {
         TDToast.makeWarn( R.string.silexgis_import_no_th );
@@ -286,26 +307,26 @@ public class SilexGisImportDialog extends MyDialog
       String[] th = mSelected.therion.get( 0 );
       File dir = mContext.getCacheDir();
       File file = new File( dir, SilexGisClient.safeFileName( th[0].isEmpty()? mSelected.surveyName : th[0], ".th" ) );
-      startDownload( th[1], file, true );
+      startDownload( file, 0 );
     }
   }
 
-  /** start the download of a file
-   * @param url      content URL
+  /** start the download of a file of the selected upload
    * @param file     destination file
-   * @param therion  whether the file is a Therion file (else it is the ZIP archive)
+   * @param therion  index of the Therion file, -1 for the ZIP archive
    */
-  private void startDownload( String url, File file, boolean therion )
+  private void startDownload( File file, int therion )
   {
     File dir = file.getParentFile();
     if ( dir != null && ! dir.exists() ) dir.mkdirs();
     mBtnOk.setEnabled( false );
     mBtnTh.setEnabled( false );
+    mETfilter.setEnabled( false );
     mProgress.setIndeterminate( true );
     mProgress.setVisibility( View.VISIBLE );
     mTVstatus.setVisibility( View.VISIBLE );
     mTVstatus.setText( String.format( resString( R.string.silexgis_import_downloading ), file.getName(), "" ) );
-    mDownload = new DownloadTask( this, mClient, url, file, therion );
+    mDownload = new DownloadTask( this, mClient, mSelected, file, therion );
     mDownload.execute();
   }
 
@@ -327,7 +348,7 @@ public class SilexGisImportDialog extends MyDialog
   /** the download is over: import the file, or say why not
    * @param res      result of the download
    * @param file     destination file
-   * @param therion  whether the file is a Therion file
+   * @param therion  whether the file is a Therion file (else it is the ZIP archive)
    */
   private void downloadDone( SilexGisClient.Result res, File file, boolean therion )
   {
@@ -335,13 +356,15 @@ public class SilexGisImportDialog extends MyDialog
     mProgress.setVisibility( View.GONE );
     mBtnOk.setEnabled( true );
     mBtnTh.setEnabled( true );
+    mETfilter.setEnabled( true );
     if ( res.isOk() ) {
       dismiss();
       if ( therion ) {
         mParent.importTherionFile( file );
       } else {
-        // the existing importer: its checks and its refusal of a survey that exists already. A refused file is not kept
-        if ( ! mParent.importZipFile( file.getName() ) ) file.delete();
+        // the existing importer, off the UI thread: its checks and its refusal of a survey that exists already.
+        // A file that is refused is not kept
+        mParent.importZipFile( file );
       }
       return;
     }
@@ -360,16 +383,16 @@ public class SilexGisImportDialog extends MyDialog
   {
     private final SilexGisImportDialog mDialog;
     private final SilexGisClient mClient;
-    private final String  mUrl;
+    private final SilexGisClient.Upload mUpload;
     private final File    mFile;
-    private final boolean mTherion;
+    private final int     mTherion; // index of the Therion file, -1 for the archive
     private long mLast = 0L; // time of the last progress report [ms]
 
-    DownloadTask( SilexGisImportDialog dialog, SilexGisClient client, String url, File file, boolean therion )
+    DownloadTask( SilexGisImportDialog dialog, SilexGisClient client, SilexGisClient.Upload upload, File file, int therion )
     {
       mDialog  = dialog;
       mClient  = client;
-      mUrl     = url;
+      mUpload  = upload;
       mFile    = file;
       mTherion = therion;
     }
@@ -377,7 +400,7 @@ public class SilexGisImportDialog extends MyDialog
     @Override
     protected SilexGisClient.Result doInBackground( Void... args )
     {
-      return mClient.download( mUrl, mFile, new SilexGisClient.Progress() {
+      return mClient.downloadUpload( mUpload, mTherion, mFile, new SilexGisClient.Progress() {
         @Override public boolean onProgress( long done, long total ) {
           long now = System.currentTimeMillis();
           if ( now - mLast >= 100L ) { // not more than ten reports a second
@@ -392,13 +415,23 @@ public class SilexGisImportDialog extends MyDialog
     @Override
     protected void onProgressUpdate( Long... progress )
     {
-      if ( mDialog.isShowing() ) mDialog.showProgress( mFile, progress[0], progress[1] );
+      if ( mDialog.isAlive() ) mDialog.showProgress( mFile, progress[0], progress[1] );
     }
 
     @Override
     protected void onPostExecute( SilexGisClient.Result res )
     {
-      if ( mDialog.isShowing() ) mDialog.downloadDone( res, mFile, mTherion );
+      if ( mDialog.isAlive() ) {
+        mDialog.downloadDone( res, mFile, mTherion >= 0 );
+      } else if ( res.isOk() ) {
+        mFile.delete(); // the dialog is gone: nobody imports the file
+      }
+    }
+
+    @Override
+    protected void onCancelled( SilexGisClient.Result res )
+    {
+      if ( res != null && res.isOk() ) mFile.delete(); // cancelled after the file was complete
     }
   }
 

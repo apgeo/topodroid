@@ -32,18 +32,31 @@ import java.io.IOException;
 
 import android.os.ParcelFileDescriptor;
 
+import java.io.File;
+
 import android.net.Uri;
 
 public class ImportZipTask extends ImportTask
 {
   boolean mForce;
   Uri mUri;
+  File mDelete = null; // file to delete if the import fails
 
   public ImportZipTask( MainWindow main, Uri uri, boolean force )
   { 
     super(main );
     mUri = uri;
     mForce = force;
+  }
+
+  /** delete a file if the import fails (eg, the file has been downloaded only to be imported)
+   * @param file   file
+   * @return this task
+   */
+  public ImportZipTask setDeleteIfFail( File file )
+  {
+    mDelete = file;
+    return this;
   }
 
   @Override
@@ -81,6 +94,7 @@ public class ImportZipTask extends ImportTask
   protected void onPostExecute(Long result)
   {
     mProgress.dismiss();
+    if ( result < 0 && mDelete != null ) mDelete.delete();
     if ( mMain.get() != null && ! mMain.get().isFinishing() ) {
       mMain.get().setTheTitle( );
       if ( result < -5 ) {

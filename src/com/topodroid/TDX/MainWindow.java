@@ -577,20 +577,17 @@ public class MainWindow extends Activity
   //   // FIXME SYNC updateDisplay();
   // }
 
-  /** import a survey from a ZIP file of the zip folder
-   * @param filename   name of the ZIP file
-   * @return true if the survey has been imported (else a message says why not)
+  /** import a survey from a ZIP file, downloaded from SilexGIS
+   * @param file   ZIP file
+   * @note the file is imported as a ZIP picked by the user, with its uri: Archiver.unArchive( app, filename, force ), which
+   *       ImportZipTask runs without a uri, does not set the survey paths and fails to unpack the SQL of a survey.
+   *       The import runs off the UI thread, with its progress and its messages; a file that is refused is deleted
    */
-  public boolean importZipFile( String filename )
+  void importZipFile( File file )
   {
-    if ( ! filename.toLowerCase( Locale.getDefault() ).endsWith(".zip") ) return false;
-    // the file is imported as a ZIP picked by the user: Archiver.unArchive( app, filename, force ), which ImportZipTask runs
-    // without a uri, does not set the survey paths and fails to unpack the SQL of a survey
-    // setTitleImport();
-    // new ImportZipTask( this, null, false ) .execute( filename ); // force = true (skip version checks)
-    boolean ret = importOneZip( Uri.fromFile( new File( TDPath.getZipFile( filename ) ) ), true );
-    updateDisplay();
-    return ret;
+    if ( ! file.getName().toLowerCase( Locale.getDefault() ).endsWith(".zip") ) return;
+    setTitleImport();
+    new ImportZipTask( this, Uri.fromFile( file ), false ).setDeleteIfFail( file ).execute( file.getName() );
   }
  
   /** import a survey from a Therion file in a folder of the app (downloaded from SilexGIS)

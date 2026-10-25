@@ -310,15 +310,30 @@ public class SilexGisClient
   public static class Upload
   {
     public String id         = "";
+    public String caveId     = "";    // id of the cave (empty if the server did not send it): cave names are not unique
     public String caveName   = "";
-    public String title      = "";    // survey title (else the survey name)
+    public String surveyId   = "";    // id of the survey of the cave that the upload is a version of (empty if not sent)
+    public String title      = "";    // title of the survey of the cave, else the survey title, else the survey name
     public String surveyName = "";
-    public String createdAt  = "";    // UTC time of the upload, which is the version of the survey
+    public String createdAt  = "";    // UTC time of the upload
+    public String version    = "";    // UTC time that names the version of the survey (empty if not sent: the time of the upload)
     public String uploader   = "";
     public long   size       = -1L;   // size of the archive [bytes], -1 if not known
     public String archiveName = "";
     public String archiveUrl  = "";
     public final ArrayList< String[] > therion = new ArrayList<>(); // Therion files: { name, content URL }
+
+    /** @return the key of the cave of the upload: its id, else its name
+     */
+    public String caveKey() { return caveId.isEmpty()? caveName : caveId; }
+
+    /** @return the key of the survey of the cave that the upload is a version of: its id, else its title
+     */
+    public String surveyKey() { return surveyId.isEmpty()? title : surveyId; }
+
+    /** @return the time that orders the versions of a survey: the version, else the time of the upload
+     */
+    public String stamp() { return version.isEmpty()? createdAt : version; }
   }
 
   /** @return the answer of the list of the uploads of a source: GET /api/v1/survey-uploads
@@ -351,11 +366,18 @@ public class SilexGisClient
       up.archiveName = optString( archive, "name" );
       up.size        = archive.optLong( "sizeBytes", -1L );
       up.id          = optString( item, "id" );
+      up.caveId      = optString( item, "caveId" );
       up.caveName    = optString( item, "caveName" );
       up.surveyName  = optString( item, "surveyName" );
-      up.title       = optString( item, "surveyTitle" );
+      JSONObject cs  = item.optJSONObject( "caveSurvey" );
+      if ( cs != null ) {
+        up.surveyId  = optString( cs, "id" );
+        up.title     = optString( cs, "title" );
+      }
+      if ( up.title.isEmpty() ) up.title = optString( item, "surveyTitle" );
       if ( up.title.isEmpty() ) up.title = up.surveyName;
       up.createdAt   = optString( item, "createdAt" );
+      up.version     = optString( item, "version" );
       JSONObject by  = item.optJSONObject( "uploadedBy" );
       up.uploader    = ( by != null )? optString( by, "displayName" ) : "";
       JSONArray th = item.optJSONArray( "therionSources" );
@@ -372,7 +394,25 @@ public class SilexGisClient
     return ret;
   }
 
-  /** sort the uploads by cave name, then by survey title, then newest first
+  /** @return the number of uploads the server holds for the list, as it says, or -1 if it does not say
+   * @param json   answer of listUploads()
+   */
+  public static int totalUploads( JSONObject json )
+  {
+    return ( json == null || ! json.has( "total" ) )? -1 : json.optInt( "total", -1 );
+  }
+
+  /** @return the number of items of the answer of listUploads() (-1 if it has no list)
+   * @param json   answer of listUploads()
+   */
+  public static int countItems( JSONObject json )
+  {
+    JSONArray items = ( json == null )? null : json.optJSONArray( "items" );
+    return ( items == null )? -1 : items.length();
+  }
+
+  /** sort the uploads by cave (name, then id: two caves can have the same name), then by survey of the cave
+   * (title, then id), then newest version first. The uploads of one cave, and of one survey, are next to each other
    * @param uploads  list of uploads
    */
   public static void sortUploads( List< Upload > uploads )
@@ -381,8 +421,11 @@ public class SilexGisClient
       @Override
       public int compare( Upload a, Upload b ) {
         int c = a.caveName.compareToIgnoreCase( b.caveName );
+        if ( c == 0 ) c = a.caveName.compareTo( b.caveName ); // names that differ only in case do not alternate
+        if ( c == 0 ) c = a.caveKey().compareTo( b.caveKey() );
         if ( c == 0 ) c = a.title.compareToIgnoreCase( b.title );
-        if ( c == 0 ) c = b.createdAt.compareTo( a.createdAt ); // ISO times: the later is greater
+        if ( c == 0 ) c = a.surveyKey().compareTo( b.surveyKey() );
+        if ( c == 0 ) c = b.stamp().compareTo( a.stamp() ); // ISO times: the later is greater
         return c;
       }
     } );
@@ -499,6 +542,47 @@ public class SilexGisClient
     } catch ( MalformedURLException e ) {
       return false;
     }
+  }
+
+  /** download the archive or a Therion file of an upload. The content URLs are signed and expire a few minutes after the
+   * server has listed them: if the download is refused with a 4xx other than 401 and 403, the list is read again, the URLs of
+   * the upload are replaced with the fresh ones, and the download is tried once more
+   * @param up        upload (its URLs are updated if they are refreshed)
+   * @param therion   index of the Therion file, -1 for the archive
+   * @param dest      destination file
+   * @param progress  progress listener (can be null)
+   * @return the result of the download, as in download()
+   */
+  public Result downloadUpload( Upload up, int therion, File dest, Progress progress )
+  {
+    Result res = download( contentUrlOf( up, therion ), dest, progress );
+    if ( res.kind != PROBLEM || res.status < 400 || res.status >= 500 || res.status == 403 ) return res;
+    Result list = listUploads( "topodroid", 100 );
+    ArrayList< Upload > ups = list.isOk()? parseUploads( list.json ) : null;
+    if ( ups == null ) return res;
+    for ( Upload fresh : ups ) {
+      if ( fresh.id.equals( up.id ) && ! up.id.isEmpty() ) {
+        up.archiveUrl = fresh.archiveUrl;
+        if ( therion >= 0 && therion < up.therion.size() ) {
+          String name = up.therion.get( therion )[0];
+          for ( String[] t : fresh.therion ) {
+            if ( t[0].equals( name ) ) {
+              up.therion.get( therion )[1] = t[1];
+              break;
+            }
+          }
+        }
+        return download( contentUrlOf( up, therion ), dest, progress );
+      }
+    }
+    return res;
+  }
+
+  /** @return the content URL of the archive (therion < 0) or of a Therion file of an upload
+   */
+  private static String contentUrlOf( Upload up, int therion )
+  {
+    return ( therion < 0 )? up.archiveUrl : up.therion.get( therion )[1];
   }
 
   /** download a file of the server
