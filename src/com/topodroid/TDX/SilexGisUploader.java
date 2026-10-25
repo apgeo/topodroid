@@ -7,7 +7,8 @@
  *
  * capabilities (limits) -> open the upload -> send each file -> complete -> watch the status
  * until the server has processed the survey. Stopping while the files are sent abandons the
- * upload; stopping while the server processes it only stops watching: the server goes on.
+ * upload, and so does a file or a completion the server refuses; stopping while the server
+ * processes it only stops watching: the server goes on.
  * The class uses only java and org.json, so that it can be tested on the JVM.
  * --------------------------------------------------------
  *  Copyright This software is distributed under GPL-3.0 or later
@@ -204,14 +205,14 @@ class SilexGisUploader
         r = put( path, item.file, listener ); // once again: the server answers a file it already has as the first time
       }
       if ( r.kind == SilexGisClient.CANCELLED || listener.isStopped() ) return abandon( out );
-      if ( ! r.isOk() ) return failed( out, r );
+      if ( ! r.isOk() ) return refusedOpen( out, r );
     }
     if ( listener.isStopped() ) return abandon( out );
 
     // processing
     listener.onStep( STEP_PROCESS, null, 0, 0 );
     SilexGisClient.Result completed = mClient.completeUpload( out.uploadId );
-    if ( ! completed.isOk() ) return failed( out, completed );
+    if ( ! completed.isOk() ) return refusedOpen( out, completed );
     out.completed = true;
     SilexGisStatus status = SilexGisStatus.parse( completed.json );
     out.status = status;
@@ -279,6 +280,17 @@ class SilexGisUploader
     if ( out.uploadId != null ) mClient.abandonUpload( out.uploadId ); // best effort: an upload not completed expires anyway
     out.kind = ABANDONED;
     return out;
+  }
+
+  /** @return the outcome of a call that failed while the upload is open (files, completion):
+   *          the upload is abandoned, so that the server does not keep it open until it expires
+   */
+  private Outcome refusedOpen( Outcome out, SilexGisClient.Result r )
+  {
+    // best effort; with the key refused the abandon would be refused too, and an upload the server
+    // has already queued is not abandoned (the server refuses it)
+    if ( r.kind != SilexGisClient.KEY_REFUSED ) mClient.abandonUpload( out.uploadId );
+    return failed( out, r );
   }
 
   /** @return the outcome of a failed call
