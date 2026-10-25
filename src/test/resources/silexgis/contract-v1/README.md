@@ -2,7 +2,7 @@
 
 Copies of the files the SilexGIS server records from its own test suite
 (`contract/topodroid-sync/v1/<exchange>/` in the SilexGIS repository, as recorded at its commit
-02a43551; the answers are byte for byte those of the earlier copy from 154380d0):
+cac9043a, which added the compiled run, the artefacts' errors, the public link and its refusal):
 
 | File here | Recording |
 |---|---|

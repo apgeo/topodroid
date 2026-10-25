@@ -135,8 +135,63 @@ public class SilexGisContractTest
     assertEquals( CAVE, out.status.caveId );
     assertEquals( "unpack", out.status.stage );
     assertEquals( 100, out.status.progress );
-    assertNull( out.status.publicLinkUrl );
+    assertEquals( "/p/survey/0190a000-0000-7000-8000-0000000000ff", out.status.publicLinkUrl );
+    assertNull( out.status.publicLinkRefusal );
     assertTrue( out.status.artefacts.isEmpty() );
+  }
+
+  @Test
+  public void theRecordedCompiledRunListsItsModelsDrawingsAndLog() throws IOException
+  {
+    SilexGisStatus st = SilexGisStatus.parse( new JSONObject( recorded( "06b-status-compiled" ) ) );
+    assertTrue( st.isSucceeded() );
+    assertEquals( "read", st.stage );
+    assertEquals( Arrays.asList( "3d", "lox", "plan-pdf", "extended-pdf", "log" ), kinds( st.artefacts ) );
+    assertEquals( Arrays.asList( "3d", "lox", "plan-pdf", "extended-pdf", "log" ), kinds( st.downloadable() ) );
+    assertTrue( st.withError().isEmpty() );
+    for ( SilexGisStatus.Artefact a : st.artefacts ) {
+      assertTrue( a.kind, a.contentUrl.startsWith( "/api/v1/files/" ) );
+      assertTrue( a.kind, a.size > 0 );
+      assertEquals( a.kind, "lox".equals( a.kind ) || "3d".equals( a.kind ), a.isModel() );
+    }
+    assertEquals( "/p/survey/0190a000-0000-7000-8000-0000000000ff", st.publicLinkUrl );
+    assertEquals( "/caves/" + CAVE + "/surveys/" + SURVEY + "/uploads/" + UPLOAD, st.statusPageUrl );
+  }
+
+  @Test
+  public void anOutputNotProducedIsToldAndNotOfferedForDownload() throws IOException
+  {
+    // the recorded compiled run, with the plan PDF missing as the server tells it: an error and no file
+    JSONObject json = new JSONObject( recorded( "06b-status-compiled" ) );
+    JSONObject pdf = json.getJSONArray( "artefacts" ).getJSONObject( 2 );
+    assertEquals( "plan-pdf", pdf.getString( "kind" ) );
+    pdf.put( "sizeBytes", JSONObject.NULL ).put( "contentUrl", JSONObject.NULL )
+       .put( "error", new JSONObject().put( "code", "survey_pipeline.output_missing" ).put( "message", "Therion did not produce this output." ) );
+    SilexGisStatus st = SilexGisStatus.parse( json );
+    assertEquals( Arrays.asList( "3d", "lox", "extended-pdf", "log" ), kinds( st.downloadable() ) );
+    assertEquals( 1, st.withError().size() );
+    SilexGisStatus.Artefact missing = st.withError().get( 0 );
+    assertEquals( "plan-pdf", missing.kind );
+    assertEquals( "survey_pipeline.output_missing", missing.errorCode );
+    assertEquals( "Therion did not produce this output.", missing.errorMessage );
+    assertEquals( -1, missing.size );
+  }
+
+  @Test
+  public void theRefusalOfAPublicLinkIsRead() throws IOException
+  {
+    JSONObject json = new JSONObject( recorded( "06-status-succeeded" ) );
+    json.put( "publicLink", JSONObject.NULL ).put( "publicLinkRefusal", "protected-cave" );
+    SilexGisStatus st = SilexGisStatus.parse( json );
+    assertNull( st.publicLinkUrl );
+    assertEquals( "protected-cave", st.publicLinkRefusal );
+  }
+
+  private static List< String > kinds( List< SilexGisStatus.Artefact > artefacts )
+  {
+    ArrayList< String > ret = new ArrayList<>();
+    for ( SilexGisStatus.Artefact a : artefacts ) ret.add( a.kind );
+    return ret;
   }
 
   @Test
@@ -276,6 +331,25 @@ public class SilexGisContractTest
     r = client.abandonUpload( UPLOAD );
     assertEquals( SilexGisClient.PROBLEM, r.kind );
     assertEquals( "survey_upload.not_receiving", r.code );
+  }
+
+  @Test
+  public void everyRecordedRefusalIsReadWithItsCode() throws IOException
+  {
+    String[] cases = { "cave-ambiguous", "cave-not-found", "cave-type-unknown", "content-mismatch", "expired",
+      "files-invalid", "files-missing", "file-unknown", "not-found", "output-unknown", "public-link-not-found",
+      "run-in-progress", "size-mismatch", "source-unsupported", "survey-not-found", "visibility-invalid", "not-receiving" };
+    SilexGisClient client = new SilexGisClient( server.base(), KEY );
+    for ( int k = 0; k < cases.length; ++k ) {
+      JSONObject problem = new JSONObject( recorded( "11-errors-" + cases[k] ) );
+      String path = UP + "/case-" + k;
+      server.on( "GET", path, problem.getInt( "status" ), problem.toString() );
+      SilexGisClient.Result r = client.request( "GET", path, null );
+      assertEquals( cases[k], SilexGisClient.PROBLEM, r.kind );
+      assertEquals( cases[k], problem.getInt( "status" ), r.status );
+      assertEquals( cases[k], problem.getString( "code" ), r.code );
+      assertFalse( cases[k], r.message().isEmpty() );
+    }
   }
 
   @Test
