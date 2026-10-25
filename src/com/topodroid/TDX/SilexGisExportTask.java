@@ -168,6 +168,9 @@ class SilexGisExportTask extends AsyncTask< Void, SilexGisExportTask.Line, Silex
         }
         return res.getString( R.string.silexgis_archive_failed ); // NO_ARCHIVE
     }
+    if ( outcome.kind == SilexGisUploader.KEY_REFUSED && outcome.hasUpload() ) { // the upload is not made again
+      return res.getString( outcome.completed ? R.string.silexgis_result_key_watching : R.string.silexgis_result_key_open );
+    }
     if ( outcome.result == null ) return res.getString( R.string.silexgis_archive_failed );
     String msg = SilexGisSettingsDialog.errorMessage( res, outcome.result );
     if ( outcome.result.code != null && outcome.result.kind == SilexGisClient.PROBLEM ) msg = msg + " (" + outcome.result.code + ")";
@@ -450,7 +453,7 @@ class SilexGisExportTask extends AsyncTask< Void, SilexGisExportTask.Line, Silex
       TDLog.e( "SilexGIS progress dialog already gone" );
     }
     if ( out.status != null && out.status.caveSurveyId != null ) rememberAnswer( out.status );
-    if ( out.kind == SilexGisUploader.KEY_REFUSED ) {
+    if ( out.mayRestart() ) { // nothing is on the server yet: the upload starts again with the new key
       SilexGisSettingsDialog.showKeyRefused( mContext, new Runnable() { @Override public void run() { start( mContext, mApp ); } } );
       return;
     }
@@ -460,6 +463,7 @@ class SilexGisExportTask extends AsyncTask< Void, SilexGisExportTask.Line, Silex
       notes.append( note );
     }
     (new SilexGisResultDialog( mContext, mClient, out, notes.toString() )).show();
+    if ( out.kind == SilexGisUploader.KEY_REFUSED ) SilexGisSettingsDialog.showKeyRefused( mContext, null ); // over the result: the upload is not sent again
   }
 
 }

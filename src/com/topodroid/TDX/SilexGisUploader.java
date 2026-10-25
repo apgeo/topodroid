@@ -100,6 +100,7 @@ class SilexGisUploader
     SilexGisFiles.Problem problem = null; // FILES
     String uploadId = null;
     String statusPageUrl = null;          // web path of the status page, from the opening
+    boolean completed = false;            // the server accepted the completion: it processes the files
     long   maxFileBytes = SilexGisFiles.MAX_FILE_BYTES;
     int    maxFiles     = SilexGisFiles.MAX_FILES;
     boolean compilerAvailable = true;
@@ -109,6 +110,12 @@ class SilexGisUploader
     /** @return true if the server has the upload (the status page can be opened)
      */
     boolean hasUpload() { return uploadId != null; }
+
+    /** @return true if the upload can be made again from the start once a new access key is set:
+     *          only when the key was refused before the server opened the upload. Later the server
+     *          has the files (archived as they arrive), and a new upload would send them all again
+     */
+    boolean mayRestart() { return kind == KEY_REFUSED && uploadId == null; }
   }
 
   private final SilexGisClient mClient;
@@ -205,6 +212,7 @@ class SilexGisUploader
     listener.onStep( STEP_PROCESS, null, 0, 0 );
     SilexGisClient.Result completed = mClient.completeUpload( out.uploadId );
     if ( ! completed.isOk() ) return failed( out, completed );
+    out.completed = true;
     SilexGisStatus status = SilexGisStatus.parse( completed.json );
     out.status = status;
     int failures = 0;

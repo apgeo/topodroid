@@ -1765,6 +1765,8 @@ On Android-11+ storage access must be granted to TopoDroid.\nYou can do this wit
   <string name="silexgis_result_failed">The server could not process the survey: %1$s</string>
   <string name="silexgis_result_cancelled">Stopped watching: the server goes on processing the survey. Open it in the browser to follow it</string>
   <string name="silexgis_result_abandoned">The upload has been stopped</string>
+  <string name="silexgis_result_key_watching">The access key was refused while watching: the server goes on processing the survey. Open it in the browser to follow it</string>
+  <string name="silexgis_result_key_open">The access key was refused before the upload was complete: the server drops it when it expires. Upload the survey again with a new key</string>
   <string name="silexgis_archive_failed">The survey archive could not be written</string>
   <string name="silexgis_export_failed">%1$s could not be exported</string>
   <string name="silexgis_file_too_large">%1$s is larger than the server accepts (%2$d MB)</string>
