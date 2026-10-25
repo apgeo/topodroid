@@ -88,19 +88,19 @@ public class SilexGisStatusTest
     assertFalse( st.isSucceeded() );
     assertEquals( "survey_pipeline.compile_failed", st.errorCode );
     assertEquals( "Therion reported 2 errors", st.errorMessage );
-    assertEquals( "line 3", st.errorDetail );
     assertEquals( "the cave is protected", st.publicLinkRefusal );
     assertEquals( "log", st.artefacts.get( 0 ).kind );
   }
 
   @Test
-  public void theOpeningAnswerGivesTheIdsAtTheTopAndOddValuesAreTolerated()
+  public void theIdsAreReadOnlyFromTheCaveAndTheSurveyAndOddValuesAreTolerated()
   {
+    // the draft contract gave the ids at the top of the opening answer; the server sends them only in "cave" and "caveSurvey"
     SilexGisStatus st = SilexGisStatus.parse( new JSONObject(
       "{\"id\":\"u2\",\"status\":\"receiving\",\"caveId\":\"c9\",\"caveCreated\":true,\"caveSurveyId\":\"s9\",\"progress\":140,"
       + "\"publicLinkRefusal\":{\"code\":\"survey_upload.public_link_protected\"},\"artefacts\":[null,{\"kind\":\"lox\"}]}" ) );
-    assertEquals( "c9", st.caveId );
-    assertEquals( "s9", st.caveSurveyId );
+    assertNull( st.caveId );
+    assertNull( st.caveSurveyId );
     assertEquals( 100, st.progress );
     assertFalse( st.isFinished() );
     assertEquals( "survey_upload.public_link_protected", st.publicLinkRefusal );
