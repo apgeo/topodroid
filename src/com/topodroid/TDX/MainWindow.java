@@ -593,6 +593,25 @@ public class MainWindow extends Activity
     return ret;
   }
  
+  /** import a survey from a Therion file in a folder of the app (downloaded from SilexGIS)
+   * @param file   Therion file
+   */
+  void importTherionFile( File file )
+  {
+    String filename = file.getName();
+    int pos = filename.lastIndexOf( "." );
+    String name = TDString.spacesToUnderscore( ( pos > 0 )? filename.substring( 0, pos ) : filename );
+    try {
+      ParcelFileDescriptor pfd = ParcelFileDescriptor.open( file, ParcelFileDescriptor.MODE_READ_ONLY );
+      setTitleImport();
+      new ImportTherionTask( this, pfd, mImportData ).execute( name, name, file.getPath() ); // the task dups the descriptor
+      TDsafUri.closeFileDescriptor( pfd );
+    } catch ( IOException e ) {
+      TDLog.e( "Main import Therion file " + e.getMessage() );
+      TDToast.makeBad( String.format( getResources().getString( R.string.silexgis_file_error ), e.getMessage() ) );
+    }
+  }
+
   /** import survey data from a URI
    * @param uri    input stream uri
    * @param name   file name
