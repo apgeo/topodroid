@@ -256,6 +256,10 @@ class SilexGisUpload
     newCaveClubId     = club_id;
   }
 
+  /** @return true if the server is to make a cave for the upload: without a target, or with a new cave
+   */
+  boolean makesCave() { return target == TARGET_AUTO || target == TARGET_NEW_CAVE; }
+
   // ---------------------------------------------------------------------
   // request
 

@@ -20,6 +20,7 @@ package com.topodroid.TDX;
 import java.io.File;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
@@ -47,6 +48,7 @@ class SilexGisUploader
   static final int KEY_REFUSED = 4; // the access key was refused
   static final int FILES       = 5; // the files do not fit the limits of the server: the problem says which
   static final int ABANDONED   = 6; // stopped while sending the files: the upload is abandoned
+  static final int NO_CAVE     = 7; // the target needs a new cave, and the server makes no cave from an upload
 
   static final int  MAX_POLL_FAILURES = 3;   // network failures in a row while watching the status
   static final long PAUSE_SLICE       = 250; // [ms] a pause is checked for a stop at this interval
@@ -121,6 +123,7 @@ class SilexGisUploader
 
   private final SilexGisClient mClient;
   private final Sleeper mSleeper;
+  private JSONObject mCaps = null; // capabilities of the server, asked once
 
   /** cstr
    * @param client   client of the server
@@ -149,11 +152,11 @@ class SilexGisUploader
   {
     Outcome out = new Outcome();
 
-    // limits of the server
-    listener.onStep( STEP_CONNECT, null, 0, 0 );
-    SilexGisClient.Result caps = mClient.capabilities();
-    if ( ! caps.isOk() ) return failed( out, caps );
-    JSONObject json = caps.json;
+    // limits of the server, unless check() has asked them already
+    if ( mCaps == null ) listener.onStep( STEP_CONNECT, null, 0, 0 );
+    Outcome refused = check( upload );
+    if ( refused != null ) return refused;
+    JSONObject json = mCaps;
     out.maxFileBytes = json.optLong( "maxFileBytes", SilexGisFiles.MAX_FILE_BYTES );
     if ( out.maxFileBytes <= 0 ) out.maxFileBytes = SilexGisFiles.MAX_FILE_BYTES;
     out.maxFiles = json.optInt( "maxFilesPerUpload", SilexGisFiles.MAX_FILES );
@@ -242,6 +245,52 @@ class SilexGisUploader
         return out;
       }
     }
+  }
+
+  /** ask the server its limits, and refuse at once an upload that it would refuse for its target
+   * @param upload   where to and what
+   * @return null if the upload can go on, else its outcome (the server has nothing of it)
+   * @note the export task calls this before it archives and exports the survey
+   */
+  Outcome check( SilexGisUpload upload )
+  {
+    if ( mCaps == null ) {
+      SilexGisClient.Result caps = mClient.capabilities();
+      if ( ! caps.isOk() ) return failed( new Outcome(), caps );
+      mCaps = ( caps.json != null )? caps.json : new JSONObject();
+    }
+    if ( upload.makesCave() && ! caveCreationAllowed( mCaps ) ) {
+      Outcome out = new Outcome();
+      out.kind = NO_CAVE;
+      return out;
+    }
+    return null;
+  }
+
+  /** @return whether the server makes a cave for an upload that names none, or asks a new one
+   * @param caps   capabilities (null if not known: allowed)
+   */
+  static boolean caveCreationAllowed( JSONObject caps )
+  {
+    JSONObject creation = ( caps == null )? null : caps.optJSONObject( "caveCreation" );
+    return creation == null || creation.optBoolean( "allowed", true );
+  }
+
+  /** @return the visibilities a cave made by the server can have, in the order of SilexGisUpload.VISIBILITIES
+   * @param caps   capabilities (null if not known: all)
+   */
+  static List< String > caveVisibilities( JSONObject caps )
+  {
+    JSONObject creation = ( caps == null )? null : caps.optJSONObject( "caveCreation" );
+    JSONArray array = ( creation == null )? null : creation.optJSONArray( "visibilities" );
+    ArrayList< String > ret = new ArrayList<>();
+    for ( String vis : SilexGisUpload.VISIBILITIES ) {
+      boolean ok = ( array == null );
+      for ( int k = 0; ! ok && k < array.length(); ++k ) ok = vis.equals( array.optString( k, "" ) );
+      if ( ok ) ret.add( vis );
+    }
+    if ( ret.isEmpty() ) ret.addAll( Arrays.asList( SilexGisUpload.VISIBILITIES ) ); // none known: the server says no at the opening
+    return ret;
   }
 
   /** @return true if the pause ended, false if the user asked to stop or the thread was interrupted

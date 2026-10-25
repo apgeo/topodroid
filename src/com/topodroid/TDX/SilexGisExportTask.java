@@ -157,6 +157,8 @@ class SilexGisExportTask extends AsyncTask< Void, SilexGisExportTask.Line, Silex
         return res.getString( R.string.silexgis_result_cancelled );
       case SilexGisUploader.ABANDONED:
         return res.getString( R.string.silexgis_result_abandoned );
+      case SilexGisUploader.NO_CAVE:
+        return res.getString( R.string.silexgis_cave_required );
       case SilexGisUploader.FILES:
         SilexGisFiles.Problem p = outcome.problem;
         if ( p == null ) return res.getString( R.string.silexgis_archive_failed );
@@ -222,6 +224,12 @@ class SilexGisExportTask extends AsyncTask< Void, SilexGisExportTask.Line, Silex
   {
     SilexGisFiles files = new SilexGisFiles();
 
+    // the limits of the server first: an upload that it would refuse for its target is refused before the survey is archived
+    SilexGisUploader uploader = new SilexGisUploader( mClient, null );
+    onStep( SilexGisUploader.STEP_CONNECT, null, 0, 0 );
+    SilexGisUploader.Outcome refused = uploader.check( mUpload );
+    if ( refused != null ) return refused;
+
     // the ordinary survey archive
     onStep( SilexGisUploader.STEP_ARCHIVE, null, 0, 0 );
     while ( ! TopoDroidApp.mEnableZip ) Thread.yield();
@@ -274,7 +282,6 @@ class SilexGisExportTask extends AsyncTask< Void, SilexGisExportTask.Line, Silex
       if ( ! skipped.isEmpty() ) mNotes.add( String.format( mRes.getString( R.string.silexgis_files_dropped ), join( skipped ) ) );
     }
 
-    SilexGisUploader uploader = new SilexGisUploader( mClient, null );
     SilexGisUploader.Outcome out = uploader.run( mUpload, surveyTitle( mSurvey ), mSurvey, mInfo.comment, TDVersion.string(), files, this );
     if ( ! out.droppedFiles.isEmpty() ) {
       mNotes.add( String.format( mRes.getString( R.string.silexgis_files_dropped ), join( out.droppedFiles ) ) );

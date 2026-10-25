@@ -39,6 +39,8 @@ import android.widget.TextView;
 import android.view.View;
 
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -75,6 +77,7 @@ class SilexGisCaveDialog extends MyDialog
   private final ArrayList< String[] > mCaves = new ArrayList<>(); // { id, name } of the listed caves
   private ArrayAdapter< String > mAdapter;
   private final ArrayList< String > mClubIds = new ArrayList<>();
+  private final ArrayList< String > mVisibilities = new ArrayList<>( Arrays.asList( SilexGisUpload.VISIBILITIES ) ); // offered for a new cave
 
   private final Handler mHandler = new Handler( Looper.getMainLooper() );
   private int mSearchSeq = 0; // the answer of an older search is dropped
@@ -133,7 +136,6 @@ class SilexGisCaveDialog extends MyDialog
 
     mETname = (EditText) findViewById( R.id.silexgis_new_name );
     mSPvisibility = (Spinner) findViewById( R.id.silexgis_new_visibility );
-    mSPvisibility.setAdapter( new ArrayAdapter<>( mContext, R.layout.menu, mContext.getResources().getStringArray( R.array.silexgisVisibility ) ) );
     mSPclub = (Spinner) findViewById( R.id.silexgis_new_club );
     String visibility = ( mCurrent != null )? mCurrent.visibility : TDSetting.mSilexGisVisibility; // the switches of the export
     if ( mCurrent != null && mCurrent.target == SilexGisUpload.TARGET_NEW_CAVE ) {
@@ -142,7 +144,7 @@ class SilexGisCaveDialog extends MyDialog
     } else {
       mETname.setText( mSurveyTitle );
     }
-    mSPvisibility.setSelection( SilexGisExportTask.visibilityIndex( visibility ) );
+    setVisibilities( mVisibilities, visibility );
 
     mBtnNew = (Button) findViewById( R.id.button_ok );
     mBtnNew.setOnClickListener( this );
@@ -166,14 +168,13 @@ class SilexGisCaveDialog extends MyDialog
         mETname.setError( resString( R.string.error_name_required ) );
         return;
       }
-      int vis = mSPvisibility.getSelectedItemPosition();
-      if ( vis < 0 || vis >= SilexGisUpload.VISIBILITIES.length ) vis = 1;
+      String vis = selectedVisibility();
       String club = null;
       if ( mClubIds.size() > 1 ) {
         int k = mSPclub.getSelectedItemPosition();
         if ( k >= 0 && k < mClubIds.size() ) club = mClubIds.get( k );
       }
-      target.setNewCave( name, SilexGisUpload.VISIBILITIES[ vis ], club );
+      target.setNewCave( name, vis, club );
     } else { // button_cancel
       mHandler.removeCallbacks( mSearch );
       dismiss();
@@ -194,6 +195,34 @@ class SilexGisCaveDialog extends MyDialog
     mHandler.removeCallbacks( mSearch );
     dismiss();
     if ( mListener != null ) mListener.onTarget( target );
+  }
+
+  /** offer the visibilities of a new cave
+   * @param values     visibilities, in the order of SilexGisUpload.VISIBILITIES
+   * @param selected   visibility to select (the club, else the first, if it is not offered)
+   */
+  private void setVisibilities( List< String > values, String selected )
+  {
+    String[] labels = mContext.getResources().getStringArray( R.array.silexgisVisibility );
+    ArrayList< String > names = new ArrayList<>();
+    for ( String vis : values ) names.add( labels[ SilexGisExportTask.visibilityIndex( vis ) ] );
+    if ( values != mVisibilities ) {
+      mVisibilities.clear();
+      mVisibilities.addAll( values );
+    }
+    mSPvisibility.setAdapter( new ArrayAdapter<>( mContext, R.layout.menu, names ) );
+    int k = mVisibilities.indexOf( selected );
+    if ( k < 0 ) k = mVisibilities.indexOf( SilexGisUpload.VISIBILITY_CLUB );
+    mSPvisibility.setSelection( Math.max( 0, k ) );
+  }
+
+  /** @return the visibility selected for a new cave
+   */
+  private String selectedVisibility()
+  {
+    int k = mSPvisibility.getSelectedItemPosition();
+    if ( k < 0 || k >= mVisibilities.size() ) return mVisibilities.isEmpty()? SilexGisUpload.VISIBILITY_CLUB : mVisibilities.get( 0 );
+    return mVisibilities.get( k );
   }
 
   /** search the caves named as the text of the search field
@@ -252,8 +281,10 @@ class SilexGisCaveDialog extends MyDialog
   private void showInfo( SilexGisClient.Result caps, SilexGisClient.Result me )
   {
     if ( caps != null && caps.isOk() ) {
-      JSONObject creation = caps.json.optJSONObject( "caveCreation" );
-      if ( creation != null && ! creation.optBoolean( "allowed", true ) ) {
+      if ( SilexGisUploader.caveCreationAllowed( caps.json ) ) {
+        setVisibilities( SilexGisUploader.caveVisibilities( caps.json ), selectedVisibility() );
+      } else { // neither a new cave nor one named after the survey title
+        findViewById( R.id.silexgis_auto ).setEnabled( false );
         mBtnNew.setEnabled( false );
         mETname.setEnabled( false );
         mSPvisibility.setEnabled( false );
