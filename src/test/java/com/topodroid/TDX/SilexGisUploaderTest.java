@@ -3,7 +3,6 @@ package com.topodroid.TDX;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
@@ -98,13 +97,20 @@ public class SilexGisUploaderTest
     + "\"compiler\":{\"available\":true,\"version\":\"therion 6.3.4\",\"outputs\":[\"lox\",\"3d\",\"plan-pdf\",\"extended-pdf\"]},"
     + "\"caveCreation\":{\"allowed\":true},\"pollIntervalSeconds\":2}";
 
+  // the shape of the recorded answer (SilexGisContractTest plays the recording itself): nested ids, no putUrl
   private static final String OPENED =
-      "{\"id\":\"" + ID + "\",\"status\":\"receiving\",\"caveId\":\"c1\",\"caveCreated\":true,\"caveSurveyId\":\"s1\","
+      "{\"id\":\"" + ID + "\",\"status\":\"receiving\",\"stage\":null,\"progress\":0,"
+    + "\"cave\":{\"id\":\"c1\",\"name\":\"pestera inventata\",\"url\":\"/caves/c1\"},"
+    + "\"caveSurvey\":{\"id\":\"s1\",\"title\":\"pestera inventata\"},\"caveCreated\":true,"
     + "\"version\":\"2026-10-25T01:32:00Z\",\"statusPageUrl\":\"/caves/c1/surveys/s1/uploads/u1\","
     + "\"files\":["
-    + "{\"name\":\"pestera_inventata.zip\",\"role\":\"archive\",\"status\":\"declared\",\"putUrl\":\"" + UP + "/" + ID + "/files/pestera_inventata.zip\"},"
-    + "{\"name\":\"pestera_inventata.th\",\"role\":\"therionSource\",\"status\":\"declared\",\"putUrl\":\"" + UP + "/" + ID + "/files/pestera_inventata.th\"}"
+    + "{\"name\":\"pestera_inventata.zip\",\"role\":\"archive\",\"status\":\"declared\",\"declaredSize\":19},"
+    + "{\"name\":\"pestera_inventata.th\",\"role\":\"therionSource\",\"status\":\"declared\",\"declaredSize\":35}"
     + "],\"expiresAt\":\"2026-10-26T01:32:00Z\"}";
+
+  // an opening answer that names the route of a file (the draft contract had putUrl; the server sends none today)
+  private static final String OPENED_WITH_PUT_URL = OPENED.replace(
+      "\"declaredSize\":19}", "\"declaredSize\":19,\"putUrl\":\"" + UP + "/" + ID + "/files/elsewhere.zip\"}" );
 
   private static String status( String st, String stage, int progress, String extra )
   {
@@ -162,7 +168,7 @@ public class SilexGisUploaderTest
         "GET " + UP + "/capabilities", "POST " + UP,
         "PUT " + UP + "/" + ID + "/files/pestera_inventata.zip",
         "PUT " + UP + "/" + ID + "/files/pestera_inventata.th",
-        "PUT " + UP + "/" + ID + "/files/pestera_inventata-1p.th2", // no putUrl in the answer: the default route
+        "PUT " + UP + "/" + ID + "/files/pestera_inventata-1p.th2", // every file to the default route
         "POST " + UP + "/" + ID + "/complete",
         "GET " + UP + "/" + ID, "GET " + UP + "/" + ID, "GET " + UP + "/" + ID, "GET " + UP + "/" + ID ), server.trail() );
     long pauses = 0;
@@ -455,9 +461,24 @@ public class SilexGisUploaderTest
   }
 
   @Test
+  public void aPutUrlInTheOpeningAnswerIsTheRouteOfItsFile() throws IOException
+  {
+    server.on( "POST", UP, 201, OPENED_WITH_PUT_URL ); // queued first: it answers the opening, not the OPENED of contract()
+    contract();
+    server.on( "PUT",  UP + "/" + ID + "/files/elsewhere.zip", 200, "{\"name\":\"pestera_inventata.zip\",\"status\":\"stored\"}" )
+          .on( "GET",  UP + "/" + ID, 200, status( "succeeded", null, 100, "" ) );
+    SilexGisUploader.Outcome out = run( new SilexGisUpload(), files(), new Recorder() );
+    assertEquals( SilexGisUploader.SUCCEEDED, out.kind );
+    assertEquals( 1, server.of( "PUT", UP + "/" + ID + "/files/elsewhere.zip" ).size() );
+    assertTrue( server.of( "PUT", UP + "/" + ID + "/files/pestera_inventata.zip" ).isEmpty() );
+    assertEquals( 1, server.of( "PUT", UP + "/" + ID + "/files/pestera_inventata.th" ).size() );
+  }
+
+  @Test
   public void putUrlsAreReadFromTheOpeningAnswerAndNamesAreEncodedInTheDefaultRoute()
   {
-    assertEquals( 2, SilexGisUploader.putUrls( new JSONObject( OPENED ) ).size() );
+    assertTrue( SilexGisUploader.putUrls( new JSONObject( OPENED ) ).isEmpty() );
+    assertEquals( UP + "/" + ID + "/files/elsewhere.zip", SilexGisUploader.putUrls( new JSONObject( OPENED_WITH_PUT_URL ) ).get( "pestera_inventata.zip" ) );
     assertTrue( SilexGisUploader.putUrls( null ).isEmpty() );
     assertEquals( UP + "/u%201/files/pe%C8%99tera%20inventat%C4%83.zip", SilexGisClient.filePath( "u 1", "peștera inventată.zip" ) );
     assertEquals( "/api/v1/caves?names=Pe%C8%99tera+I&search=Pe%C8%99tera+I&pageSize=20", SilexGisClient.cavesSearchPath( " Peștera I ", 20 ) );
@@ -468,7 +489,6 @@ public class SilexGisUploaderTest
   {
     SilexGisClient.Result r = client.putFile( "http://127.0.0.2:9/x", file( "x.th", "x" ), null );
     assertEquals( SilexGisClient.BAD_URL, r.kind );
-    assertNotNull( r );
     assertNull( r.json );
   }
 }
