@@ -49,6 +49,7 @@ class SilexGisResultDialog extends MyDialog
   private final String mNotes;
   private List< SilexGisStatus.Artefact > mArtefacts = null;
   private SilexGisStatus.Artefact mSelected = null;
+  private boolean mDownloading = false; // a download is running: no other is started
 
   private TextView mTVpick;
   private Button mBtnDownload;
@@ -154,9 +155,27 @@ class SilexGisResultDialog extends MyDialog
   private void setSelected( SilexGisStatus.Artefact a )
   {
     mSelected = a;
-    mBtnDownload.setEnabled( a != null );
-    mBtnCave3d.setEnabled( a != null && a.isModel() );
-    if ( a != null ) mTVpick.setText( String.format( resString( R.string.silexgis_artefact_selected ), a.name ) );
+    mBtnDownload.setEnabled( a != null && ! mDownloading );
+    mBtnCave3d.setEnabled( a != null && a.isModel() && ! mDownloading );
+    if ( a != null && ! mDownloading ) mTVpick.setText( String.format( resString( R.string.silexgis_artefact_selected ), a.name ) );
+  }
+
+  /** a download starts or ends
+   * @param on   whether a download is running
+   */
+  private void setDownloading( boolean on )
+  {
+    mDownloading = on;
+    setSelected( mSelected );
+  }
+
+  /** show the progress of a download
+   * @param name   artefact name
+   * @param done   bytes received
+   */
+  private void showDownload( String name, long done )
+  {
+    mTVpick.setText( String.format( resString( R.string.silexgis_downloading ), name, (int)( done / 1024 ) ) );
   }
 
   @Override
@@ -187,10 +206,10 @@ class SilexGisResultDialog extends MyDialog
       }
       return;
     } else if ( id == R.id.button_download || id == R.id.button_cave3d ) {
-      if ( mSelected == null ) return;
+      if ( mSelected == null || mDownloading ) return;
       TDPath.checkOutdir();
       File dest = new File( TDPath.getOutFile( SilexGisFiles.safeName( mSelected.name, mSelected.kind ) ) );
-      (new DownloadTask( mContext, mClient, mOutcome.uploadId, mSelected, dest, id == R.id.button_cave3d )).execute();
+      (new DownloadTask( this, mClient, mOutcome.uploadId, mSelected, dest, id == R.id.button_cave3d )).execute();
       return;
     }
     dismiss(); // button_close
@@ -213,8 +232,9 @@ class SilexGisResultDialog extends MyDialog
 
   /** download an artefact off the UI thread
    */
-  private static class DownloadTask extends AsyncTask< Void, Void, SilexGisClient.Result >
+  private static class DownloadTask extends AsyncTask< Void, Long, SilexGisClient.Result >
   {
+    private final SilexGisResultDialog mDialog;
     private final Context mContext;
     private final SilexGisClient mClient;
     private final String mUploadId;
@@ -222,9 +242,12 @@ class SilexGisResultDialog extends MyDialog
     private final File mDest;
     private final boolean mOpen;
 
-    DownloadTask( Context context, SilexGisClient client, String upload_id, SilexGisStatus.Artefact artefact, File dest, boolean open )
+    private long mShown = -1; // kB shown
+
+    DownloadTask( SilexGisResultDialog dialog, SilexGisClient client, String upload_id, SilexGisStatus.Artefact artefact, File dest, boolean open )
     {
-      mContext  = context;
+      mDialog   = dialog;
+      mContext  = dialog.mContext;
       mClient   = client;
       mUploadId = upload_id;
       mArtefact = artefact;
@@ -233,14 +256,29 @@ class SilexGisResultDialog extends MyDialog
     }
 
     @Override
+    protected void onPreExecute() { mDialog.setDownloading( true ); }
+
+    @Override
     protected SilexGisClient.Result doInBackground( Void... args )
     {
-      return ( new SilexGisUploader( mClient, null ) ).fetchArtefact( mUploadId, mArtefact, mDest, null );
+      return ( new SilexGisUploader( mClient, null ) ).fetchArtefact( mUploadId, mArtefact, mDest, new SilexGisClient.Progress() {
+        @Override public boolean onProgress( long done, long total ) {
+          if ( done / 1024 != mShown ) { // one update per kB
+            mShown = done / 1024;
+            publishProgress( done );
+          }
+          return true;
+        }
+      } );
     }
+
+    @Override
+    protected void onProgressUpdate( Long... done ) { mDialog.showDownload( mArtefact.name, done[ done.length - 1 ] ); }
 
     @Override
     protected void onPostExecute( SilexGisClient.Result r )
     {
+      mDialog.setDownloading( false );
       Resources res = mContext.getResources();
       if ( ! r.isOk() ) {
         TDLog.e( "SilexGIS download failed " + r.kind + " " + r.status );

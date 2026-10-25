@@ -1783,6 +1783,7 @@ On Android-11+ storage access must be granted to TopoDroid.\nYou can do this wit
   <string name="silexgis_artefact_pick">Tap a result to download it or to open it in Cave3D</string>
   <string name="silexgis_artefact_selected">Selected: %1$s</string>
   <string name="silexgis_download_failed">Download of %1$s failed: %2$s</string>
+  <string name="silexgis_downloading">Downloading %1$s: %2$d kB</string>
   <string name="pref_vtopo_splays_title">VisualTopo splays</string>
   <string name="pref_vtopo_splays_summary">Export splays in VisualTopo files</string>
   <string name="pref_vtopo_lrud_title">LRUD at From</string>
