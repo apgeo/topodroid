@@ -77,13 +77,20 @@ class SilexGisResultDialog extends MyDialog
     Resources res = mContext.getResources();
 
     ( (TextView) findViewById( R.id.silexgis_result ) ).setText( SilexGisExportTask.outcomeText( res, mOutcome ) );
-    if ( mNotes != null && ! mNotes.isEmpty() ) {
+    SilexGisStatus status = mOutcome.status;
+    String text_notes = ( mNotes == null )? "" : mNotes;
+    if ( status != null ) { // the server's own words about an output it did not produce or could not read
+      for ( SilexGisStatus.Artefact a : status.withError() ) {
+        if ( ! text_notes.isEmpty() ) text_notes += "\n";
+        text_notes += a.kind + ": " + ( ( a.errorMessage != null )? a.errorMessage : a.errorCode );
+      }
+    }
+    if ( ! text_notes.isEmpty() ) {
       TextView notes = (TextView) findViewById( R.id.silexgis_notes );
-      notes.setText( mNotes );
+      notes.setText( text_notes );
       notes.setVisibility( View.VISIBLE );
     }
 
-    SilexGisStatus status = mOutcome.status;
     String link = publicLink();
     TextView tv_link = (TextView) findViewById( R.id.silexgis_link );
     if ( link != null ) {

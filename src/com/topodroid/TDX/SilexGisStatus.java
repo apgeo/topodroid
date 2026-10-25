@@ -37,6 +37,8 @@ class SilexGisStatus
     long   size       = -1;
     String contentUrl = null; // signed, short-lived
     String viewUrl    = null; // web path, relative to the server base URL
+    String errorCode    = null; // what is wrong with this output, e.g. asked for and not produced (it then has no file)
+    String errorMessage = null;
 
     /** @return true if the artefact is a 3D model that Cave3D opens
      */
@@ -74,6 +76,15 @@ class SilexGisStatus
   {
     ArrayList< Artefact > ret = new ArrayList<>();
     for ( Artefact a : artefacts ) if ( a.contentUrl != null ) ret.add( a );
+    return ret;
+  }
+
+  /** @return the artefacts the server tells something wrong about (an output not produced, a model it could not read)
+   */
+  List< Artefact > withError()
+  {
+    ArrayList< Artefact > ret = new ArrayList<>();
+    for ( Artefact a : artefacts ) if ( a.errorCode != null ) ret.add( a );
     return ret;
   }
 
@@ -144,6 +155,11 @@ class SilexGisStatus
         a.size = item.optLong( "sizeBytes", -1 );
         a.contentUrl = text( item, "contentUrl" );
         a.viewUrl    = text( item, "viewUrl" );
+        JSONObject err = item.optJSONObject( "error" );
+        if ( err != null ) {
+          a.errorCode    = text( err, "code" );
+          a.errorMessage = text( err, "message" );
+        }
         ret.artefacts.add( a );
       }
     }
