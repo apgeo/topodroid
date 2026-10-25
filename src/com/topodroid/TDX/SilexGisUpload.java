@@ -43,7 +43,7 @@ class SilexGisUpload
   String caveSurveyTitle = null;
   String newCaveName       = null; // TARGET_NEW_CAVE
   String newCaveVisibility = null;
-  String newCaveClubId     = null; // only when the account is in more than one club
+  boolean newCaveProtected = false; // whether the server is to protect the location of the new cave
 
   // switches: the last combination is remembered
   boolean withTh     = true;
@@ -152,7 +152,7 @@ class SilexGisUpload
       if ( caveSurveyTitle   != null ) ret.put( "caveSurveyTitle",   caveSurveyTitle );
       if ( newCaveName       != null ) ret.put( "newCaveName",       newCaveName );
       if ( newCaveVisibility != null ) ret.put( "newCaveVisibility", newCaveVisibility );
-      if ( newCaveClubId     != null ) ret.put( "newCaveClubId",     newCaveClubId );
+      if ( newCaveProtected ) ret.put( "newCaveProtected", true );
     } catch ( JSONException e ) { /* cannot happen with these values */ }
     return ret;
   }
@@ -171,7 +171,7 @@ class SilexGisUpload
     caveSurveyTitle   = optString( json, "caveSurveyTitle", null );
     newCaveName       = optString( json, "newCaveName", null );
     newCaveVisibility = optString( json, "newCaveVisibility", null );
-    newCaveClubId     = optString( json, "newCaveClubId", null );
+    newCaveProtected  = json.optBoolean( "newCaveProtected", false );
     switch ( t ) {
       case TARGET_CAVE:        if ( caveId != null )       target = t; break;
       case TARGET_CAVE_SURVEY: if ( caveSurveyId != null ) target = t; break;
@@ -211,7 +211,8 @@ class SilexGisUpload
   {
     target = TARGET_AUTO;
     caveId = caveName = caveSurveyId = caveSurveyTitle = null;
-    newCaveName = newCaveVisibility = newCaveClubId = null;
+    newCaveName = newCaveVisibility = null;
+    newCaveProtected = false;
   }
 
   /** upload to a cave
@@ -244,16 +245,16 @@ class SilexGisUpload
 
   /** upload to a new cave
    * @param name        cave name
-   * @param visibility  who may see the cave
-   * @param club_id     club of the cave (null to let the server take the only club of the account)
+   * @param visibility  who may see the cave (a club-visible cave goes to the club of the account)
+   * @param protect     whether the server is to protect the location of the cave
    */
-  void setNewCave( String name, String visibility, String club_id )
+  void setNewCave( String name, String visibility, boolean protect )
   {
     setAuto();
     target            = TARGET_NEW_CAVE;
     newCaveName       = name;
     newCaveVisibility = visibility;
-    newCaveClubId     = club_id;
+    newCaveProtected  = protect;
   }
 
   /** @return true if the server is to make a cave for the upload: without a target, or with a new cave
@@ -293,7 +294,7 @@ class SilexGisUpload
           JSONObject cave = new JSONObject();
           cave.put( "name", newCaveName );
           cave.put( "visibility", newCaveVisibility );
-          if ( newCaveClubId != null ) cave.put( "cavingGroupId", newCaveClubId );
+          cave.put( "locationProtected", newCaveProtected ); // a server that does not know it yet ignores it
           ret.put( "newCave", cave );
           break;
         default: // TARGET_AUTO: a new cave with no name, so that the server names it after the survey title

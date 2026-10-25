@@ -63,24 +63,11 @@
       android:layout_height="wrap_content"
       android:drawSelectorOnTop="true"
       />
-    <LinearLayout android:id="@+id/silexgis_club_layout"
-      android:layout_width="match_parent" 
+    <CheckBox android:id="@+id/silexgis_new_protected"
+      android:layout_width="wrap_content"
       android:layout_height="wrap_content"
-      android:orientation="horizontal"
-      android:visibility="gone"
-      >
-      <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content" 
-        android:layout_marginEnd="@dimen/marginh"
-        android:text="@string/silexgis_club"
-        />
-      <Spinner android:id="@+id/silexgis_new_club"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:drawSelectorOnTop="true"
-        />
-    </LinearLayout>
+      android:text="@string/silexgis_protect_location"
+      />
     <TextView android:id="@+id/silexgis_no_creation" 
       android:layout_width="match_parent"
       android:layout_height="wrap_content" 

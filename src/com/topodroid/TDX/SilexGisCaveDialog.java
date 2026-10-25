@@ -30,8 +30,8 @@ import android.text.TextWatcher;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
+import android.widget.CheckBox;
 import android.widget.EditText;
-import android.widget.LinearLayout;
 import android.widget.ListView;
 import android.widget.Spinner;
 import android.widget.TextView;
@@ -41,9 +41,6 @@ import android.view.View;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-
-import org.json.JSONArray;
-import org.json.JSONObject;
 
 class SilexGisCaveDialog extends MyDialog
                          implements View.OnClickListener
@@ -71,12 +68,11 @@ class SilexGisCaveDialog extends MyDialog
   private ListView mList;
   private EditText mETname;
   private Spinner  mSPvisibility;
-  private Spinner  mSPclub;
+  private CheckBox mCBprotected;
   private Button   mBtnNew;
 
   private final ArrayList< String[] > mCaves = new ArrayList<>(); // { id, name } of the listed caves
   private ArrayAdapter< String > mAdapter;
-  private final ArrayList< String > mClubIds = new ArrayList<>();
   private final ArrayList< String > mVisibilities = new ArrayList<>( Arrays.asList( SilexGisUpload.VISIBILITIES ) ); // offered for a new cave
 
   private final Handler mHandler = new Handler( Looper.getMainLooper() );
@@ -137,11 +133,12 @@ class SilexGisCaveDialog extends MyDialog
 
     mETname = (EditText) findViewById( R.id.silexgis_new_name );
     mSPvisibility = (Spinner) findViewById( R.id.silexgis_new_visibility );
-    mSPclub = (Spinner) findViewById( R.id.silexgis_new_club );
+    mCBprotected  = (CheckBox) findViewById( R.id.silexgis_new_protected );
     String visibility = ( mCurrent != null )? mCurrent.visibility : TDSetting.mSilexGisVisibility; // the switches of the export
     if ( mCurrent != null && mCurrent.target == SilexGisUpload.TARGET_NEW_CAVE ) {
       mETname.setText( mCurrent.newCaveName );
       visibility = mCurrent.newCaveVisibility;
+      mCBprotected.setChecked( mCurrent.newCaveProtected );
     } else {
       mETname.setText( mSurveyTitle );
     }
@@ -169,13 +166,7 @@ class SilexGisCaveDialog extends MyDialog
         mETname.setError( resString( R.string.error_name_required ) );
         return;
       }
-      String vis = selectedVisibility();
-      String club = null;
-      if ( mClubIds.size() > 1 ) {
-        int k = mSPclub.getSelectedItemPosition();
-        if ( k >= 0 && k < mClubIds.size() ) club = mClubIds.get( k );
-      }
-      target.setNewCave( name, vis, club );
+      target.setNewCave( name, selectedVisibility(), mCBprotected.isChecked() );
     } else { // button_cancel
       mHandler.removeCallbacks( mSearch );
       dismiss();
@@ -264,61 +255,29 @@ class SilexGisCaveDialog extends MyDialog
       }
       return;
     }
-    JSONArray items = r.json.optJSONArray( "items" );
-    if ( items != null ) {
-      for ( int k = 0; k < items.length(); ++k ) {
-        JSONObject cave = items.optJSONObject( k );
-        if ( cave == null ) continue;
-        String cid  = SilexGisUpload.optString( cave, "id", null );
-        String name = SilexGisUpload.optString( cave, "name", null );
-        if ( cid == null || name == null ) continue;
-        mCaves.add( new String[] { cid, name } );
-        StringBuilder sb = new StringBuilder( name );
-        String code   = SilexGisUpload.optString( cave, "identificationCode", null );
-        String region = SilexGisUpload.optString( cave, "region", null );
-        if ( code != null ) sb.append( " (" ).append( code ).append( ")" );
-        if ( region != null ) sb.append( " - " ).append( region );
-        mAdapter.add( sb.toString() );
-      }
+    for ( String[] cave : SilexGisClient.parseCaves( r.json ) ) {
+      mCaves.add( cave );
+      mAdapter.add( cave[2] );
     }
     mTVsearch.setText( mCaves.isEmpty()? resString( R.string.silexgis_cave_none ) : "" );
   }
 
-  /** show what the server allows: making a cave, the clubs of the account
+  /** show what the server allows: making a cave, and with which visibilities
    * @param caps   capabilities
-   * @param me     account
+   * @note the server binds a club-visible cave to the club of the account: the account's clubs are not listed to an access key
    */
-  private void showInfo( SilexGisClient.Result caps, SilexGisClient.Result me )
+  private void showInfo( SilexGisClient.Result caps )
   {
-    if ( caps != null && caps.isOk() ) {
-      if ( SilexGisUploader.caveCreationAllowed( caps.json ) ) {
-        setVisibilities( SilexGisUploader.caveVisibilities( caps.json ), selectedVisibility() );
-      } else { // neither a new cave nor one named after the survey title
-        findViewById( R.id.silexgis_auto ).setEnabled( false );
-        mBtnNew.setEnabled( false );
-        mETname.setEnabled( false );
-        mSPvisibility.setEnabled( false );
-        findViewById( R.id.silexgis_no_creation ).setVisibility( View.VISIBLE );
-      }
-    }
-    if ( me != null && me.isOk() ) {
-      JSONArray clubs = me.json.optJSONArray( "cavingGroups" );
-      if ( clubs != null && clubs.length() > 1 ) {
-        ArrayList< String > names = new ArrayList<>();
-        mClubIds.clear();
-        for ( int k = 0; k < clubs.length(); ++k ) {
-          JSONObject club = clubs.optJSONObject( k );
-          if ( club == null ) continue;
-          String cid = SilexGisUpload.optString( club, "id", null );
-          if ( cid == null ) continue;
-          mClubIds.add( cid );
-          names.add( SilexGisUpload.optString( club, "name", cid ) );
-        }
-        if ( mClubIds.size() > 1 ) {
-          mSPclub.setAdapter( new ArrayAdapter<>( mContext, R.layout.menu, names ) );
-          ( (LinearLayout) findViewById( R.id.silexgis_club_layout ) ).setVisibility( View.VISIBLE );
-        }
-      }
+    if ( caps == null || ! caps.isOk() ) return;
+    if ( SilexGisUploader.caveCreationAllowed( caps.json ) ) {
+      setVisibilities( SilexGisUploader.caveVisibilities( caps.json ), selectedVisibility() );
+    } else { // neither a new cave nor one named after the survey title
+      findViewById( R.id.silexgis_auto ).setEnabled( false );
+      mBtnNew.setEnabled( false );
+      mETname.setEnabled( false );
+      mSPvisibility.setEnabled( false );
+      mCBprotected.setEnabled( false );
+      findViewById( R.id.silexgis_no_creation ).setVisibility( View.VISIBLE );
     }
   }
 
@@ -349,9 +308,9 @@ class SilexGisCaveDialog extends MyDialog
     }
   }
 
-  /** capabilities and account off the UI thread
+  /** capabilities off the UI thread
    */
-  private static class InfoTask extends AsyncTask< Void, Void, SilexGisClient.Result[] >
+  private static class InfoTask extends AsyncTask< Void, Void, SilexGisClient.Result >
   {
     private final SilexGisCaveDialog mDialog;
     private final SilexGisClient mClient;
@@ -363,15 +322,12 @@ class SilexGisCaveDialog extends MyDialog
     }
 
     @Override
-    protected SilexGisClient.Result[] doInBackground( Void... args )
-    {
-      return new SilexGisClient.Result[] { mClient.capabilities(), mClient.me() };
-    }
+    protected SilexGisClient.Result doInBackground( Void... args ) { return mClient.capabilities(); }
 
     @Override
-    protected void onPostExecute( SilexGisClient.Result[] r )
+    protected void onPostExecute( SilexGisClient.Result r )
     {
-      if ( mDialog.isShowing() ) mDialog.showInfo( r[0], r[1] );
+      if ( mDialog.isShowing() ) mDialog.showInfo( r );
     }
   }
 

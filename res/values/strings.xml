@@ -1752,7 +1752,7 @@ On Android-11+ storage access must be granted to TopoDroid.\nYou can do this wit
   <string name="silexgis_cave_new">New cave</string>
   <string name="silexgis_cave_no_creation">This server does not make caves from an upload</string>
   <string name="silexgis_cave_required">This server does not make caves from an upload: pick the cave to upload to</string>
-  <string name="silexgis_club">Club</string>
+  <string name="silexgis_protect_location">Protect location</string>
   <string name="silexgis_upload_title">SilexGIS upload</string>
   <string name="silexgis_step_archive">Archiving the survey</string>
   <string name="silexgis_step_therion">Exporting the Therion files</string>
