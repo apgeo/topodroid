@@ -81,6 +81,7 @@ class SilexGisCaveDialog extends MyDialog
 
   private final Handler mHandler = new Handler( Looper.getMainLooper() );
   private int mSearchSeq = 0; // the answer of an older search is dropped
+  private boolean mKeyAsked = false; // the access dialog has been opened after a refused key
   private final Runnable mSearch = new Runnable() {
     @Override public void run() { startSearch(); }
   };
@@ -252,6 +253,15 @@ class SilexGisCaveDialog extends MyDialog
     mAdapter.clear();
     if ( ! r.isOk() ) {
       mTVsearch.setText( SilexGisSettingsDialog.errorMessage( mContext.getResources(), r ) );
+      if ( r.kind == SilexGisClient.KEY_REFUSED && ! mKeyAsked ) { // once: the searches typed meanwhile are refused too
+        mKeyAsked = true;
+        SilexGisSettingsDialog.showKeyRefused( mContext, new Runnable() {
+          @Override public void run() {
+            mKeyAsked = false;
+            if ( isShowing() ) startSearch(); // with the new key
+          }
+        } );
+      }
       return;
     }
     JSONArray items = r.json.optJSONArray( "items" );
