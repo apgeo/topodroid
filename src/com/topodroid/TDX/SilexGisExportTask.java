@@ -194,7 +194,8 @@ class SilexGisExportTask extends AsyncTask< Void, SilexGisExportTask.Line, Silex
       TDToast.makeBad( R.string.no_survey );
       return;
     }
-    (new SilexGisExportTask( context, app, info )).execute();
+    // the pool, not the serial executor: the task watches the server for minutes, and every other task of the app would wait behind it
+    (new SilexGisExportTask( context, app, info )).executeOnExecutor( AsyncTask.THREAD_POOL_EXECUTOR );
   }
 
   /** cstr - on the UI thread
