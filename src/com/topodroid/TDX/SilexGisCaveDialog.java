@@ -1,0 +1,337 @@
+/* @file SilexGisCaveDialog.java
+ *
+ * @author apgeo
+ * @date oct 2026
+ *
+ * @brief TopoDroid upload to a SilexGIS server: the cave to upload to
+ *
+ * The survey goes to a cave found by its name, to a new cave, to the survey of the cave
+ * it was uploaded to last time, or to no cave: then the server makes one named after
+ * the survey title.
+ * --------------------------------------------------------
+ *  Copyright This software is distributed under GPL-3.0 or later
+ *  See the file COPYING.
+ * --------------------------------------------------------
+ */
+package com.topodroid.TDX;
+
+import com.topodroid.ui.MyDialog;
+import com.topodroid.prefs.TDSetting;
+
+import android.os.Bundle;
+import android.os.AsyncTask;
+import android.os.Handler;
+import android.os.Looper;
+import android.content.Context;
+
+import android.text.Editable;
+import android.text.TextWatcher;
+
+import android.widget.AdapterView;
+import android.widget.ArrayAdapter;
+import android.widget.Button;
+import android.widget.EditText;
+import android.widget.LinearLayout;
+import android.widget.ListView;
+import android.widget.Spinner;
+import android.widget.TextView;
+
+import android.view.View;
+
+import java.util.ArrayList;
+
+import org.json.JSONArray;
+import org.json.JSONObject;
+
+class SilexGisCaveDialog extends MyDialog
+                         implements View.OnClickListener
+                         , AdapterView.OnItemClickListener
+{
+  static final long SEARCH_DELAY = 300; // [ms] after the last key
+  static final int  SEARCH_SIZE  = 20;  // most caves listed
+
+  /** receiver of the picked target
+   */
+  interface Listener
+  {
+    /** @param target   upload that carries the picked target
+     */
+    void onTarget( SilexGisUpload target );
+  }
+
+  private final Listener mListener;
+  private final String mSurveyTitle;
+  private final SilexGisUpload mCurrent;    // target in the export dialog
+  private final SilexGisUpload mRemembered; // target remembered for the survey (null if none)
+
+  private EditText mETsearch;
+  private TextView mTVsearch;
+  private ListView mList;
+  private EditText mETname;
+  private Spinner  mSPvisibility;
+  private Spinner  mSPclub;
+  private Button   mBtnNew;
+
+  private final ArrayList< String[] > mCaves = new ArrayList<>(); // { id, name } of the listed caves
+  private ArrayAdapter< String > mAdapter;
+  private final ArrayList< String > mClubIds = new ArrayList<>();
+
+  private final Handler mHandler = new Handler( Looper.getMainLooper() );
+  private int mSearchSeq = 0; // the answer of an older search is dropped
+  private final Runnable mSearch = new Runnable() {
+    @Override public void run() { startSearch(); }
+  };
+
+  /** cstr
+   * @param context      context
+   * @param survey_title survey title, the name of a new cave
+   * @param current      current target
+   * @param remembered   target remembered for the survey (can be null)
+   * @param listener     receiver of the picked target
+   */
+  SilexGisCaveDialog( Context context, String survey_title, SilexGisUpload current, SilexGisUpload remembered, Listener listener )
+  {
+    super( context, null, 0 ); // 0: no help resource
+    mSurveyTitle = survey_title;
+    mCurrent     = current;
+    mRemembered  = remembered;
+    mListener    = listener;
+  }
+
+  /** @return the client of the configured server
+   */
+  private static SilexGisClient client() { return new SilexGisClient( TDSetting.mSilexGisUrl, TDSetting.mSilexGisKey ); }
+
+  @Override
+  protected void onCreate( Bundle savedInstanceState )
+  {
+    super.onCreate( savedInstanceState );
+    initLayout( R.layout.silexgis_cave_dialog, R.string.silexgis_cave_title );
+
+    ( (Button) findViewById( R.id.silexgis_auto ) ).setOnClickListener( this );
+    Button last = (Button) findViewById( R.id.silexgis_last );
+    if ( mRemembered != null && mRemembered.target != SilexGisUpload.TARGET_AUTO ) {
+      last.setText( SilexGisExportTask.targetText( mContext.getResources(), mRemembered ) );
+      last.setVisibility( View.VISIBLE );
+      last.setOnClickListener( this );
+    }
+
+    mETsearch = (EditText) findViewById( R.id.silexgis_search );
+    mTVsearch = (TextView) findViewById( R.id.silexgis_search_result );
+    mList     = (ListView) findViewById( R.id.silexgis_caves );
+    mAdapter  = new ArrayAdapter<>( mContext, R.layout.message );
+    mList.setAdapter( mAdapter );
+    mList.setOnItemClickListener( this );
+    mETsearch.addTextChangedListener( new TextWatcher() {
+      @Override public void beforeTextChanged( CharSequence s, int start, int count, int after ) { }
+      @Override public void onTextChanged( CharSequence s, int start, int before, int count ) { }
+      @Override public void afterTextChanged( Editable e ) {
+        mHandler.removeCallbacks( mSearch );
+        mHandler.postDelayed( mSearch, SEARCH_DELAY );
+      }
+    } );
+
+    mETname = (EditText) findViewById( R.id.silexgis_new_name );
+    mSPvisibility = (Spinner) findViewById( R.id.silexgis_new_visibility );
+    mSPvisibility.setAdapter( new ArrayAdapter<>( mContext, R.layout.menu, mContext.getResources().getStringArray( R.array.silexgisVisibility ) ) );
+    mSPclub = (Spinner) findViewById( R.id.silexgis_new_club );
+    String visibility = TDSetting.mSilexGisVisibility;
+    if ( mCurrent != null && mCurrent.target == SilexGisUpload.TARGET_NEW_CAVE ) {
+      mETname.setText( mCurrent.newCaveName );
+      visibility = mCurrent.newCaveVisibility;
+    } else {
+      mETname.setText( mSurveyTitle );
+    }
+    mSPvisibility.setSelection( SilexGisExportTask.visibilityIndex( visibility ) );
+
+    mBtnNew = (Button) findViewById( R.id.button_ok );
+    mBtnNew.setOnClickListener( this );
+    ( (Button) findViewById( R.id.button_cancel ) ).setOnClickListener( this );
+
+    (new InfoTask( this, client() )).execute();
+  }
+
+  @Override
+  public void onClick( View v )
+  {
+    int id = v.getId();
+    SilexGisUpload target = new SilexGisUpload();
+    if ( id == R.id.silexgis_auto ) {
+      target.setAuto();
+    } else if ( id == R.id.silexgis_last ) {
+      target = mRemembered.copy();
+    } else if ( id == R.id.button_ok ) { // new cave
+      String name = mETname.getText().toString().trim();
+      if ( name.isEmpty() ) {
+        mETname.setError( resString( R.string.error_name_required ) );
+        return;
+      }
+      int vis = mSPvisibility.getSelectedItemPosition();
+      if ( vis < 0 || vis >= SilexGisUpload.VISIBILITIES.length ) vis = 1;
+      String club = null;
+      if ( mClubIds.size() > 1 ) {
+        int k = mSPclub.getSelectedItemPosition();
+        if ( k >= 0 && k < mClubIds.size() ) club = mClubIds.get( k );
+      }
+      target.setNewCave( name, SilexGisUpload.VISIBILITIES[ vis ], club );
+    } else { // button_cancel
+      mHandler.removeCallbacks( mSearch );
+      dismiss();
+      return;
+    }
+    mHandler.removeCallbacks( mSearch );
+    dismiss();
+    if ( mListener != null ) mListener.onTarget( target );
+  }
+
+  @Override
+  public void onItemClick( AdapterView<?> parent, View view, int pos, long id )
+  {
+    if ( pos < 0 || pos >= mCaves.size() ) return;
+    String[] cave = mCaves.get( pos );
+    SilexGisUpload target = new SilexGisUpload();
+    target.setCave( cave[0], cave[1] );
+    mHandler.removeCallbacks( mSearch );
+    dismiss();
+    if ( mListener != null ) mListener.onTarget( target );
+  }
+
+  /** search the caves named as the text of the search field
+   */
+  private void startSearch()
+  {
+    String text = mETsearch.getText().toString().trim();
+    ++ mSearchSeq;
+    if ( text.isEmpty() ) {
+      mCaves.clear();
+      mAdapter.clear();
+      mTVsearch.setText( "" );
+      return;
+    }
+    mTVsearch.setText( R.string.silexgis_cave_searching );
+    (new SearchTask( this, client(), text, mSearchSeq )).execute();
+  }
+
+  /** show the caves found
+   * @param seq   number of the search
+   * @param r     answer of the server
+   */
+  private void showCaves( int seq, SilexGisClient.Result r )
+  {
+    if ( seq != mSearchSeq ) return; // a newer search is on its way
+    mCaves.clear();
+    mAdapter.clear();
+    if ( ! r.isOk() ) {
+      mTVsearch.setText( SilexGisSettingsDialog.errorMessage( mContext.getResources(), r ) );
+      return;
+    }
+    JSONArray items = r.json.optJSONArray( "items" );
+    if ( items != null ) {
+      for ( int k = 0; k < items.length(); ++k ) {
+        JSONObject cave = items.optJSONObject( k );
+        if ( cave == null ) continue;
+        String cid  = SilexGisUpload.optString( cave, "id", null );
+        String name = SilexGisUpload.optString( cave, "name", null );
+        if ( cid == null || name == null ) continue;
+        mCaves.add( new String[] { cid, name } );
+        StringBuilder sb = new StringBuilder( name );
+        String code   = SilexGisUpload.optString( cave, "identificationCode", null );
+        String region = SilexGisUpload.optString( cave, "region", null );
+        if ( code != null ) sb.append( " (" ).append( code ).append( ")" );
+        if ( region != null ) sb.append( " - " ).append( region );
+        mAdapter.add( sb.toString() );
+      }
+    }
+    mTVsearch.setText( mCaves.isEmpty()? resString( R.string.silexgis_cave_none ) : "" );
+  }
+
+  /** show what the server allows: making a cave, the clubs of the account
+   * @param caps   capabilities
+   * @param me     account
+   */
+  private void showInfo( SilexGisClient.Result caps, SilexGisClient.Result me )
+  {
+    if ( caps != null && caps.isOk() ) {
+      JSONObject creation = caps.json.optJSONObject( "caveCreation" );
+      if ( creation != null && ! creation.optBoolean( "allowed", true ) ) {
+        mBtnNew.setEnabled( false );
+        mETname.setEnabled( false );
+        mSPvisibility.setEnabled( false );
+        findViewById( R.id.silexgis_no_creation ).setVisibility( View.VISIBLE );
+      }
+    }
+    if ( me != null && me.isOk() ) {
+      JSONArray clubs = me.json.optJSONArray( "cavingGroups" );
+      if ( clubs != null && clubs.length() > 1 ) {
+        ArrayList< String > names = new ArrayList<>();
+        mClubIds.clear();
+        for ( int k = 0; k < clubs.length(); ++k ) {
+          JSONObject club = clubs.optJSONObject( k );
+          if ( club == null ) continue;
+          String cid = SilexGisUpload.optString( club, "id", null );
+          if ( cid == null ) continue;
+          mClubIds.add( cid );
+          names.add( SilexGisUpload.optString( club, "name", cid ) );
+        }
+        if ( mClubIds.size() > 1 ) {
+          mSPclub.setAdapter( new ArrayAdapter<>( mContext, R.layout.menu, names ) );
+          ( (LinearLayout) findViewById( R.id.silexgis_club_layout ) ).setVisibility( View.VISIBLE );
+        }
+      }
+    }
+  }
+
+  /** search off the UI thread
+   */
+  private static class SearchTask extends AsyncTask< Void, Void, SilexGisClient.Result >
+  {
+    private final SilexGisCaveDialog mDialog;
+    private final SilexGisClient mClient;
+    private final String mText;
+    private final int mSeq;
+
+    SearchTask( SilexGisCaveDialog dialog, SilexGisClient client, String text, int seq )
+    {
+      mDialog = dialog;
+      mClient = client;
+      mText   = text;
+      mSeq    = seq;
+    }
+
+    @Override
+    protected SilexGisClient.Result doInBackground( Void... args ) { return mClient.searchCaves( mText, SEARCH_SIZE ); }
+
+    @Override
+    protected void onPostExecute( SilexGisClient.Result r )
+    {
+      if ( mDialog.isShowing() ) mDialog.showCaves( mSeq, r );
+    }
+  }
+
+  /** capabilities and account off the UI thread
+   */
+  private static class InfoTask extends AsyncTask< Void, Void, SilexGisClient.Result[] >
+  {
+    private final SilexGisCaveDialog mDialog;
+    private final SilexGisClient mClient;
+
+    InfoTask( SilexGisCaveDialog dialog, SilexGisClient client )
+    {
+      mDialog = dialog;
+      mClient = client;
+    }
+
+    @Override
+    protected SilexGisClient.Result[] doInBackground( Void... args )
+    {
+      return new SilexGisClient.Result[] { mClient.capabilities(), mClient.me() };
+    }
+
+    @Override
+    protected void onPostExecute( SilexGisClient.Result[] r )
+    {
+      if ( mDialog.isShowing() ) mDialog.showInfo( r[0], r[1] );
+    }
+  }
+
+}

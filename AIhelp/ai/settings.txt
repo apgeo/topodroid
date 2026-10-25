@@ -74,6 +74,7 @@ EXPORT_DATA_DXF: B, Bool, "DXF export", "Enable DXF (AutoCAD) data export, for C
 EXPORT_DATA_KML: B, Bool, "KML export", "Enable KML (GoogleEarth) data export"
 EXPORT_DATA_GPX: B, Bool, "GPX export", "Enable GPX (trackfile) data export"
 EXPORT_DATA_SHAPEFILE: B, Bool, "Shapefile export", "Enable shapefile data export, for GIS programs"
+EXPORT_DATA_SILEXGIS: B, Bool, "SilexGIS upload", "Enable the upload of the survey to a SilexGIS server (from the normal level on)"
 }
 IMPORT {
 DISTOX_PT_CMAP: N, Button, "PocketTopo color map", "Open a dialog to set the PocketTopo colormap", "The PocketTopo color map translates PocketTopo color to TopoDroid lines and areas"

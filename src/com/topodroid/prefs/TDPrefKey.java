@@ -276,7 +276,8 @@ class TDPrefKey
     new TDPrefKey( B, BOOL, UI, "EXPORT_DATA_DXF",       R.string.dxf,       -1, FALSE ),
     new TDPrefKey( B, BOOL, UI, "EXPORT_DATA_KML",       R.string.kml,       -1, FALSE ),
     new TDPrefKey( B, BOOL, UI, "EXPORT_DATA_GPX",       R.string.gpx,       -1, FALSE ),
-    new TDPrefKey( B, BOOL, UI, "EXPORT_DATA_SHAPEFILE", R.string.shapefile, -1, FALSE )
+    new TDPrefKey( B, BOOL, UI, "EXPORT_DATA_SHAPEFILE", R.string.shapefile, -1, FALSE ),
+    new TDPrefKey( B, BOOL, UI, "EXPORT_DATA_SILEXGIS",  R.string.silexgis_pref_cat, -1, TRUE )
   };
 
   /** export settings
