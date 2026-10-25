@@ -71,7 +71,7 @@ public class SilexGisUploadTest
     assertEquals( "[\"lox\",\"3d\",\"plan-pdf\",\"extended-pdf\"]", pipeline.getJSONArray( "outputs" ).toString() );
     assertFalse( "the pipeline never sets the current model", pipeline.has( "makeCurrentModel" ) );
     assertEquals( "cavingGroup", body.getString( "documentsVisibility" ) );
-    assertTrue( body.getBoolean( "publicLink" ) );
+    assertFalse( "the server reads no public link switch: the account preference decides", body.has( "publicLink" ) );
   }
 
   @Test
