@@ -56,6 +56,7 @@ import com.topodroid.TDX.TDToast;
 import com.topodroid.mag.WorldMagneticModel;
 
 // import java.io.File;
+import java.io.File;
 import java.io.FileInputStream;
 // import java.io.InputStreamReader;
 // import java.io.FileFilter;
@@ -576,11 +577,20 @@ public class MainWindow extends Activity
   //   // FIXME SYNC updateDisplay();
   // }
 
-  public void importZipFile( String filename )
+  /** import a survey from a ZIP file of the zip folder
+   * @param filename   name of the ZIP file
+   * @return true if the survey has been imported (else a message says why not)
+   */
+  public boolean importZipFile( String filename )
   {
-    if ( ! filename.toLowerCase( Locale.getDefault() ).endsWith(".zip") ) return;
-    setTitleImport();
-    new ImportZipTask( this, null, false ) .execute( filename ); // force = true (skip version checks)
+    if ( ! filename.toLowerCase( Locale.getDefault() ).endsWith(".zip") ) return false;
+    // the file is imported as a ZIP picked by the user: Archiver.unArchive( app, filename, force ), which ImportZipTask runs
+    // without a uri, does not set the survey paths and fails to unpack the SQL of a survey
+    // setTitleImport();
+    // new ImportZipTask( this, null, false ) .execute( filename ); // force = true (skip version checks)
+    boolean ret = importOneZip( Uri.fromFile( new File( TDPath.getZipFile( filename ) ) ), true );
+    updateDisplay();
+    return ret;
   }
  
   /** import survey data from a URI
