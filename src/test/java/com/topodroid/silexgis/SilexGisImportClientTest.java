@@ -153,7 +153,7 @@ public class SilexGisImportClientTest
     +  "\"therionSources\":[{\"name\":\"inventata-1-20261025T013200Z.th\",\"contentUrl\":\"/files/a1.th\"}]},"
     + "{\"id\":\"u2\",\"caveName\":\"Avenul Inventat\",\"surveyName\":\"avenul-2\",\"createdAt\":\"2026-10-24T10:00:00Z\","
     +  "\"uploadedBy\":{\"displayName\":\"Maria B.\"},\"archive\":{\"name\":\"avenul-2.zip\",\"sizeBytes\":1000,\"contentUrl\":\"/files/a2.zip\"},\"therionSources\":[]},"
-    + "{\"id\":\"u3\",\"caveName\":\"Pestera Inventata\",\"surveyName\":\"inventata-1\",\"createdAt\":\"2026-10-26T09:00:00Z\","
+    + "{\"id\":\"u3\",\"caveId\":\"c1\",\"caveName\":\"Pestera Inventata\",\"surveyName\":\"inventata-1\",\"createdAt\":\"2026-10-26T09:00:00Z\","
     +  "\"archive\":{\"name\":\"inventata-1-b.zip\",\"contentUrl\":\"/files/a3.zip\"}}"
     + "]}";
 
@@ -536,5 +536,188 @@ public class SilexGisImportClientTest
     SilexGisClient.Result r = c.download( "/files/z.zip", dest, null );
     assertEquals( SilexGisClient.NETWORK, r.kind );
     assertFalse( dest.exists() );
+  }
+
+  // ---------------------------------------------------------------------------- the shape the server sends
+
+  // one item as the server serialises it (SurveyUploadListItemDto), with invented values. Note that this parser runs on
+  // json.org's org.json here, and on Android's own implementation on the device: they differ in the handling of null members
+  private static final String SERVER_ITEM =
+      "{\"id\":\"01a1\",\"caveId\":\"c-1\",\"caveName\":\"Pestera Inventata\","
+    + "\"caveSurvey\":{\"id\":\"s-1\",\"title\":\"Galeria noua\"},\"version\":\"2026-10-25T01:32:00+00:00\","
+    + "\"source\":\"topoDroid\",\"surveyTitle\":\"Galeria veche\",\"surveyName\":\"inventata-1\",\"surveyDate\":\"2026-10-20\","
+    + "\"uploadedBy\":{\"id\":\"p-1\",\"displayName\":\"Ion A.\"},\"status\":\"succeeded\",\"createdAt\":\"2026-10-25T01:32:05+00:00\","
+    + "\"archive\":{\"name\":\"inventata-1.zip\",\"sizeBytes\":48213,\"contentUrl\":\"/api/v1/files/f1/content?token=abc123\"},"
+    + "\"therionSources\":[{\"name\":\"inventata-1.th\",\"sizeBytes\":900,\"contentUrl\":\"/api/v1/files/f2/content?token=def456\"}],"
+    + "\"statusPageUrl\":\"/caves/c-1/surveys/s-1/uploads/01a1\"}";
+
+  @Test
+  public void parserReadsAnItemAsTheServerSendsIt() throws Exception
+  {
+    SilexGisClient.Upload u = SilexGisClient.parseUploads( new JSONObject( "{\"items\":[" + SERVER_ITEM + "],\"total\":1,\"page\":1,\"pageSize\":100}" ) ).get( 0 );
+    assertEquals( "c-1", u.caveId );
+    assertEquals( "s-1", u.surveyId );
+    assertEquals( "Galeria noua", u.title ); // the title of the survey of the cave, not the title this upload carried
+    assertEquals( "inventata-1", u.surveyName );
+    assertEquals( "2026-10-25T01:32:00+00:00", u.version );
+    assertEquals( "2026-10-25T01:32:00+00:00", u.stamp() );
+    assertEquals( "Ion A.", u.uploader );
+    assertEquals( "/api/v1/files/f1/content?token=abc123", u.archiveUrl );
+    assertEquals( "/api/v1/files/f2/content?token=def456", u.therion.get( 0 )[1] );
+  }
+
+  @Test
+  public void titleFallsBackToTheSurveyTitleThenTheSurveyName() throws Exception
+  {
+    String text = "{\"items\":["
+      + "{\"id\":\"a\",\"caveSurvey\":{\"id\":\"s\"},\"surveyTitle\":\"T\",\"surveyName\":\"N\",\"archive\":{\"contentUrl\":\"/a\"}},"
+      + "{\"id\":\"b\",\"caveSurvey\":null,\"surveyName\":\"N\",\"archive\":{\"contentUrl\":\"/b\"}}]}";
+    ArrayList<SilexGisClient.Upload> ups = SilexGisClient.parseUploads( new JSONObject( text ) );
+    assertEquals( "T", ups.get( 0 ).title );
+    assertEquals( "s", ups.get( 0 ).surveyId );
+    assertEquals( "N", ups.get( 1 ).title );
+    assertEquals( "", ups.get( 1 ).surveyId );
+    assertEquals( "", ups.get( 1 ).caveId );
+    assertEquals( ups.get( 1 ).createdAt, ups.get( 1 ).stamp() ); // no version: the time of the upload
+  }
+
+  @Test
+  public void twoCavesWithTheSameNameStaySeparate() throws Exception
+  {
+    String text = "{\"items\":["
+      + "{\"id\":\"1\",\"caveId\":\"c2\",\"caveName\":\"Avenul\",\"caveSurvey\":{\"id\":\"s1\",\"title\":\"A\"},\"version\":\"2026-10-01T00:00:00Z\",\"archive\":{\"contentUrl\":\"/1\"}},"
+      + "{\"id\":\"2\",\"caveId\":\"c1\",\"caveName\":\"Avenul\",\"caveSurvey\":{\"id\":\"s2\",\"title\":\"A\"},\"version\":\"2026-10-02T00:00:00Z\",\"archive\":{\"contentUrl\":\"/2\"}},"
+      + "{\"id\":\"3\",\"caveId\":\"c2\",\"caveName\":\"avenul\",\"caveSurvey\":{\"id\":\"s1\",\"title\":\"A\"},\"version\":\"2026-10-03T00:00:00Z\",\"archive\":{\"contentUrl\":\"/3\"}},"
+      + "{\"id\":\"4\",\"caveId\":\"c1\",\"caveName\":\"Avenul\",\"caveSurvey\":{\"id\":\"s2\",\"title\":\"A\"},\"version\":\"2026-10-04T00:00:00Z\",\"archive\":{\"contentUrl\":\"/4\"}}]}";
+    ArrayList<SilexGisClient.Upload> ups = SilexGisClient.parseUploads( new JSONObject( text ) );
+    SilexGisClient.sortUploads( ups );
+    // cave c1 (two versions, newest first), then the two uploads of c2 (the names differ only in case and do not alternate)
+    assertEquals( "4", ups.get( 0 ).id );
+    assertEquals( "2", ups.get( 1 ).id );
+    assertEquals( "c1", ups.get( 1 ).caveKey() );
+    assertEquals( "c2", ups.get( 2 ).caveKey() );
+    assertEquals( "c2", ups.get( 3 ).caveKey() );
+  }
+
+  @Test
+  public void versionsAreGroupedBySurveyOfTheCaveEvenWhenRetitled() throws Exception
+  {
+    String text = "{\"items\":["
+      + "{\"id\":\"1\",\"caveId\":\"c\",\"caveName\":\"C\",\"caveSurvey\":{\"id\":\"s1\",\"title\":\"Zeta\"},\"version\":\"2026-10-01T00:00:00Z\",\"archive\":{\"contentUrl\":\"/1\"}},"
+      + "{\"id\":\"2\",\"caveId\":\"c\",\"caveName\":\"C\",\"caveSurvey\":{\"id\":\"s2\",\"title\":\"Alfa\"},\"version\":\"2026-10-02T00:00:00Z\",\"archive\":{\"contentUrl\":\"/2\"}},"
+      + "{\"id\":\"3\",\"caveId\":\"c\",\"caveName\":\"C\",\"surveyTitle\":\"Old title\",\"caveSurvey\":{\"id\":\"s1\",\"title\":\"Zeta\"},\"version\":\"2026-10-03T00:00:00Z\",\"archive\":{\"contentUrl\":\"/3\"}}]}";
+    ArrayList<SilexGisClient.Upload> ups = SilexGisClient.parseUploads( new JSONObject( text ) );
+    SilexGisClient.sortUploads( ups );
+    assertEquals( "2", ups.get( 0 ).id ); // survey Alfa
+    assertEquals( "3", ups.get( 1 ).id ); // survey Zeta, newest version first
+    assertEquals( "1", ups.get( 2 ).id );
+  }
+
+  @Test
+  public void totalsTellWhenTheServerHoldsMoreThanThePage() throws Exception
+  {
+    JSONObject page = new JSONObject( "{\"items\":[" + SERVER_ITEM + "],\"total\":250}" );
+    assertEquals( 250, SilexGisClient.totalUploads( page ) );
+    assertEquals( 1, SilexGisClient.countItems( page ) );
+    assertEquals( -1, SilexGisClient.totalUploads( new JSONObject( "{\"items\":[]}" ) ) );
+    assertEquals( -1, SilexGisClient.countItems( new JSONObject( "{\"total\":3}" ) ) );
+    assertEquals( -1, SilexGisClient.totalUploads( null ) );
+  }
+
+  // ---------------------------------------------------------------------------- signed addresses that expire
+
+  /** a server whose signed address of the file expires: the address of the first list is refused with 404 file.not_found,
+   * the address of the second list works
+   */
+  private HttpServer expiringServer( final String oldToken, final String newToken, final byte[] body, final AtomicInteger lists, final AtomicInteger queries ) throws IOException
+  {
+    HttpServer srv = HttpServer.create( new InetSocketAddress( InetAddress.getLoopbackAddress(), 0 ), 0 );
+    srv.createContext( "/", ex -> {
+      String path = ex.getRequestURI().getPath();
+      String query = ex.getRequestURI().getRawQuery();
+      byte[] out;
+      int status = 200;
+      if ( path.equals( "/api/v1/survey-uploads" ) ) {
+        lists.incrementAndGet();
+        String token = ( lists.get() == 1 )? oldToken : newToken;
+        out = ( "{\"total\":1,\"items\":[" + SERVER_ITEM.replace( "token=abc123", "token=" + token ).replace( "token=def456", "token=" + token ) + "]}" ).getBytes( StandardCharsets.UTF_8 );
+      } else if ( path.startsWith( "/api/v1/files/" ) ) {
+        queries.incrementAndGet();
+        if ( ( "token=" + newToken ).equals( query ) ) {
+          out = body;
+        } else {
+          status = 404;
+          out = "{\"title\":\"Not Found\",\"code\":\"file.not_found\"}".getBytes( StandardCharsets.UTF_8 );
+        }
+      } else {
+        status = 404;
+        out = new byte[0];
+      }
+      ex.sendResponseHeaders( status, out.length == 0 ? -1 : out.length );
+      if ( out.length > 0 ) try ( OutputStream os = ex.getResponseBody() ) { os.write( out ); }
+      ex.close();
+    } );
+    srv.start();
+    return srv;
+  }
+
+  @Test
+  public void anExpiredAddressIsReplacedByAFreshOneAndTriedOnce() throws Exception
+  {
+    AtomicInteger lists = new AtomicInteger(), queries = new AtomicInteger();
+    byte[] body = bytes( 2000, 3 );
+    HttpServer srv = expiringServer( "old", "new", body, lists, queries );
+    try {
+      SilexGisClient c = new SilexGisClient( "http://127.0.0.1:" + srv.getAddress().getPort(), KEY );
+      // the list was read earlier: it carries the address that has expired since
+      lists.incrementAndGet();
+      SilexGisClient.Upload u = SilexGisClient.parseUploads( new JSONObject( "{\"items\":[" + SERVER_ITEM.replace( "token=abc123", "token=old" ) + "]}" ) ).get( 0 );
+      File dest = new File( dir, "x.zip" );
+      SilexGisClient.Result r = c.downloadUpload( u, -1, dest, null );
+      assertTrue( r.message(), r.isOk() );
+      assertArrayEquals( body, Files.readAllBytes( dest.toPath() ) );
+      assertEquals( 2, lists.get() );     // the list was asked again
+      assertEquals( 2, queries.get() );   // one refused, one served
+      assertEquals( "/api/v1/files/f1/content?token=new", u.archiveUrl );
+
+      File th = new File( dir, "x.th" ); // the Therion file: the refreshed address is the one of the file of the same name
+      u.therion.get( 0 )[1] = "/api/v1/files/f2/content?token=old";
+      r = c.downloadUpload( u, 0, th, null );
+      assertTrue( r.message(), r.isOk() );
+      assertArrayEquals( body, Files.readAllBytes( th.toPath() ) );
+    } finally {
+      srv.stop( 0 );
+    }
+  }
+
+  @Test
+  public void aRefusedKeyOrAServerErrorIsNotRetried() throws Exception
+  {
+    problems.put( "/files/k.zip", new String[] { "401", "{\"code\":\"auth.unauthorized\"}" } );
+    problems.put( "/files/e.zip", new String[] { "500", "{\"code\":\"server.error\"}" } );
+    SilexGisClient.Upload u = new SilexGisClient.Upload();
+    u.id = "u";
+    u.archiveUrl = "/files/k.zip";
+    int before = hits.get();
+    assertEquals( SilexGisClient.KEY_REFUSED, client().downloadUpload( u, -1, new File( dir, "k.zip" ), null ).kind );
+    assertEquals( 1, hits.get() - before );
+    u.archiveUrl = "/files/e.zip";
+    before = hits.get();
+    assertEquals( 500, client().downloadUpload( u, -1, new File( dir, "e.zip" ), null ).status );
+    assertEquals( 1, hits.get() - before );
+  }
+
+  @Test
+  public void aMissingFileIsAskedTwiceAtMostAndKeepsItsMessage() throws Exception
+  {
+    // the upload is not in the list any more: the first refusal stands
+    files.put( "/api/v1/survey-uploads", "{\"items\":[]}".getBytes( StandardCharsets.UTF_8 ) );
+    SilexGisClient.Upload u = new SilexGisClient.Upload();
+    u.id = "gone";
+    u.archiveUrl = "/files/none.zip";
+    SilexGisClient.Result r = client().downloadUpload( u, -1, new File( dir, "n.zip" ), null );
+    assertEquals( SilexGisClient.PROBLEM, r.kind );
+    assertEquals( 404, r.status );
+    assertEquals( "survey_upload.not_found", r.code );
   }
 }
