@@ -296,8 +296,28 @@ public class SilexGisUploaderTest
     assertEquals( SilexGisUploader.REFUSED, out.kind );
     assertEquals( "survey_upload.content_mismatch", out.result.code );
     assertTrue( server.of( "POST", UP + "/" + ID + "/complete" ).isEmpty() );
+    assertEquals( "the server is told to drop the upload", 1, server.of( "DELETE", UP + "/" + ID ).size() );
+    assertTrue( "the refusal is kept, not the abandon", out.hasUpload() );
     assertEquals( "a refusal is not retried", 1, server.of( "PUT", UP + "/" + ID + "/files/pestera_inventata.th" ).size() );
     assertTrue( server.of( "PUT", UP + "/" + ID + "/files/pestera_inventata-1p.th2" ).isEmpty() );
+  }
+
+  @Test
+  public void aRefusedCompletionAbandonsTheUpload() throws IOException
+  {
+    server.on( "GET",  UP + "/capabilities", 200, CAPS )
+          .on( "POST", UP, 201, OPENED )
+          .on( "PUT",  UP + "/" + ID + "/files/pestera_inventata.zip", 200, "{}" )
+          .on( "PUT",  UP + "/" + ID + "/files/pestera_inventata.th", 200, "{}" )
+          .on( "PUT",  UP + "/" + ID + "/files/pestera_inventata-1p.th2", 200, "{}" )
+          .on( "POST", UP + "/" + ID + "/complete", 400, "{\"status\":400,\"code\":\"survey_upload.files_missing\",\"detail\":\"pestera_inventata.th\"}" )
+          .on( "DELETE", UP + "/" + ID, 204, "" );
+    SilexGisUploader.Outcome out = run( new SilexGisUpload(), files(), new Recorder() );
+    assertEquals( SilexGisUploader.REFUSED, out.kind );
+    assertEquals( "survey_upload.files_missing", out.result.code );
+    assertFalse( out.completed );
+    assertEquals( 1, server.of( "DELETE", UP + "/" + ID ).size() );
+    assertTrue( server.of( "GET", UP + "/" + ID ).isEmpty() );
   }
 
   @Test
