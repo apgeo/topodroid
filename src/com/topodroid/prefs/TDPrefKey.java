@@ -447,7 +447,7 @@ class TDPrefKey
    * whether to ask the server to compile the survey
    * outputs to ask the server for (comma separated)
    * who may see a cave created by the upload
-   * whether to ask for a public link to the results
+   * whether to ask for a public link to the results (not sent yet: the account preference in SilexGIS decides)
    */
   static TDPrefKey[] mExportSilexgis = {
     new TDPrefKey( N, STR,  XP, "DISTOX_SILEXGIS_URL",         R.string.silexgis_pref_url_title,         R.string.silexgis_pref_url_summary,         TDString.EMPTY ),
@@ -463,7 +463,7 @@ class TDPrefKey
     new TDPrefKey( N, BOOL, XP, "DISTOX_SILEXGIS_COMPILE",     R.string.silexgis_pref_compile_title,     R.string.silexgis_pref_compile_summary,     TRUE  ),
     new TDPrefKey( A, STR,  XP, "DISTOX_SILEXGIS_OUTPUTS",     R.string.silexgis_pref_outputs_title,     R.string.silexgis_pref_outputs_summary,     "lox,3d,plan-pdf,extended-pdf" ),
     new TDPrefKey( N,       XP, "DISTOX_SILEXGIS_VISIBILITY",  R.string.silexgis_pref_visibility_title,  R.string.silexgis_pref_visibility_summary,  "cavingGroup", R.array.silexgisVisibility, R.array.silexgisVisibilityValue ),
-    new TDPrefKey( N, BOOL, XP, "DISTOX_SILEXGIS_PUBLIC_LINK", R.string.silexgis_pref_public_link_title, R.string.silexgis_pref_public_link_summary, TRUE  )
+    new TDPrefKey( D, BOOL, XP, "DISTOX_SILEXGIS_PUBLIC_LINK", R.string.silexgis_pref_public_link_title, R.string.silexgis_pref_public_link_summary, TRUE  )
   };
 
   /** VisualTopo settings

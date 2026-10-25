@@ -1715,7 +1715,7 @@ On Android-11+ storage access must be granted to TopoDroid.\nYou can do this wit
   <string name="silexgis_pref_visibility_title">Visibility</string>
   <string name="silexgis_pref_visibility_summary">Who may see a cave created by the upload, and the documents of the upload</string>
   <string name="silexgis_pref_public_link_title">Public link</string>
-  <string name="silexgis_pref_public_link_summary">Ask for a public link to the results</string>
+  <string name="silexgis_pref_public_link_summary">Public link to the results: the account preference in SilexGIS (Settings) decides</string>
   <string name="silexgis_visibility_private">private</string>
   <string name="silexgis_visibility_club">club</string>
   <string name="silexgis_visibility_authenticated">signed-in users</string>

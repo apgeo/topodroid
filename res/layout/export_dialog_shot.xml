@@ -565,6 +565,12 @@
       android:layout_width="match_parent" 
       android:layout_height="wrap_content"
       android:text="@string/silexgis_pref_public_link_title"
+      android:visibility="gone"
+      />
+    <TextView
+      android:layout_width="match_parent" 
+      android:layout_height="wrap_content"
+      android:text="@string/silexgis_pref_public_link_summary"
       />
   </LinearLayout>
 

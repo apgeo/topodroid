@@ -329,7 +329,7 @@ class SilexGisUpload
       }
       ret.put( "pipeline", pipeline );
       if ( isVisibility( visibility ) ) ret.put( "documentsVisibility", visibility );
-      ret.put( "publicLink", publicLink );
+      // ret.put( "publicLink", publicLink ); // the server reads no such member yet: the account preference in SilexGIS decides
     } catch ( JSONException e ) { /* cannot happen with these values */ }
     return ret;
   }
