@@ -610,6 +610,8 @@ public class ExportDialogShot extends MyDialog
   private void pickSilexgisTarget()
   {
     if ( mSilexgisUpload == null ) return;
+    int vis = ((Spinner) findViewById( R.id.silexgis_visibility )).getSelectedItemPosition(); // a new cave starts from the visibility shown
+    if ( vis >= 0 && vis < SilexGisUpload.VISIBILITIES.length ) mSilexgisUpload.visibility = SilexGisUpload.VISIBILITIES[ vis ];
     Runnable pick = new Runnable() {
       @Override public void run() {
         (new SilexGisCaveDialog( mContext, SilexGisExportTask.surveyTitle( mSurvey ), mSilexgisUpload, mSilexgisRemembered,

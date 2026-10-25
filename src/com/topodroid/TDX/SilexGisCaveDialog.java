@@ -135,7 +135,7 @@ class SilexGisCaveDialog extends MyDialog
     mSPvisibility = (Spinner) findViewById( R.id.silexgis_new_visibility );
     mSPvisibility.setAdapter( new ArrayAdapter<>( mContext, R.layout.menu, mContext.getResources().getStringArray( R.array.silexgisVisibility ) ) );
     mSPclub = (Spinner) findViewById( R.id.silexgis_new_club );
-    String visibility = TDSetting.mSilexGisVisibility;
+    String visibility = ( mCurrent != null )? mCurrent.visibility : TDSetting.mSilexGisVisibility; // the switches of the export
     if ( mCurrent != null && mCurrent.target == SilexGisUpload.TARGET_NEW_CAVE ) {
       mETname.setText( mCurrent.newCaveName );
       visibility = mCurrent.newCaveVisibility;

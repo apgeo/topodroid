@@ -1713,7 +1713,7 @@ On Android-11+ storage access must be granted to TopoDroid.\nYou can do this wit
   <string name="silexgis_pref_outputs_title">Outputs</string>
   <string name="silexgis_pref_outputs_summary">Outputs to ask the server for, comma separated (lox, 3d, plan-pdf, extended-pdf, ...)</string>
   <string name="silexgis_pref_visibility_title">Visibility</string>
-  <string name="silexgis_pref_visibility_summary">Who may see a cave created by the upload</string>
+  <string name="silexgis_pref_visibility_summary">Who may see a cave created by the upload, and the documents of the upload</string>
   <string name="silexgis_pref_public_link_title">Public link</string>
   <string name="silexgis_pref_public_link_summary">Ask for a public link to the results</string>
   <string name="silexgis_visibility_private">private</string>

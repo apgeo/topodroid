@@ -6,7 +6,7 @@
  * @brief TopoDroid upload to a SilexGIS server: where to and what to send
  *
  * The target is a cave, a survey of a cave, a new cave, or nothing: without a target
- * the server makes a cave named after the survey title.
+ * the server makes a cave named after the survey title, open to whom the switches say.
  * The class uses only java and org.json, so that it can be tested on the JVM.
  * --------------------------------------------------------
  *  Copyright This software is distributed under GPL-3.0 or later
@@ -32,6 +32,7 @@ class SilexGisUpload
   static final int TARGET_NEW_CAVE    = 3; // a new cave, with its name and who may see it
 
   static final String[] VISIBILITIES = { "private", "cavingGroup", "authenticated", "public" };
+  static final String VISIBILITY_CLUB = "cavingGroup";
 
   static final int MAX_DESCRIPTION = 4000; // characters of the description the server keeps
 
@@ -55,7 +56,7 @@ class SilexGisUpload
   boolean compile    = true;
   boolean publicLink = true;
   String  outputs    = "lox,3d,plan-pdf,extended-pdf"; // comma separated
-  String  visibility = "cavingGroup"; // documents of the upload
+  String  visibility = "cavingGroup"; // documents of the upload, and the cave the server makes without a target
 
   /** default cstr: the defaults of the settings
    */
@@ -291,7 +292,13 @@ class SilexGisUpload
           if ( newCaveClubId != null ) cave.put( "cavingGroupId", newCaveClubId );
           ret.put( "newCave", cave );
           break;
-        // TARGET_AUTO: no cave, the server makes one from the survey title
+        default: // TARGET_AUTO: a new cave with no name, so that the server names it after the survey title
+                 // (numbered when a cave the uploader sees has that name), open to whom the switches say.
+                 // The club is not named: the server's default is the club of the account, else private, while
+                 // a club named outright is refused to an account without one or with several
+          if ( isVisibility( visibility ) && ! VISIBILITY_CLUB.equals( visibility ) ) {
+            ret.put( "newCave", ( new JSONObject() ).put( "visibility", visibility ) );
+          }
       }
       ret.put( "surveyTitle", survey_title );
       ret.put( "surveyName",  survey_name );
