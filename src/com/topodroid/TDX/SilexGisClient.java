@@ -273,6 +273,9 @@ public class SilexGisClient
       int status = http.getResponseCode();
       InputStream is = ( status >= 400 )? http.getErrorStream() : http.getInputStream();
       String text = readText( is );
+      if ( status == HttpURLConnection.HTTP_NO_CONTENT ) { // e.g. an upload abandoned: there is no answer to read
+        return new Result( OK, status, null, null, null, new JSONObject(), URL_OK );
+      }
       if ( status >= 200 && status < 300 ) {
         JSONObject json = parseObject( text );
         if ( json == null ) return new Result( BAD_RESPONSE, status, null, null, null, null, URL_OK );
@@ -319,13 +322,37 @@ public class SilexGisClient
   /** @return the route of the cave search
    * @param text       text to look for
    * @param page_size  most caves in the answer
-   * @note the route of the cave registry matches the name and the other names with "search";
-   *       "names" (name, other names or code) is sent too, for a server that takes it
+   * @note the cave list matches its "search" text against the cave names
    */
   static String cavesSearchPath( String text, int page_size )
   {
     String q = encodeQuery( ( text == null )? "" : text.trim() );
-    return "/api/v1/caves?names=" + q + "&search=" + q + "&pageSize=" + page_size;
+    return "/api/v1/caves?search=" + q + "&pageSize=" + page_size;
+  }
+
+  /** @return the caves of an answer of searchCaves(): { id, name, list line } each; empty if the answer has no list
+   * @param json   answer of searchCaves(): { items: [ { id, name, identificationCode, region, ... } ], page, pageSize, totalItems }
+   * @note the list line is "name (code) - region", without the parts the cave does not have
+   */
+  public static ArrayList< String[] > parseCaves( JSONObject json )
+  {
+    ArrayList< String[] > ret = new ArrayList<>();
+    JSONArray items = ( json == null )? null : json.optJSONArray( "items" );
+    if ( items == null ) return ret;
+    for ( int k = 0; k < items.length(); ++k ) {
+      JSONObject cave = items.optJSONObject( k );
+      if ( cave == null ) continue;
+      String id   = optString( cave, "id" );
+      String name = optString( cave, "name" );
+      if ( id.isEmpty() || name.isEmpty() ) continue;
+      StringBuilder sb = new StringBuilder( name );
+      String code   = optString( cave, "identificationCode" );
+      String region = optString( cave, "region" );
+      if ( ! code.isEmpty() ) sb.append( " (" ).append( code ).append( ")" );
+      if ( ! region.isEmpty() ) sb.append( " - " ).append( region );
+      ret.add( new String[] { id, name, sb.toString() } );
+    }
+    return ret;
   }
 
   /** @return the answer of the request that opens an upload: POST /api/v1/survey-uploads
@@ -355,7 +382,7 @@ public class SilexGisClient
   static String filePath( String id, String name ) { return "/api/v1/survey-uploads/" + encodePath( id ) + "/files/" + encodePath( name ); }
 
   /** send a file of an upload: PUT, streamed from the file
-   * @param path       route of the file (the "putUrl" of the server), a path of the server or a full URL of it
+   * @param path       route of the file (filePath()), a path of the server or a full URL of it
    * @param file       file
    * @param progress   progress listener (can be null): it can stop the sending
    * @return the result of the call: OK with the answer of the server, CANCELLED if the listener stopped it, or a failure as in request()

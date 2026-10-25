@@ -21,7 +21,6 @@ import java.io.File;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 
@@ -193,7 +192,6 @@ class SilexGisUploader
     out.uploadId = open.id;
     out.statusPageUrl = open.statusPageUrl;
     listener.onOpened( open );
-    HashMap< String, String > put_urls = putUrls( opened.json );
 
     // files
     List< SilexGisFiles.Item > items = files.items();
@@ -201,8 +199,7 @@ class SilexGisUploader
     for ( int k = 0; k < n; ++k ) {
       SilexGisFiles.Item item = items.get( k );
       listener.onStep( STEP_PUT, item.name, k+1, n );
-      String path = put_urls.get( item.name );
-      if ( path == null ) path = SilexGisClient.filePath( out.uploadId, item.name );
+      String path = SilexGisClient.filePath( out.uploadId, item.name ); // each file has its route: the answer names none
       SilexGisClient.Result r = put( path, item.file, listener );
       if ( r.kind == SilexGisClient.NETWORK && ! listener.isStopped() ) {
         r = put( path, item.file, listener ); // once again: the server answers a file it already has as the first time
@@ -349,24 +346,6 @@ class SilexGisUploader
     out.result = r;
     out.kind = ( r.kind == SilexGisClient.KEY_REFUSED )? KEY_REFUSED : REFUSED;
     return out;
-  }
-
-  /** @return the routes of the files, by name, from the answer that opened the upload
-   * @param json   answer
-   */
-  static HashMap< String, String > putUrls( JSONObject json )
-  {
-    HashMap< String, String > ret = new HashMap<>();
-    JSONArray files = ( json == null )? null : json.optJSONArray( "files" );
-    if ( files == null ) return ret;
-    for ( int k = 0; k < files.length(); ++k ) {
-      JSONObject file = files.optJSONObject( k );
-      if ( file == null ) continue;
-      String name = file.optString( "name", "" );
-      String url  = file.isNull( "putUrl" )? "" : file.optString( "putUrl", "" );
-      if ( ! name.isEmpty() && ! url.isEmpty() ) ret.put( name, url );
-    }
-    return ret;
   }
 
   /** @return the strings of a JSON array, lowercase; null if the array is null

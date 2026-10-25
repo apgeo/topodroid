@@ -50,7 +50,6 @@ class SilexGisStatus
   String message  = null;
   String errorCode    = null;
   String errorMessage = null;
-  String errorDetail  = null;
   String caveId          = null;
   String caveName        = null;
   String caveSurveyId    = null;
@@ -105,20 +104,17 @@ class SilexGisStatus
     if ( error != null ) {
       ret.errorCode    = text( error, "code" );
       ret.errorMessage = text( error, "message" );
-      ret.errorDetail  = text( error, "detail" );
     }
     JSONObject cave = json.optJSONObject( "cave" );
     if ( cave != null ) {
       ret.caveId   = text( cave, "id" );
       ret.caveName = text( cave, "name" );
     }
-    if ( ret.caveId == null ) ret.caveId = text( json, "caveId" );
     JSONObject survey = json.optJSONObject( "caveSurvey" );
     if ( survey != null ) {
       ret.caveSurveyId    = text( survey, "id" );
       ret.caveSurveyTitle = text( survey, "title" );
     }
-    if ( ret.caveSurveyId == null ) ret.caveSurveyId = text( json, "caveSurveyId" );
     ret.version       = text( json, "version" );
     ret.statusPageUrl = text( json, "statusPageUrl" );
     JSONObject link = json.optJSONObject( "publicLink" );
