@@ -246,6 +246,54 @@ public class SilexGisUploaderTest
   }
 
   @Test
+  public void aServerThatMakesNoCaveRefusesAnUploadWithoutATargetOrWithANewCaveBeforeAnythingIsSent() throws IOException
+  {
+    server.on( "GET", UP + "/capabilities", 200, CAPS.replace( "\"caveCreation\":{\"allowed\":true}", "\"caveCreation\":{\"allowed\":false}" ) );
+    SilexGisUpload auto = new SilexGisUpload();
+    assertEquals( SilexGisUploader.NO_CAVE, uploader.check( auto ).kind );
+    SilexGisUpload fresh = new SilexGisUpload();
+    fresh.setNewCave( "Pestera Noua", "private", null );
+    assertEquals( SilexGisUploader.NO_CAVE, uploader.check( fresh ).kind );
+    SilexGisUploader.Outcome out = run( auto, files(), new Recorder() );
+    assertEquals( SilexGisUploader.NO_CAVE, out.kind );
+    assertFalse( out.hasUpload() );
+    assertFalse( out.mayRestart() );
+    assertEquals( "the limits are asked once", Arrays.asList( "GET " + UP + "/capabilities" ), server.trail() );
+
+    SilexGisUpload cave = new SilexGisUpload();
+    cave.setCave( "0190a000-0000-7000-8000-00000000c001", "Pestera Inventata" );
+    assertNull( "a cave of the server can be uploaded to", uploader.check( cave ) );
+  }
+
+  @Test
+  public void theLimitsAskedBeforeTheArchiveAreNotAskedAgain() throws IOException
+  {
+    contract();
+    server.on( "GET", UP + "/" + ID, 200, status( "succeeded", null, 100, "" ) );
+    SilexGisUpload upload = new SilexGisUpload();
+    assertNull( uploader.check( upload ) );
+    Recorder rec = new Recorder();
+    SilexGisUploader.Outcome out = run( upload, files(), rec );
+    assertEquals( SilexGisUploader.SUCCEEDED, out.kind );
+    assertEquals( 1, server.of( "GET", UP + "/capabilities" ).size() );
+    assertEquals( "7", rec.steps.get( 0 ) ); // no second "connecting" step
+  }
+
+  @Test
+  public void theVisibilitiesOfANewCaveAreThoseTheServerOffers()
+  {
+    assertEquals( Arrays.asList( SilexGisUpload.VISIBILITIES ), SilexGisUploader.caveVisibilities( null ) );
+    assertEquals( Arrays.asList( SilexGisUpload.VISIBILITIES ), SilexGisUploader.caveVisibilities( new JSONObject( "{\"caveCreation\":{\"allowed\":true}}" ) ) );
+    assertEquals( Arrays.asList( "private", "cavingGroup" ), SilexGisUploader.caveVisibilities(
+      new JSONObject( "{\"caveCreation\":{\"visibilities\":[\"cavingGroup\",\"private\",\"everybody\"]}}" ) ) );
+    assertEquals( "none known: all, and the server says no", 4, SilexGisUploader.caveVisibilities(
+      new JSONObject( "{\"caveCreation\":{\"visibilities\":[]}}" ) ).size() );
+    assertTrue( SilexGisUploader.caveCreationAllowed( null ) );
+    assertTrue( SilexGisUploader.caveCreationAllowed( new JSONObject( "{}" ) ) );
+    assertFalse( SilexGisUploader.caveCreationAllowed( new JSONObject( "{\"caveCreation\":{\"allowed\":false}}" ) ) );
+  }
+
+  @Test
   public void aFileLargerThanTheServerAcceptsIsRefusedBeforeAnythingIsSent() throws IOException
   {
     server.on( "GET", UP + "/capabilities", 200, CAPS.replace( "262144000", "16" ) );
