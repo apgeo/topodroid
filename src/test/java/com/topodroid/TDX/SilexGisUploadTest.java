@@ -98,6 +98,17 @@ public class SilexGisUploadTest
   }
 
   @Test
+  public void noOutputsMeansTheServerDefaultAndIsRemembered() throws IOException
+  {
+    SilexGisUpload u = new SilexGisUpload();
+    u.outputs = "";
+    JSONObject body = u.openRequest( "t", "n", null, "v", files(), OUTPUTS, true );
+    assertTrue( body.getJSONObject( "pipeline" ).getBoolean( "compile" ) );
+    assertFalse( "the server default", body.getJSONObject( "pipeline" ).has( "outputs" ) );
+    assertEquals( "an empty list is remembered as it is", "", u.copy().outputs );
+  }
+
+  @Test
   public void aPickedCaveASurveyOrANewCaveIsTheOnlyTargetOfTheRequest() throws IOException
   {
     SilexGisUpload u = new SilexGisUpload();
