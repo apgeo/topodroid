@@ -202,7 +202,7 @@ public class SilexGisUploaderTest
   }
 
   @Test
-  public void aKeyRefusedWhileWatchingStopsTheUploadAsARefusedKey() throws IOException
+  public void aKeyRefusedWhileWatchingStopsTheWatchingAndTheUploadIsNotMadeAgain() throws IOException
   {
     contract();
     server.on( "GET", UP + "/" + ID, 200, status( "running", "unpack", 10, "" ) )
@@ -211,6 +211,27 @@ public class SilexGisUploaderTest
     assertEquals( SilexGisUploader.KEY_REFUSED, out.kind );
     assertEquals( 401, out.result.status );
     assertEquals( "running", out.status.status );
+    assertTrue( out.completed );
+    assertTrue( out.hasUpload() );
+    assertFalse( "the server processes the files it has: they are not sent again", out.mayRestart() );
+    List< String > trail = server.trail();
+    List< String > after = trail.subList( trail.indexOf( "POST " + UP + "/" + ID + "/complete" ) + 1, trail.size() );
+    assertEquals( "after the completion the status is only asked", Arrays.asList( "GET " + UP + "/" + ID, "GET " + UP + "/" + ID ), after );
+  }
+
+  @Test
+  public void aKeyRefusedWhileTheFilesAreSentIsNotMadeAgainAndTheUploadIsLeftToExpire() throws IOException
+  {
+    server.on( "GET",  UP + "/capabilities", 200, CAPS )
+          .on( "POST", UP, 201, OPENED )
+          .on( "PUT",  UP + "/" + ID + "/files/pestera_inventata.zip", 401, "{\"title\":\"Unauthorized\",\"status\":401}" );
+    SilexGisUploader.Outcome out = run( new SilexGisUpload(), files(), new Recorder() );
+    assertEquals( SilexGisUploader.KEY_REFUSED, out.kind );
+    assertTrue( out.hasUpload() );
+    assertFalse( out.completed );
+    assertFalse( out.mayRestart() );
+    assertTrue( "with the key refused an abandon would be refused too", server.of( "DELETE", UP + "/" + ID ).isEmpty() );
+    assertTrue( server.of( "POST", UP + "/" + ID + "/complete" ).isEmpty() );
   }
 
   @Test
@@ -220,6 +241,7 @@ public class SilexGisUploaderTest
     SilexGisUploader.Outcome out = run( new SilexGisUpload(), files(), new Recorder() );
     assertEquals( SilexGisUploader.KEY_REFUSED, out.kind );
     assertFalse( out.hasUpload() );
+    assertTrue( "nothing is on the server: the upload starts again with a new key", out.mayRestart() );
     assertEquals( Arrays.asList( "GET " + UP + "/capabilities" ), server.trail() );
   }
 
