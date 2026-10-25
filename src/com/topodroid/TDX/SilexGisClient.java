@@ -15,6 +15,9 @@
  */
 package com.topodroid.TDX;
 
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.ByteArrayOutputStream;
@@ -26,6 +29,9 @@ import java.net.MalformedURLException;
 
 import java.util.Locale;
 
+import java.io.UnsupportedEncodingException;
+import java.net.URLEncoder;
+
 import org.json.JSONObject;
 import org.json.JSONException;
 
@@ -35,6 +41,7 @@ public class SilexGisClient
 
   static final int CONNECT_TIMEOUT = 15000; // [ms]
   static final int READ_TIMEOUT    = 30000; // [ms]
+  static final int PUT_READ_TIMEOUT = 120000; // [ms] the server stores a file before it answers
 
   // base-URL check
   public static final int URL_OK        = 0;
@@ -52,6 +59,8 @@ public class SilexGisClient
   public static final int NETWORK          = 6; // the server could not be reached
   public static final int BAD_RESPONSE     = 7; // the answer is not a JSON object
   public static final int BAD_KEY          = 8; // the access key is not of the form sgx_... (refused without connecting)
+  public static final int CANCELLED        = 9; // a download stopped on request of the progress listener
+  public static final int FILE_ERROR       = 10; // a download could not be written to the file (see the detail of the result)
 
   public static final int KEY_PREFIX_LENGTH = 12; // characters of the key shown, as the server lists the keys by their first 12 characters
 
@@ -264,22 +273,311 @@ public class SilexGisClient
         if ( json == null ) return new Result( BAD_RESPONSE, status, null, null, null, null, URL_OK );
         return new Result( OK, status, null, null, null, json, URL_OK );
       }
-      JSONObject problem = parseObject( text );
-      String code   = optText( problem, "code" );
-      String title  = optText( problem, "title" );
-      String detail = optText( problem, "detail" );
-      if ( status == HttpURLConnection.HTTP_UNAUTHORIZED ) {
-        return new Result( KEY_REFUSED, status, code, title, detail, null, URL_OK );
-      }
-      if ( status == HttpURLConnection.HTTP_FORBIDDEN && CODE_KEY_NOT_ACCEPTED.equals( code ) ) {
-        return new Result( KEY_NOT_ACCEPTED, status, code, title, detail, null, URL_OK );
-      }
-      return new Result( PROBLEM, status, code, title, detail, null, URL_OK );
+      return problemResult( status, text );
     } catch ( IOException e ) {
       return new Result( NETWORK, 0, null, null, e.getMessage(), null, URL_OK );
     } catch ( RuntimeException e ) { // e.g. a header value or a host the connection refuses: never let it out of a background task
       return new Result( NETWORK, 0, null, null, e.getMessage(), null, URL_OK );
     } finally {
+      if ( http != null ) http.disconnect();
+    }
+  }
+
+  /** @return the result of a refusal (HTTP status of 300 or more)
+   * @param status   HTTP status
+   * @param text     body of the answer: the Problem Details of the server, if any
+   */
+  private static Result problemResult( int status, String text )
+  {
+    JSONObject problem = parseObject( text );
+    String code   = optText( problem, "code" );
+    String title  = optText( problem, "title" );
+    String detail = optText( problem, "detail" );
+    if ( status == HttpURLConnection.HTTP_UNAUTHORIZED ) {
+      return new Result( KEY_REFUSED, status, code, title, detail, null, URL_OK );
+    }
+    if ( status == HttpURLConnection.HTTP_FORBIDDEN && CODE_KEY_NOT_ACCEPTED.equals( code ) ) {
+      return new Result( KEY_NOT_ACCEPTED, status, code, title, detail, null, URL_OK );
+    }
+    return new Result( PROBLEM, status, code, title, detail, null, URL_OK );
+  }
+
+  // ---------------------------------------------------------------------
+  // survey uploads, for the export
+
+  /** @return the caves whose name matches a text: GET /api/v1/caves
+   * @param text       text to look for
+   * @param page_size  most caves in the answer
+   */
+  public Result searchCaves( String text, int page_size ) { return request( "GET", cavesSearchPath( text, page_size ), null ); }
+
+  /** @return the route of the cave search
+   * @param text       text to look for
+   * @param page_size  most caves in the answer
+   * @note the route of the cave registry matches the name and the other names with "search";
+   *       "names" (name, other names or code) is sent too, for a server that takes it
+   */
+  static String cavesSearchPath( String text, int page_size )
+  {
+    String q = encodeQuery( ( text == null )? "" : text.trim() );
+    return "/api/v1/caves?names=" + q + "&search=" + q + "&pageSize=" + page_size;
+  }
+
+  /** @return the answer of the request that opens an upload: POST /api/v1/survey-uploads
+   * @param body   request (SilexGisUpload.openRequest)
+   */
+  public Result openUpload( JSONObject body ) { return request( "POST", "/api/v1/survey-uploads", body ); }
+
+  /** @return the answer of the request that closes the sending of the files: POST /api/v1/survey-uploads/{id}/complete
+   * @param id   upload id
+   */
+  public Result completeUpload( String id ) { return request( "POST", "/api/v1/survey-uploads/" + encodePath( id ) + "/complete", new JSONObject() ); }
+
+  /** @return the status of an upload: GET /api/v1/survey-uploads/{id}
+   * @param id   upload id
+   */
+  public Result uploadStatus( String id ) { return request( "GET", "/api/v1/survey-uploads/" + encodePath( id ), null ); }
+
+  /** @return the answer of the request that abandons an upload still receiving its files: DELETE /api/v1/survey-uploads/{id}
+   * @param id   upload id
+   */
+  public Result abandonUpload( String id ) { return request( "DELETE", "/api/v1/survey-uploads/" + encodePath( id ), null ); }
+
+  /** @return the default route of a file of an upload: /api/v1/survey-uploads/{id}/files/{name}
+   * @param id     upload id
+   * @param name   file name
+   */
+  static String filePath( String id, String name ) { return "/api/v1/survey-uploads/" + encodePath( id ) + "/files/" + encodePath( name ); }
+
+  /** send a file of an upload: PUT, streamed from the file
+   * @param path       route of the file (the "putUrl" of the server), a path of the server or a full URL of it
+   * @param file       file
+   * @param progress   progress listener (can be null): it can stop the sending
+   * @return the result of the call: OK with the answer of the server, CANCELLED if the listener stopped it, or a failure as in request()
+   * @note the access key goes only to the server of the base URL: a route on another host is refused
+   */
+  public Result putFile( String path, File file, Progress progress )
+  {
+    if ( ! isConfigured() ) return new Result( NOT_CONFIGURED, 0, null, null, null, null, mUrlCheck );
+    if ( mUrlCheck != URL_OK ) return new Result( BAD_URL, 0, null, null, null, null, mUrlCheck );
+    if ( ! checkKey( mKey ) ) return new Result( BAD_KEY, 0, null, null, null, null, URL_OK );
+    String full = resolveUrl( path );
+    if ( full == null || ! sameOrigin( mBaseUrl, full ) ) return new Result( BAD_URL, 0, null, null, null, null, URL_INVALID );
+    HttpURLConnection http = null;
+    FileInputStream fis = null;
+    try {
+      long size = file.length();
+      fis = new FileInputStream( file );
+      http = (HttpURLConnection) (new URL( full )).openConnection();
+      http.setConnectTimeout( CONNECT_TIMEOUT );
+      http.setReadTimeout( PUT_READ_TIMEOUT );
+      http.setInstanceFollowRedirects( false );
+      http.setUseCaches( false );
+      http.setRequestMethod( "PUT" );
+      http.setRequestProperty( "Authorization", "Bearer " + mKey );
+      http.setRequestProperty( "Accept", "application/json, application/problem+json" );
+      http.setRequestProperty( "X-SilexGis-Contract", Integer.toString( CONTRACT_VERSION ) );
+      http.setRequestProperty( "Content-Type", "application/octet-stream" );
+      http.setDoOutput( true );
+      http.setFixedLengthStreamingMode( size );
+      OutputStream os = http.getOutputStream();
+      byte[] buf = new byte[65536];
+      long sent = 0L;
+      int n;
+      while ( ( n = fis.read( buf ) ) > 0 ) {
+        os.write( buf, 0, n );
+        sent += n;
+        if ( progress != null && ! progress.onProgress( sent, size ) ) {
+          return new Result( CANCELLED, 0, null, null, null, null, URL_OK );
+        }
+      }
+      os.close();
+      int status = http.getResponseCode();
+      InputStream is = ( status >= 400 )? http.getErrorStream() : http.getInputStream();
+      String text = readText( is );
+      if ( status >= 200 && status < 300 ) {
+        JSONObject json = parseObject( text );
+        if ( json == null ) json = new JSONObject(); // the file is received: the answer is only informative
+        return new Result( OK, status, null, null, null, json, URL_OK );
+      }
+      return problemResult( status, text );
+    } catch ( IOException e ) {
+      return new Result( NETWORK, 0, null, null, e.getMessage(), null, URL_OK );
+    } catch ( RuntimeException e ) {
+      return new Result( NETWORK, 0, null, null, e.getMessage(), null, URL_OK );
+    } finally {
+      try { if ( fis != null ) fis.close(); } catch ( IOException e ) { /* nothing to do */ }
+      if ( http != null ) http.disconnect();
+    }
+  }
+
+  /** @return a text encoded for a query parameter
+   * @param text   text
+   */
+  static String encodeQuery( String text )
+  {
+    try {
+      return URLEncoder.encode( text, "UTF-8" );
+    } catch ( UnsupportedEncodingException e ) {
+      return "";
+    }
+  }
+
+  /** @return a text encoded as a segment of a path: every byte but letters, digits and - . _ ~ is percent-encoded
+   * @param text   text
+   */
+  static String encodePath( String text )
+  {
+    if ( text == null ) return "";
+    StringBuilder sb = new StringBuilder();
+    byte[] bytes;
+    try {
+      bytes = text.getBytes( "UTF-8" );
+    } catch ( UnsupportedEncodingException e ) {
+      return "";
+    }
+    for ( byte b : bytes ) {
+      int c = b & 0xff;
+      if ( ( c >= 'A' && c <= 'Z' ) || ( c >= 'a' && c <= 'z' ) || ( c >= '0' && c <= '9' ) || c == '-' || c == '.' || c == '_' || c == '~' ) {
+        sb.append( (char)c );
+      } else {
+        sb.append( String.format( Locale.US, "%%%02X", c ) );
+      }
+    }
+    return sb.toString();
+  }
+
+  // ---------------------------------------------------------------------
+  // downloads
+
+  /** listener of the progress of a download
+   */
+  public interface Progress
+  {
+    /** @return true to go on, false to stop the download
+     * @param done    bytes received
+     * @param total   bytes expected (-1 if not known)
+     */
+    boolean onProgress( long done, long total );
+  }
+
+  /** @return the full URL of a content URL of the server: a path is relative to the base URL, null if the URL is neither
+   * @param content_url   content URL
+   */
+  String resolveUrl( String content_url )
+  {
+    if ( content_url == null ) return null;
+    if ( content_url.startsWith( "/" ) ) return mBaseUrl + content_url;
+    String lower = content_url.toLowerCase( Locale.US );
+    if ( lower.startsWith( "https://" ) || lower.startsWith( "http://" ) ) return content_url;
+    return null;
+  }
+
+  /** @return true if the two URLs have the same scheme, host and port
+   */
+  private static boolean sameOrigin( String url1, String url2 )
+  {
+    try {
+      URL u1 = new URL( url1 );
+      URL u2 = new URL( url2 );
+      return u1.getProtocol().equalsIgnoreCase( u2.getProtocol() )
+          && u1.getHost().equalsIgnoreCase( u2.getHost() )
+          && u1.getPort() == u2.getPort()
+          && u1.getDefaultPort() == u2.getDefaultPort();
+    } catch ( MalformedURLException e ) {
+      return false;
+    }
+  }
+
+  /** download a file of the server
+   * @param content_url   content URL of the file, a path of the server or a full URL
+   * @param dest          destination file
+   * @param progress      progress listener (can be null)
+   * @return the result of the download: OK (no JSON), CANCELLED if the listener stopped it, FILE_ERROR if the file cannot be written,
+   *         or a failure as in request()
+   * @note the file is written as "dest.part" and renamed when it is complete. The access key goes only to the server
+   *       of the base URL: a content URL on another host is signed and needs no key
+   */
+  public Result download( String content_url, File dest, Progress progress )
+  {
+    if ( ! isConfigured() ) return new Result( NOT_CONFIGURED, 0, null, null, null, null, mUrlCheck );
+    if ( mUrlCheck != URL_OK ) return new Result( BAD_URL, 0, null, null, null, null, mUrlCheck );
+    if ( ! checkKey( mKey ) ) return new Result( BAD_KEY, 0, null, null, null, null, URL_OK );
+    String full = resolveUrl( content_url );
+    if ( full == null ) return new Result( BAD_URL, 0, null, null, null, null, URL_INVALID );
+    int check = checkBaseUrl( full );
+    if ( check != URL_OK ) return new Result( BAD_URL, 0, null, null, null, null, check );
+    File part = new File( dest.getPath() + ".part" );
+    HttpURLConnection http = null;
+    InputStream is = null;
+    FileOutputStream fos = null;
+    boolean done = false;
+    try {
+      http = (HttpURLConnection) (new URL( full )).openConnection();
+      http.setConnectTimeout( CONNECT_TIMEOUT );
+      http.setReadTimeout( READ_TIMEOUT );
+      http.setInstanceFollowRedirects( false );
+      http.setUseCaches( false );
+      http.setRequestMethod( "GET" );
+      if ( sameOrigin( mBaseUrl, full ) ) {
+        http.setRequestProperty( "Authorization", "Bearer " + mKey );
+        http.setRequestProperty( "X-SilexGis-Contract", Integer.toString( CONTRACT_VERSION ) );
+      }
+      http.setRequestProperty( "Accept", "application/octet-stream, */*" );
+      int status = http.getResponseCode();
+      if ( status < 200 || status >= 300 ) {
+        return problemResult( status, readText( http.getErrorStream() ) );
+      }
+      long total = -1L;
+      String length = http.getHeaderField( "Content-Length" );
+      if ( length != null ) {
+        try { total = Long.parseLong( length.trim() ); } catch ( NumberFormatException e ) { total = -1L; }
+      }
+      is = http.getInputStream();
+      try {
+        fos = new FileOutputStream( part );
+      } catch ( IOException e ) {
+        return new Result( FILE_ERROR, status, null, null, e.getMessage(), null, URL_OK );
+      }
+      byte[] buf = new byte[65536];
+      long count = 0L;
+      int n;
+      while ( ( n = is.read( buf ) ) > 0 ) {
+        try {
+          fos.write( buf, 0, n );
+        } catch ( IOException e ) {
+          return new Result( FILE_ERROR, status, null, null, e.getMessage(), null, URL_OK );
+        }
+        count += n;
+        if ( progress != null && ! progress.onProgress( count, total ) ) {
+          return new Result( CANCELLED, status, null, null, null, null, URL_OK );
+        }
+      }
+      if ( total >= 0 && count != total ) { // the connection dropped before the end
+        return new Result( NETWORK, status, null, null, "received " + count + " of " + total + " bytes", null, URL_OK );
+      }
+      try {
+        fos.close();
+        fos = null;
+        if ( dest.exists() && ! dest.delete() ) {
+          return new Result( FILE_ERROR, status, null, null, dest.getPath(), null, URL_OK );
+        }
+        if ( ! part.renameTo( dest ) ) {
+          return new Result( FILE_ERROR, status, null, null, dest.getPath(), null, URL_OK );
+        }
+      } catch ( IOException e ) {
+        return new Result( FILE_ERROR, status, null, null, e.getMessage(), null, URL_OK );
+      }
+      done = true;
+      return new Result( OK, status, null, null, null, null, URL_OK );
+    } catch ( IOException e ) {
+      return new Result( NETWORK, 0, null, null, e.getMessage(), null, URL_OK );
+    } catch ( RuntimeException e ) {
+      return new Result( NETWORK, 0, null, null, e.getMessage(), null, URL_OK );
+    } finally {
+      try { if ( is  != null ) is.close();  } catch ( IOException e ) { /* nothing to do */ }
+      try { if ( fos != null ) fos.close(); } catch ( IOException e ) { /* nothing to do */ }
+      if ( ! done ) part.delete();
       if ( http != null ) http.disconnect();
     }
   }
