@@ -15,6 +15,8 @@
  */
 package com.topodroid.TDX;
 
+import java.io.File;
+import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.ByteArrayOutputStream;
@@ -24,8 +26,13 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.MalformedURLException;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.List;
 import java.util.Locale;
 
+import org.json.JSONArray;
 import org.json.JSONObject;
 import org.json.JSONException;
 
@@ -52,6 +59,8 @@ public class SilexGisClient
   public static final int NETWORK          = 6; // the server could not be reached
   public static final int BAD_RESPONSE     = 7; // the answer is not a JSON object
   public static final int BAD_KEY          = 8; // the access key is not of the form sgx_... (refused without connecting)
+  public static final int CANCELLED        = 9; // a download stopped on request of the progress listener
+  public static final int FILE_ERROR       = 10; // a download could not be written to the file (see the detail of the result)
 
   public static final int KEY_PREFIX_LENGTH = 12; // characters of the key shown, as the server lists the keys by their first 12 characters
 
@@ -264,17 +273,7 @@ public class SilexGisClient
         if ( json == null ) return new Result( BAD_RESPONSE, status, null, null, null, null, URL_OK );
         return new Result( OK, status, null, null, null, json, URL_OK );
       }
-      JSONObject problem = parseObject( text );
-      String code   = optText( problem, "code" );
-      String title  = optText( problem, "title" );
-      String detail = optText( problem, "detail" );
-      if ( status == HttpURLConnection.HTTP_UNAUTHORIZED ) {
-        return new Result( KEY_REFUSED, status, code, title, detail, null, URL_OK );
-      }
-      if ( status == HttpURLConnection.HTTP_FORBIDDEN && CODE_KEY_NOT_ACCEPTED.equals( code ) ) {
-        return new Result( KEY_NOT_ACCEPTED, status, code, title, detail, null, URL_OK );
-      }
-      return new Result( PROBLEM, status, code, title, detail, null, URL_OK );
+      return problemResult( status, text );
     } catch ( IOException e ) {
       return new Result( NETWORK, 0, null, null, e.getMessage(), null, URL_OK );
     } catch ( RuntimeException e ) { // e.g. a header value or a host the connection refuses: never let it out of a background task
@@ -284,8 +283,329 @@ public class SilexGisClient
     }
   }
 
+  /** @return the result of a refusal (HTTP status of 300 or more)
+   * @param status   HTTP status
+   * @param text     body of the answer: the Problem Details of the server, if any
+   */
+  private static Result problemResult( int status, String text )
+  {
+    JSONObject problem = parseObject( text );
+    String code   = optText( problem, "code" );
+    String title  = optText( problem, "title" );
+    String detail = optText( problem, "detail" );
+    if ( status == HttpURLConnection.HTTP_UNAUTHORIZED ) {
+      return new Result( KEY_REFUSED, status, code, title, detail, null, URL_OK );
+    }
+    if ( status == HttpURLConnection.HTTP_FORBIDDEN && CODE_KEY_NOT_ACCEPTED.equals( code ) ) {
+      return new Result( KEY_NOT_ACCEPTED, status, code, title, detail, null, URL_OK );
+    }
+    return new Result( PROBLEM, status, code, title, detail, null, URL_OK );
+  }
+
+  // ---------------------------------------------------------------------
+  // survey uploads, for the import
+
+  /** a survey upload, as listed by the server: the archive of a TopoDroid survey and its Therion files
+   */
+  public static class Upload
+  {
+    public String id         = "";
+    public String caveName   = "";
+    public String title      = "";    // survey title (else the survey name)
+    public String surveyName = "";
+    public String createdAt  = "";    // UTC time of the upload, which is the version of the survey
+    public String uploader   = "";
+    public long   size       = -1L;   // size of the archive [bytes], -1 if not known
+    public String archiveName = "";
+    public String archiveUrl  = "";
+    public final ArrayList< String[] > therion = new ArrayList<>(); // Therion files: { name, content URL }
+  }
+
+  /** @return the answer of the list of the uploads of a source: GET /api/v1/survey-uploads
+   * @param source     source of the uploads, eg, "topodroid"
+   * @param page_size  maximum number of uploads in the answer
+   */
+  public Result listUploads( String source, int page_size )
+  {
+    return request( "GET", "/api/v1/survey-uploads?source=" + source + "&pageSize=" + page_size, null );
+  }
+
+  /** @return the uploads of an answer of listUploads(), or null if the answer has no list of items
+   * @param json   answer of listUploads()
+   * @note an item without the content URL of the archive is skipped: there is nothing to import from it
+   */
+  public static ArrayList< Upload > parseUploads( JSONObject json )
+  {
+    if ( json == null ) return null;
+    JSONArray items = json.optJSONArray( "items" );
+    if ( items == null ) return null;
+    ArrayList< Upload > ret = new ArrayList<>();
+    for ( int k = 0; k < items.length(); ++k ) {
+      JSONObject item = items.optJSONObject( k );
+      if ( item == null ) continue;
+      JSONObject archive = item.optJSONObject( "archive" );
+      if ( archive == null ) continue;
+      Upload up = new Upload();
+      up.archiveUrl = optString( archive, "contentUrl" );
+      if ( up.archiveUrl.isEmpty() ) continue;
+      up.archiveName = optString( archive, "name" );
+      up.size        = archive.optLong( "sizeBytes", -1L );
+      up.id          = optString( item, "id" );
+      up.caveName    = optString( item, "caveName" );
+      up.surveyName  = optString( item, "surveyName" );
+      up.title       = optString( item, "surveyTitle" );
+      if ( up.title.isEmpty() ) up.title = up.surveyName;
+      up.createdAt   = optString( item, "createdAt" );
+      JSONObject by  = item.optJSONObject( "uploadedBy" );
+      up.uploader    = ( by != null )? optString( by, "displayName" ) : "";
+      JSONArray th = item.optJSONArray( "therionSources" );
+      if ( th != null ) {
+        for ( int j = 0; j < th.length(); ++j ) {
+          JSONObject t = th.optJSONObject( j );
+          if ( t == null ) continue;
+          String url = optString( t, "contentUrl" );
+          if ( ! url.isEmpty() ) up.therion.add( new String[] { optString( t, "name" ), url } );
+        }
+      }
+      ret.add( up );
+    }
+    return ret;
+  }
+
+  /** sort the uploads by cave name, then by survey title, then newest first
+   * @param uploads  list of uploads
+   */
+  public static void sortUploads( List< Upload > uploads )
+  {
+    Collections.sort( uploads, new Comparator< Upload >() {
+      @Override
+      public int compare( Upload a, Upload b ) {
+        int c = a.caveName.compareToIgnoreCase( b.caveName );
+        if ( c == 0 ) c = a.title.compareToIgnoreCase( b.title );
+        if ( c == 0 ) c = b.createdAt.compareTo( a.createdAt ); // ISO times: the later is greater
+        return c;
+      }
+    } );
+  }
+
+  /** @return the uploads with the text in the cave name, the survey title or name, or the uploader
+   * @param uploads  list of uploads
+   * @param text     filter text (blank for all)
+   */
+  public static ArrayList< Upload > filterUploads( List< Upload > uploads, String text )
+  {
+    ArrayList< Upload > ret = new ArrayList<>();
+    String t = ( text == null )? "" : text.trim().toLowerCase( Locale.getDefault() );
+    for ( Upload up : uploads ) {
+      if ( t.isEmpty()
+        || up.caveName.toLowerCase( Locale.getDefault() ).contains( t )
+        || up.title.toLowerCase( Locale.getDefault() ).contains( t )
+        || up.surveyName.toLowerCase( Locale.getDefault() ).contains( t )
+        || up.uploader.toLowerCase( Locale.getDefault() ).contains( t ) ) ret.add( up );
+    }
+    return ret;
+  }
+
+  /** @return the file name from a name given by the server: no folder, only letters, digits, dot, dash and underscore, with the extension
+   * @param name   name given by the server
+   * @param ext    extension, with the dot, eg, ".zip"
+   * @note the name comes from a server: it must not move the file out of its folder
+   */
+  public static String safeFileName( String name, String ext )
+  {
+    if ( name == null ) name = "";
+    int pos = Math.max( name.lastIndexOf( '/' ), name.lastIndexOf( '\\' ) );
+    name = name.substring( pos + 1 ).replaceAll( "[^A-Za-z0-9._-]", "_" );
+    while ( name.startsWith( "." ) ) name = name.substring( 1 );
+    if ( name.isEmpty() ) name = "survey";
+    if ( ! name.toLowerCase( Locale.US ).endsWith( ext ) ) name = name + ext;
+    return name;
+  }
+
+  /** @return a file in the folder that does not exist yet: the name, or the name with -1, -2, ... before the extension
+   * @param dir    folder
+   * @param name   file name
+   */
+  public static File newFile( File dir, String name )
+  {
+    File file = new File( dir, name );
+    if ( ! file.exists() ) return file;
+    int pos = name.lastIndexOf( '.' );
+    String base = ( pos > 0 )? name.substring( 0, pos ) : name;
+    String ext  = ( pos > 0 )? name.substring( pos ) : "";
+    for ( int k = 1; ; ++k ) {
+      file = new File( dir, base + "-" + k + ext );
+      if ( ! file.exists() ) return file;
+    }
+  }
+
+  /** @return the time of an ISO UTC time, to the minute: "2026-10-25 01:32"
+   * @param iso   ISO time
+   */
+  public static String shortTime( String iso )
+  {
+    String ret = iso.replace( 'T', ' ' );
+    return ( ret.length() > 16 )? ret.substring( 0, 16 ) : ret;
+  }
+
+  /** @return the size in megabytes ("5.2 MB") or, under one megabyte, in kilobytes ("5.2 kB"); "5.2 / 12.0 MB" if the total is known
+   * @param done   size [bytes]
+   * @param total  total size [bytes] (-1 if not known)
+   */
+  public static String sizeText( long done, long total )
+  {
+    if ( done < 0 ) return "";
+    boolean kb = Math.max( done, total ) < 1048576L;
+    double unit = kb? 1024.0 : 1048576.0;
+    String name = kb? "kB" : "MB";
+    if ( total > 0 ) return String.format( Locale.US, "%.1f / %.1f %s", done / unit, total / unit, name );
+    return String.format( Locale.US, "%.1f %s", done / unit, name );
+  }
+
+  /** listener of the progress of a download
+   */
+  public interface Progress
+  {
+    /** @return true to go on, false to stop the download
+     * @param done    bytes received
+     * @param total   bytes expected (-1 if not known)
+     */
+    boolean onProgress( long done, long total );
+  }
+
+  /** @return the full URL of a content URL of the server: a path is relative to the base URL, null if the URL is neither
+   * @param content_url   content URL
+   */
+  String resolveUrl( String content_url )
+  {
+    if ( content_url == null ) return null;
+    if ( content_url.startsWith( "/" ) ) return mBaseUrl + content_url;
+    String lower = content_url.toLowerCase( Locale.US );
+    if ( lower.startsWith( "https://" ) || lower.startsWith( "http://" ) ) return content_url;
+    return null;
+  }
+
+  /** @return true if the two URLs have the same scheme, host and port
+   */
+  private static boolean sameOrigin( String url1, String url2 )
+  {
+    try {
+      URL u1 = new URL( url1 );
+      URL u2 = new URL( url2 );
+      return u1.getProtocol().equalsIgnoreCase( u2.getProtocol() )
+          && u1.getHost().equalsIgnoreCase( u2.getHost() )
+          && u1.getPort() == u2.getPort()
+          && u1.getDefaultPort() == u2.getDefaultPort();
+    } catch ( MalformedURLException e ) {
+      return false;
+    }
+  }
+
+  /** download a file of the server
+   * @param content_url   content URL of the file, a path of the server or a full URL
+   * @param dest          destination file
+   * @param progress      progress listener (can be null)
+   * @return the result of the download: OK (no JSON), CANCELLED if the listener stopped it, FILE_ERROR if the file cannot be written,
+   *         or a failure as in request()
+   * @note the file is written as "dest.part" and renamed when it is complete. The access key goes only to the server
+   *       of the base URL: a content URL on another host is signed and needs no key
+   */
+  public Result download( String content_url, File dest, Progress progress )
+  {
+    if ( ! isConfigured() ) return new Result( NOT_CONFIGURED, 0, null, null, null, null, mUrlCheck );
+    if ( mUrlCheck != URL_OK ) return new Result( BAD_URL, 0, null, null, null, null, mUrlCheck );
+    if ( ! checkKey( mKey ) ) return new Result( BAD_KEY, 0, null, null, null, null, URL_OK );
+    String full = resolveUrl( content_url );
+    if ( full == null ) return new Result( BAD_URL, 0, null, null, null, null, URL_INVALID );
+    int check = checkBaseUrl( full );
+    if ( check != URL_OK ) return new Result( BAD_URL, 0, null, null, null, null, check );
+    File part = new File( dest.getPath() + ".part" );
+    HttpURLConnection http = null;
+    InputStream is = null;
+    FileOutputStream fos = null;
+    boolean done = false;
+    try {
+      http = (HttpURLConnection) (new URL( full )).openConnection();
+      http.setConnectTimeout( CONNECT_TIMEOUT );
+      http.setReadTimeout( READ_TIMEOUT );
+      http.setInstanceFollowRedirects( false );
+      http.setUseCaches( false );
+      http.setRequestMethod( "GET" );
+      if ( sameOrigin( mBaseUrl, full ) ) {
+        http.setRequestProperty( "Authorization", "Bearer " + mKey );
+        http.setRequestProperty( "X-SilexGis-Contract", Integer.toString( CONTRACT_VERSION ) );
+      }
+      http.setRequestProperty( "Accept", "application/octet-stream, */*" );
+      int status = http.getResponseCode();
+      if ( status < 200 || status >= 300 ) {
+        return problemResult( status, readText( http.getErrorStream() ) );
+      }
+      long total = -1L;
+      String length = http.getHeaderField( "Content-Length" );
+      if ( length != null ) {
+        try { total = Long.parseLong( length.trim() ); } catch ( NumberFormatException e ) { total = -1L; }
+      }
+      is = http.getInputStream();
+      try {
+        fos = new FileOutputStream( part );
+      } catch ( IOException e ) {
+        return new Result( FILE_ERROR, status, null, null, e.getMessage(), null, URL_OK );
+      }
+      byte[] buf = new byte[65536];
+      long count = 0L;
+      int n;
+      while ( ( n = is.read( buf ) ) > 0 ) {
+        try {
+          fos.write( buf, 0, n );
+        } catch ( IOException e ) {
+          return new Result( FILE_ERROR, status, null, null, e.getMessage(), null, URL_OK );
+        }
+        count += n;
+        if ( progress != null && ! progress.onProgress( count, total ) ) {
+          return new Result( CANCELLED, status, null, null, null, null, URL_OK );
+        }
+      }
+      if ( total >= 0 && count != total ) { // the connection dropped before the end
+        return new Result( NETWORK, status, null, null, "received " + count + " of " + total + " bytes", null, URL_OK );
+      }
+      try {
+        fos.close();
+        fos = null;
+        if ( dest.exists() && ! dest.delete() ) {
+          return new Result( FILE_ERROR, status, null, null, dest.getPath(), null, URL_OK );
+        }
+        if ( ! part.renameTo( dest ) ) {
+          return new Result( FILE_ERROR, status, null, null, dest.getPath(), null, URL_OK );
+        }
+      } catch ( IOException e ) {
+        return new Result( FILE_ERROR, status, null, null, e.getMessage(), null, URL_OK );
+      }
+      done = true;
+      return new Result( OK, status, null, null, null, null, URL_OK );
+    } catch ( IOException e ) {
+      return new Result( NETWORK, 0, null, null, e.getMessage(), null, URL_OK );
+    } catch ( RuntimeException e ) {
+      return new Result( NETWORK, 0, null, null, e.getMessage(), null, URL_OK );
+    } finally {
+      try { if ( is  != null ) is.close();  } catch ( IOException e ) { /* nothing to do */ }
+      try { if ( fos != null ) fos.close(); } catch ( IOException e ) { /* nothing to do */ }
+      if ( ! done ) part.delete();
+      if ( http != null ) http.disconnect();
+    }
+  }
+
   // ---------------------------------------------------------------------
   // utilities
+
+  /** @return a string member of a JSON object, empty if missing or null
+   * @param json   JSON object
+   * @param name   member name
+   */
+  private static String optString( JSONObject json, String name )
+  {
+    String ret = optText( json, name );
+    return ( ret == null )? "" : ret;
+  }
 
   /** @return the text of a stream (UTF-8), empty if the stream is null
    * @param is   input stream
