@@ -62,7 +62,7 @@ public class SilexGisStoreTest
     a.setCave( "c1", "Pestera Inventata" );
     store.save( "a", a );
     SilexGisUpload b = store.load( "b", settings() );
-    b.setNewCave( "Pestera Noua", "cavingGroup", null );
+    b.setNewCave( "Pestera Noua", "cavingGroup", false );
     store.save( "b", b );
     assertEquals( SilexGisUpload.TARGET_CAVE, store.load( "a", settings() ).target );
     assertEquals( "c1", store.load( "a", settings() ).caveId );
@@ -76,7 +76,7 @@ public class SilexGisStoreTest
   public void theSurveyTheServerAnsweredBecomesTheTargetOfTheNextUpload()
   {
     SilexGisUpload a = store.load( "a", settings() );
-    a.setNewCave( "Pestera Noua", "public", null );
+    a.setNewCave( "Pestera Noua", "public", false );
     store.save( "a", a );
     store.saveAnswer( "a", "s7", "pestera noua", "c7", "Pestera Noua" );
     SilexGisUpload next = store.load( "a", settings() );

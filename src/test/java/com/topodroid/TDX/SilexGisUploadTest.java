@@ -123,17 +123,46 @@ public class SilexGisUploadTest
     assertEquals( "0190a000-0000-7000-8000-00000000d001", body.getJSONObject( "caveSurvey" ).getString( "id" ) );
     assertFalse( body.has( "cave" ) || body.has( "newCave" ) );
 
-    u.setNewCave( "Pestera Noua", "public", null );
+    u.setNewCave( "Pestera Noua", "public", false );
     body = u.openRequest( "t", "n", null, "v", files(), null, true );
     JSONObject cave = body.getJSONObject( "newCave" );
     assertEquals( "Pestera Noua", cave.getString( "name" ) );
     assertEquals( "public", cave.getString( "visibility" ) );
-    assertFalse( "the only club of the account is the server's to take", cave.has( "cavingGroupId" ) );
     assertFalse( body.has( "cave" ) || body.has( "caveSurvey" ) );
+  }
 
-    u.setNewCave( "Pestera Noua", "cavingGroup", "club-2" );
-    body = u.openRequest( "t", "n", null, "v", files(), null, true );
-    assertEquals( "club-2", body.getJSONObject( "newCave" ).getString( "cavingGroupId" ) );
+  @Test
+  public void aNewCaveNamesNoClubBecauseTheAccountAnswerListsNone() throws IOException
+  {
+    // /api/v1/me carries one "cavingClubId" and no list of the account's caving groups:
+    // the server binds a club-visible cave to the club of the account
+    SilexGisUpload u = new SilexGisUpload();
+    u.setNewCave( "Pestera Noua", "cavingGroup", false );
+    JSONObject cave = u.openRequest( "t", "n", null, "v", files(), null, true ).getJSONObject( "newCave" );
+    assertEquals( "cavingGroup", cave.getString( "visibility" ) );
+    assertFalse( cave.has( "cavingGroupId" ) );
+    u.targetFromJson( new JSONObject( "{\"target\":3,\"newCaveName\":\"x\",\"newCaveVisibility\":\"cavingGroup\",\"newCaveClubId\":\"club-2\"}" ) );
+    assertEquals( "an old remembered club is dropped", SilexGisUpload.TARGET_NEW_CAVE, u.target );
+    assertFalse( u.openRequest( "t", "n", null, "v", files(), null, true ).getJSONObject( "newCave" ).has( "cavingGroupId" ) );
+  }
+
+  @Test
+  public void aNewCaveCarriesWhetherItsLocationIsProtectedOffByDefault() throws IOException
+  {
+    SilexGisUpload u = new SilexGisUpload();
+    u.setNewCave( "Pestera Noua", "private", false );
+    JSONObject cave = u.openRequest( "t", "n", null, "v", files(), null, true ).getJSONObject( "newCave" );
+    assertFalse( cave.getBoolean( "locationProtected" ) );
+    u.setNewCave( "Pestera Noua", "private", true );
+    cave = u.openRequest( "t", "n", null, "v", files(), null, true ).getJSONObject( "newCave" );
+    assertTrue( cave.getBoolean( "locationProtected" ) );
+    assertTrue( "remembered with the target", u.copy().newCaveProtected );
+    u.setAuto();
+    assertFalse( u.newCaveProtected );
+    u.visibility = "private";
+    assertFalse( "only a new cave asks", u.openRequest( "t", "n", null, "v", files(), null, true ).getJSONObject( "newCave" ).has( "locationProtected" ) );
+    u.targetFromJson( new JSONObject( "{\"target\":3,\"newCaveName\":\"x\",\"newCaveVisibility\":\"private\"}" ) );
+    assertFalse( "a target remembered before the switch is unprotected", u.newCaveProtected );
   }
 
   @Test
@@ -174,14 +203,14 @@ public class SilexGisUploadTest
     SilexGisUpload u = new SilexGisUpload();
     u.withTh = false; u.withSvx = true; u.withDat = true; u.withCsv = true; u.withKml = true; u.withGpx = true; u.withOut = true;
     u.compile = false; u.publicLink = false; u.outputs = "lox"; u.visibility = "private";
-    u.setNewCave( "Pestera Noua", "authenticated", "club-1" );
+    u.setNewCave( "Pestera Noua", "authenticated", true );
     SilexGisUpload v = new SilexGisUpload();
     v.fromJson( new JSONObject( u.toJson().toString() ) );
     assertEquals( u.switchesToJson().toString(), v.switchesToJson().toString() );
     assertEquals( SilexGisUpload.TARGET_NEW_CAVE, v.target );
     assertEquals( "Pestera Noua", v.newCaveName );
     assertEquals( "authenticated", v.newCaveVisibility );
-    assertEquals( "club-1", v.newCaveClubId );
+    assertTrue( v.newCaveProtected );
     SilexGisUpload w = u.copy();
     assertEquals( u.toJson().toString(), w.toJson().toString() );
   }
