@@ -26,6 +26,7 @@ import com.topodroid.prefs.TDSetting;
 import com.topodroid.prefs.TDPrefHelper;
 
 import android.os.AsyncTask;
+import android.app.Activity;
 import android.content.Context;
 import android.content.res.Resources;
 import android.net.Uri;
@@ -461,6 +462,10 @@ class SilexGisExportTask extends AsyncTask< Void, SilexGisExportTask.Line, Silex
       TDLog.e( "SilexGIS progress dialog already gone" );
     }
     if ( out.status != null && out.status.caveSurveyId != null ) rememberAnswer( out.status );
+    if ( mContext instanceof Activity && ( ((Activity)mContext).isFinishing() || ((Activity)mContext).isDestroyed() ) ) {
+      TDToast.makeLong( outcomeText( mRes, out ) ); // the window has gone during the upload: no dialog can be shown on it
+      return;
+    }
     if ( out.mayRestart() ) { // nothing is on the server yet: the upload starts again with the new key
       SilexGisSettingsDialog.showKeyRefused( mContext, new Runnable() { @Override public void run() { start( mContext, mApp ); } } );
       return;
