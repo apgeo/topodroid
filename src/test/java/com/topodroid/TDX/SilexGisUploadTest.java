@@ -75,6 +75,29 @@ public class SilexGisUploadTest
   }
 
   @Test
+  public void withoutATargetTheCaveTheServerMakesHasTheVisibilityOfTheSwitches() throws IOException
+  {
+    SilexGisUpload u = new SilexGisUpload();
+    u.visibility = "private";
+    JSONObject body = u.openRequest( "pestera inventata", "pestera_inventata", null, "6.5.34", files(), OUTPUTS, true );
+    JSONObject cave = body.getJSONObject( "newCave" );
+    assertEquals( "private", cave.getString( "visibility" ) );
+    assertFalse( "no name: the server names the cave after the survey title", cave.has( "name" ) );
+    assertFalse( cave.has( "cavingGroupId" ) );
+    assertFalse( body.has( "cave" ) || body.has( "caveSurvey" ) );
+    assertEquals( "private", body.getString( "documentsVisibility" ) );
+
+    u.visibility = "public";
+    body = u.openRequest( "t", "n", null, "v", files(), null, true );
+    assertEquals( "public", body.getJSONObject( "newCave" ).getString( "visibility" ) );
+
+    u.visibility = "cavingGroup"; // the server's default: the club of the account, else private
+    body = u.openRequest( "t", "n", null, "v", files(), null, true );
+    assertFalse( body.has( "newCave" ) );
+    assertEquals( "cavingGroup", body.getString( "documentsVisibility" ) );
+  }
+
+  @Test
   public void aPickedCaveASurveyOrANewCaveIsTheOnlyTargetOfTheRequest() throws IOException
   {
     SilexGisUpload u = new SilexGisUpload();
