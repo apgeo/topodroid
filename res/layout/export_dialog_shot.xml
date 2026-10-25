@@ -517,6 +517,7 @@
       <EditText android:id="@+id/silexgis_outputs"
         style="@style/edit_text"
         android:layout_width="match_parent"
+        android:hint="@string/silexgis_outputs_default"
         android:inputType="text"
         android:importantForAutofill="no"
         />

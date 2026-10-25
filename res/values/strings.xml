@@ -1711,6 +1711,7 @@ On Android-11+ storage access must be granted to TopoDroid.\nYou can do this wit
   <string name="silexgis_pref_compile_title">Compile</string>
   <string name="silexgis_pref_compile_summary">Ask the server to compile the survey</string>
   <string name="silexgis_pref_outputs_title">Outputs</string>
+  <string name="silexgis_outputs_default">Empty for the outputs the server makes by default</string>
   <string name="silexgis_pref_outputs_summary">Outputs to ask the server for, comma separated (lox, 3d, plan-pdf, extended-pdf, ...)</string>
   <string name="silexgis_pref_visibility_title">Visibility</string>
   <string name="silexgis_pref_visibility_summary">Who may see a cave created by the upload, and the documents of the upload</string>

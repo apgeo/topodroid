@@ -585,8 +585,7 @@ public class ExportDialogShot extends MyDialog
           mSilexgisUpload.withGpx    = ((CheckBox) findViewById( R.id.silexgis_with_gpx )).isChecked();
           mSilexgisUpload.withOut    = ((CheckBox) findViewById( R.id.silexgis_with_out )).isChecked();
           mSilexgisUpload.publicLink = ((CheckBox) findViewById( R.id.silexgis_public_link )).isChecked();
-          String outputs = ((EditText) findViewById( R.id.silexgis_outputs )).getText().toString().trim();
-          if ( ! outputs.isEmpty() ) mSilexgisUpload.outputs = outputs;
+          mSilexgisUpload.outputs = ((EditText) findViewById( R.id.silexgis_outputs )).getText().toString().trim(); // empty: the server default
           int vis = ((Spinner) findViewById( R.id.silexgis_visibility )).getSelectedItemPosition();
           if ( vis >= 0 && vis < SilexGisUpload.VISIBILITIES.length ) mSilexgisUpload.visibility = SilexGisUpload.VISIBILITIES[ vis ];
         }
