@@ -71,10 +71,7 @@ public class SilexGisUploadTest
     assertEquals( "[\"lox\",\"3d\",\"plan-pdf\",\"extended-pdf\"]", pipeline.getJSONArray( "outputs" ).toString() );
     assertFalse( "the pipeline never sets the current model", pipeline.has( "makeCurrentModel" ) );
     assertEquals( "cavingGroup", body.getString( "documentsVisibility" ) );
-    JSONObject link = body.getJSONObject( "publicLink" );
-    assertTrue( link.getBoolean( "wanted" ) );
-    assertEquals( "public", link.getString( "audience" ) );
-    assertFalse( link.getBoolean( "allowProtected" ) );
+    assertFalse( "no link chosen: the preferences of the account decide on the server", body.has( "publicLink" ) );
   }
 
   @Test
@@ -205,7 +202,7 @@ public class SilexGisUploadTest
   {
     SilexGisUpload u = new SilexGisUpload();
     u.withTh = false; u.withSvx = true; u.withDat = true; u.withCsv = true; u.withKml = true; u.withGpx = true; u.withOut = true;
-    u.compile = false; u.publicLink = false; u.outputs = "lox"; u.visibility = "private";
+    u.compile = false; u.setLinkChoice( SilexGisUpload.LINK_ORGANIZATION ); u.outputs = "lox"; u.visibility = "private";
     u.setNewCave( "Pestera Noua", "authenticated", true );
     SilexGisUpload v = new SilexGisUpload();
     v.fromJson( new JSONObject( u.toJson().toString() ) );

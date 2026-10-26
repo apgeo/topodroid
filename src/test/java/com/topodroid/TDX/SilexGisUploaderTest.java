@@ -181,11 +181,7 @@ public class SilexGisUploaderTest
     assertEquals( "pestera_inventata", body.getString( "surveyName" ) );
     assertEquals( 3, body.getJSONArray( "files" ).length() );
     assertEquals( "[\"lox\",\"3d\"]", body.getJSONObject( "pipeline" ).getJSONArray( "outputs" ).toString() );
-    JSONObject link = body.getJSONObject( "publicLink" );
-    assertEquals( 3, link.length() );
-    assertTrue( link.getBoolean( "wanted" ) );
-    assertEquals( "public", link.getString( "audience" ) );
-    assertFalse( link.getBoolean( "allowProtected" ) );
+    assertFalse( "the link is left to the account unless the user chose one", body.has( "publicLink" ) );
 
     // a file is sent as its bytes, with the key and the contract version
     FakeSilexGis.Request put = server.of( "PUT", UP + "/" + ID + "/files/pestera_inventata.zip" ).get( 0 );

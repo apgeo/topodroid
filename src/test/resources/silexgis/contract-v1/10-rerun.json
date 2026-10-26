@@ -49,7 +49,9 @@
   "statusPageUrl": "/caves/<cave>/surveys/<survey>/uploads/<next-upload>",
   "publicLink": {
     "url": "/p/survey/<next-public-token>",
-    "createdAt": "<timestamp>"
+    "createdAt": "<timestamp>",
+    "audience": "public",
+    "protectedAcknowledged": false
   },
   "publicLinkRefusal": null,
   "createdAt": "<timestamp>",

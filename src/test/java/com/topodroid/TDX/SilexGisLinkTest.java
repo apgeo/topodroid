@@ -17,9 +17,9 @@ import org.junit.Test;
 /**
  * The link to the results of a SilexGIS upload as the phone handles it: the choice sent with the opening,
  * the link read from the status, and the requests that make a new link (also for a protected cave, only when
- * asked for on purpose) and withdraw it. The answers are written to the shapes of the owner's decisions
- * (make: POST, withdraw: DELETE /api/v1/survey-uploads/{id}/public-link, body {audience, allowProtected});
- * they are to be checked against the server's recordings once it records them. Every value is invented.
+ * asked for on purpose) and withdraw it (make: POST, withdraw: DELETE /api/v1/survey-uploads/{id}/public-link,
+ * body {audience, allowProtected}). The answers here are written by hand to the shapes of the server's code;
+ * the recorded making of a link is played in SilexGisContractTest. Every value is invented.
  */
 public class SilexGisLinkTest
 {
@@ -54,10 +54,20 @@ public class SilexGisLinkTest
   // the choice of the export dialog
 
   @Test
-  public void theOpeningCarriesTheLinkChoice()
+  public void byDefaultTheOpeningLeavesTheLinkToTheAccount()
   {
     SilexGisUpload u = new SilexGisUpload();
-    assertEquals( "the default: a link for anyone", SilexGisUpload.LINK_PUBLIC, u.linkChoice() );
+    assertEquals( "the default: as the account says", SilexGisUpload.LINK_ACCOUNT, u.linkChoice() );
+    assertNull( u.linkAudience() );
+    assertFalse( "nothing sent: the account preferences decide, link or not, and its audience",
+      u.openRequest( "t", "n", null, "v", null, null, false ).has( "publicLink" ) );
+  }
+
+  @Test
+  public void theOpeningCarriesTheLinkTheUserPicked()
+  {
+    SilexGisUpload u = new SilexGisUpload();
+    u.setLinkChoice( SilexGisUpload.LINK_PUBLIC );
     JSONObject link = u.openRequest( "t", "n", null, "v", null, null, false ).getJSONObject( "publicLink" );
     assertTrue( link.getBoolean( "wanted" ) );
     assertEquals( "public", link.getString( "audience" ) );
@@ -73,33 +83,26 @@ public class SilexGisLinkTest
     assertEquals( SilexGisUpload.LINK_NONE, u.linkChoice() );
     link = u.openRequest( "t", "n", null, "v", null, null, false ).getJSONObject( "publicLink" );
     assertFalse( "no link for this upload, whatever the account says", link.getBoolean( "wanted" ) );
+    assertFalse( "no audience for no link", link.has( "audience" ) );
     assertFalse( link.getBoolean( "allowProtected" ) );
-    assertEquals( "no link keeps the audience for the next time a link is chosen", "organization", u.linkAudience );
+
+    u.setLinkChoice( 7 );
+    assertEquals( "an unknown choice leaves it to the account", SilexGisUpload.LINK_ACCOUNT, u.linkChoice() );
   }
 
   @Test
   public void theLinkChoiceIsRememberedWithTheOtherSwitches()
   {
     SilexGisUpload u = new SilexGisUpload();
-    u.setLinkChoice( SilexGisUpload.LINK_ORGANIZATION );
     SilexGisUpload v = new SilexGisUpload();
-    v.switchesFromJson( new JSONObject( u.switchesToJson().toString() ) );
-    assertEquals( SilexGisUpload.LINK_ORGANIZATION, v.linkChoice() );
-    u.setLinkChoice( SilexGisUpload.LINK_NONE );
-    v.switchesFromJson( new JSONObject( u.switchesToJson().toString() ) );
-    assertEquals( SilexGisUpload.LINK_NONE, v.linkChoice() );
-    v.switchesFromJson( new JSONObject( "{\"publicLink\":true,\"linkAudience\":\"everybody\"}" ) );
-    assertEquals( "an unknown audience is not taken", "organization", v.linkAudience );
-  }
-
-  @Test
-  public void theAccountAudienceIsReadFromTheCapabilities()
-  {
-    assertEquals( "organization", SilexGisUploader.accountLinkAudience( new JSONObject( "{\"publicLinks\":{\"defaultAudience\":\"organization\"}}" ) ) );
-    assertEquals( "public", SilexGisUploader.accountLinkAudience( new JSONObject( "{\"publicLinks\":{\"defaultAudience\":\"public\"}}" ) ) );
-    assertNull( SilexGisUploader.accountLinkAudience( new JSONObject( "{\"publicLinks\":{\"defaultAudience\":\"world\"}}" ) ) );
-    assertNull( "a server that does not say", SilexGisUploader.accountLinkAudience( new JSONObject( "{\"pollIntervalSeconds\":3}" ) ) );
-    assertNull( SilexGisUploader.accountLinkAudience( null ) );
+    for ( int choice : new int[] { SilexGisUpload.LINK_ORGANIZATION, SilexGisUpload.LINK_NONE, SilexGisUpload.LINK_PUBLIC, SilexGisUpload.LINK_ACCOUNT } ) {
+      u.setLinkChoice( choice );
+      v.switchesFromJson( new JSONObject( u.switchesToJson().toString() ) );
+      assertEquals( choice, v.linkChoice() );
+    }
+    v.setLinkChoice( SilexGisUpload.LINK_NONE );
+    v.switchesFromJson( new JSONObject( "{\"link\":\"everybody\"}" ) );
+    assertEquals( "an unknown choice is not taken", SilexGisUpload.LINK_NONE, v.linkChoice() );
   }
 
   // ---------------------------------------------------------------------
@@ -228,10 +231,20 @@ public class SilexGisLinkTest
   @Test
   public void aLinkAlreadyGoneIsWithdrawn()
   {
-    server.on( "DELETE", LINK, 404, "{\"title\":\"Not Found\",\"status\":404,\"code\":\"survey_upload.public_link_not_found\"}" );
-    SilexGisLink l = SilexGisLink.of( status( "{\"url\":\"/p/survey/old\"}", null ) );
+    server.on( "DELETE", LINK, new FakeSilexGis.Answer( 204, null, new byte[0] ) ); // the server answers 204 also when there is no link
+    SilexGisLink l = new SilexGisLink();
     assertEquals( SilexGisLink.WITHDRAWN, l.withdraw( client, UPLOAD ) );
     assertFalse( l.hasLink() );
+  }
+
+  @Test
+  public void anUploadTheServerDoesNotShowIsNotWithdrawn()
+  {
+    server.on( "DELETE", LINK, 404, "{\"title\":\"Not Found\",\"status\":404,\"code\":\"survey_upload.not_found\"}" );
+    SilexGisLink l = SilexGisLink.of( status( "{\"url\":\"/p/survey/old\"}", null ) );
+    assertEquals( SilexGisLink.REFUSED, l.withdraw( client, UPLOAD ) );
+    assertEquals( "survey_upload.not_found", l.result.code );
+    assertEquals( "the link is shown as it was", "/p/survey/old", l.url );
   }
 
   @Test
@@ -263,8 +276,32 @@ public class SilexGisLinkTest
   public void theMakeRequestNeverSendsAnUnknownAudience()
   {
     JSONObject body = SilexGisLink.makeRequest( "everybody", true );
-    assertEquals( "public", body.getString( "audience" ) );
+    assertFalse( "an unknown audience is left to the server", body.has( "audience" ) );
     assertTrue( body.getBoolean( "allowProtected" ) );
-    assertEquals( 2, body.length() );
+    assertEquals( 1, body.length() );
+  }
+
+  @Test
+  public void aNewLinkWithoutAChosenAudienceTakesTheOneTheServerAnswers()
+  {
+    server.on( "POST", LINK, 201, "{\"url\":\"/p/survey/new4\",\"createdAt\":\"2026-10-26T10:00:00Z\",\"audience\":\"organization\",\"protectedAcknowledged\":false}" );
+    SilexGisLink l = new SilexGisLink();
+    assertEquals( SilexGisLink.MADE, l.make( client, UPLOAD, null, false ) );
+    JSONObject body = new JSONObject( server.of( "POST", LINK ).get( 0 ).text() );
+    assertFalse( "the server keeps the audience of the link it replaces, else the upload's, else the account's", body.has( "audience" ) );
+    assertFalse( body.getBoolean( "allowProtected" ) );
+    assertTrue( l.isOrganization() );
+  }
+
+  @Test
+  public void aCopyIsChangedWithoutTheLinkItWasMadeFrom()
+  {
+    server.on( "DELETE", LINK, new FakeSilexGis.Answer( 204, null, new byte[0] ) );
+    SilexGisLink shown = SilexGisLink.of( status( "{\"url\":\"/p/survey/old\",\"audience\":\"organization\"}", null ) );
+    SilexGisLink work = shown.copy();
+    assertEquals( SilexGisLink.WITHDRAWN, work.withdraw( client, UPLOAD ) );
+    assertFalse( work.hasLink() );
+    assertEquals( "the dialog reads the link it shows until the request ends", "/p/survey/old", shown.url );
+    assertTrue( shown.isOrganization() );
   }
 }

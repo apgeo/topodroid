@@ -2,7 +2,11 @@
 
 Copies of the files the SilexGIS server records from its own test suite
 (`contract/topodroid-sync/v1/<exchange>/` in the SilexGIS repository, as recorded at its commit
-cac9043a, which added the compiled run, the artefacts' errors, the public link and its refusal):
+cac9043a, which added the compiled run, the artefacts' errors, the public link and its refusal; then
+again on 2026-10-26 from the recordings that added the link audiences: the opening request with its
+`publicLink` choice, the statuses and the list with the link's `audience` and `protectedAcknowledged`,
+`13-make-public-link` and `11-errors/public-link-sign-in-required`, the last of which answers the
+public page that a browser opens, not the phone):
 
 | File here | Recording |
 |---|---|

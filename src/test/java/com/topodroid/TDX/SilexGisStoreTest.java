@@ -25,7 +25,7 @@ public class SilexGisStoreTest
   private static SilexGisUpload settings()
   {
     SilexGisUpload s = new SilexGisUpload();
-    s.withTh = true; s.compile = true; s.outputs = "lox,3d"; s.visibility = "private"; s.publicLink = false;
+    s.withTh = true; s.compile = true; s.outputs = "lox,3d"; s.visibility = "private"; s.setLinkChoice( SilexGisUpload.LINK_NONE );
     return s;
   }
 
@@ -36,7 +36,7 @@ public class SilexGisStoreTest
     assertEquals( SilexGisUpload.TARGET_AUTO, u.target );
     assertEquals( "lox,3d", u.outputs );
     assertEquals( "private", u.visibility );
-    assertFalse( u.publicLink );
+    assertEquals( SilexGisUpload.LINK_NONE, u.linkChoice() );
     assertNull( store.loadTarget( "pestera_inventata" ) );
   }
 
@@ -44,14 +44,14 @@ public class SilexGisStoreTest
   public void theNextUploadTakesTheLastCombinationNotTheSettings()
   {
     SilexGisUpload u = store.load( "a", settings() );
-    u.compile = false; u.withSvx = true; u.outputs = "lox"; u.visibility = "public"; u.publicLink = true;
+    u.compile = false; u.withSvx = true; u.outputs = "lox"; u.visibility = "public"; u.setLinkChoice( SilexGisUpload.LINK_ORGANIZATION );
     store.save( "a", u );
     SilexGisUpload v = store.load( "b", settings() ); // the switches are the same for every survey
     assertFalse( v.compile );
     assertTrue( v.withSvx );
     assertEquals( "lox", v.outputs );
     assertEquals( "public", v.visibility );
-    assertTrue( v.publicLink );
+    assertEquals( SilexGisUpload.LINK_ORGANIZATION, v.linkChoice() );
     assertEquals( "another survey keeps its own target", SilexGisUpload.TARGET_AUTO, v.target );
   }
 
@@ -92,29 +92,30 @@ public class SilexGisStoreTest
   }
 
   @Test
-  public void theAccountAudienceIsTheDefaultUntilAnAudienceIsChosen()
+  public void theLinkIsLeftToTheAccountUntilTheUserPicksOne()
   {
-    assertEquals( "nothing known: a link for anyone", "public", store.load( "a", new SilexGisUpload() ).linkAudience );
-    store.saveAccountAudience( "organization" );
-    assertEquals( "organization", store.load( "a", new SilexGisUpload() ).linkAudience );
-    SilexGisUpload u = store.load( "a", settings() );
-    assertEquals( "organization", u.linkAudience );
+    SilexGisUpload u = store.load( "a", new SilexGisUpload() );
+    assertEquals( "nothing picked: the account decides", SilexGisUpload.LINK_ACCOUNT, u.linkChoice() );
+    assertNull( u.linkAudience() );
     u.setLinkChoice( SilexGisUpload.LINK_PUBLIC );
     store.save( "a", u );
-    assertEquals( "the last choice wins over the account", "public", store.load( "b", settings() ).linkAudience );
-    store.saveAccountAudience( "world" );
-    store.saveAccountAudience( null );
-    assertEquals( "an unknown audience is not remembered", "organization", prefs.get( SilexGisStore.KEY_AUDIENCE ) );
+    SilexGisUpload v = store.load( "b", new SilexGisUpload() );
+    assertEquals( "the pick is remembered", SilexGisUpload.LINK_PUBLIC, v.linkChoice() );
+    assertEquals( "public", v.linkAudience() );
+    v.setLinkChoice( SilexGisUpload.LINK_ACCOUNT );
+    store.save( "b", v );
+    assertEquals( "and so is going back to the account", SilexGisUpload.LINK_ACCOUNT, store.load( "a", settings() ).linkChoice() );
   }
 
   @Test
-  public void anOlderRememberedCombinationTakesTheAccountAudience()
+  public void aRememberedCombinationWithoutALinkChoiceKeepsTheDefault()
   {
-    prefs.put( SilexGisStore.KEY_SWITCHES, "{\"publicLink\":true,\"compile\":false}" ); // remembered before the audience existed
-    store.saveAccountAudience( "organization" );
-    SilexGisUpload u = store.load( "a", settings() );
+    prefs.put( SilexGisStore.KEY_SWITCHES, "{\"publicLink\":true,\"linkAudience\":\"public\",\"compile\":false}" ); // an older form
+    SilexGisUpload u = store.load( "a", new SilexGisUpload() );
     assertFalse( u.compile );
-    assertEquals( SilexGisUpload.LINK_ORGANIZATION, u.linkChoice() );
+    assertEquals( "the account decides", SilexGisUpload.LINK_ACCOUNT, u.linkChoice() );
+    prefs.put( SilexGisStore.KEY_SWITCHES, "{\"link\":\"everybody\"}" );
+    assertEquals( "an unknown choice is not taken", SilexGisUpload.LINK_NONE, store.load( "a", settings() ).linkChoice() );
   }
 
   @Test

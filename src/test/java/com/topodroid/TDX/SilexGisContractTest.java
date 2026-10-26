@@ -136,6 +136,7 @@ public class SilexGisContractTest
     assertEquals( "unpack", out.status.stage );
     assertEquals( 100, out.status.progress );
     assertEquals( "/p/survey/0190a000-0000-7000-8000-0000000000ff", out.status.publicLinkUrl );
+    assertEquals( "public", out.status.publicLinkAudience );
     assertNull( out.status.publicLinkRefusal );
     assertTrue( out.status.artefacts.isEmpty() );
   }
@@ -235,10 +236,38 @@ public class SilexGisContractTest
   public void theOpeningRequestHasTheShapeOfTheRecordedOne() throws IOException
   {
     recordedConversation( "06-status-succeeded" );
-    uploader.run( new SilexGisUpload(), "Pestera Inventata m1", "pestera_inventata", "Invented survey for the recorded contract", "6.5.34", files(), new Recorder() );
+    SilexGisUpload upload = new SilexGisUpload();
+    upload.setLinkChoice( SilexGisUpload.LINK_PUBLIC ); // the recorded tool picked a link for anyone
+    uploader.run( upload, "Pestera Inventata m1", "pestera_inventata", "Invented survey for the recorded contract", "6.5.34", files(), new Recorder() );
     JSONObject sent = new JSONObject( server.of( "POST", UP ).get( 0 ).text() );
-    assertSentAsRecorded( new JSONObject( recorded( "02-open.request" ) ), sent );
+    JSONObject recorded = new JSONObject( recorded( "02-open.request" ) );
+    assertSentAsRecorded( recorded, sent );
     assertFalse( "no target: the server makes the cave", sent.has( "cave" ) || sent.has( "caveSurvey" ) );
+    assertEquals( "the picked link is sent as the recorded one", recorded.getJSONObject( "publicLink" ).toString(), sent.getJSONObject( "publicLink" ).toString() );
+  }
+
+  @Test
+  public void anOpeningThatLeavesTheLinkToTheAccountSendsNoLinkMember() throws IOException
+  {
+    recordedConversation( "06-status-succeeded" );
+    uploader.run( new SilexGisUpload(), "Pestera Inventata m1", "pestera_inventata", null, "6.5.34", files(), new Recorder() );
+    JSONObject sent = new JSONObject( server.of( "POST", UP ).get( 0 ).text() );
+    assertFalse( "absent: the account preferences decide, as the server records", sent.has( "publicLink" ) );
+  }
+
+  @Test
+  public void theRecordedMakingOfALinkIsReadWithItsAudience() throws IOException
+  {
+    server.on( "POST", UP + "/" + UPLOAD + "/public-link", 201, recorded( "13-make-public-link" ) );
+    SilexGisLink link = SilexGisLink.of( null );
+    assertEquals( SilexGisLink.MADE, link.make( new SilexGisClient( server.base(), KEY ), UPLOAD, "organization", false ) );
+    assertEquals( "/p/survey/0190a000-0000-7000-8000-0000000000ff", link.url );
+    assertEquals( "organization", link.audience );
+    assertTrue( link.isOrganization() );
+    JSONObject sent = new JSONObject( server.of( "POST", UP + "/" + UPLOAD + "/public-link" ).get( 0 ).text() );
+    JSONObject recorded = new JSONObject( recorded( "13-make-public-link.request" ) );
+    for ( String name : JSONObject.getNames( recorded ) ) assertEquals( name, recorded.get( name ), sent.get( name ) );
+    assertEquals( recorded.length(), sent.length() );
   }
 
   @Test
