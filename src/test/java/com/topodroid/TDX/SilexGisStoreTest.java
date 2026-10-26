@@ -92,6 +92,32 @@ public class SilexGisStoreTest
   }
 
   @Test
+  public void theAccountAudienceIsTheDefaultUntilAnAudienceIsChosen()
+  {
+    assertEquals( "nothing known: a link for anyone", "public", store.load( "a", new SilexGisUpload() ).linkAudience );
+    store.saveAccountAudience( "organization" );
+    assertEquals( "organization", store.load( "a", new SilexGisUpload() ).linkAudience );
+    SilexGisUpload u = store.load( "a", settings() );
+    assertEquals( "organization", u.linkAudience );
+    u.setLinkChoice( SilexGisUpload.LINK_PUBLIC );
+    store.save( "a", u );
+    assertEquals( "the last choice wins over the account", "public", store.load( "b", settings() ).linkAudience );
+    store.saveAccountAudience( "world" );
+    store.saveAccountAudience( null );
+    assertEquals( "an unknown audience is not remembered", "organization", prefs.get( SilexGisStore.KEY_AUDIENCE ) );
+  }
+
+  @Test
+  public void anOlderRememberedCombinationTakesTheAccountAudience()
+  {
+    prefs.put( SilexGisStore.KEY_SWITCHES, "{\"publicLink\":true,\"compile\":false}" ); // remembered before the audience existed
+    store.saveAccountAudience( "organization" );
+    SilexGisUpload u = store.load( "a", settings() );
+    assertFalse( u.compile );
+    assertEquals( SilexGisUpload.LINK_ORGANIZATION, u.linkChoice() );
+  }
+
+  @Test
   public void aDamagedRememberedValueIsIgnored()
   {
     prefs.put( SilexGisStore.KEY_SWITCHES, "{not json" );
