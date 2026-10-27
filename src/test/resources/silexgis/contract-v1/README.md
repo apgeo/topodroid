@@ -6,13 +6,16 @@ cac9043a, which added the compiled run, the artefacts' errors, the public link a
 again on 2026-10-26 from the recordings that added the link audiences: the opening request with its
 `publicLink` choice, the statuses and the list with the link's `audience` and `protectedAcknowledged`,
 `13-make-public-link` and `11-errors/public-link-sign-in-required`, the last of which answers the
-public page that a browser opens, not the phone):
+public page that a browser opens, not the phone; and again on 2026-10-28 from the recordings that added
+`olderVersions` to every status, the capabilities' `publicLinks { enabled, defaultAudience }` and the
+bodies of the refused opening requests):
 
 | File here | Recording |
 |---|---|
 | `NN-name.json` | `NN-name/response.json` |
 | `NN-name.request.json` | `NN-name/request.json` (the body the recorded tool sent) |
 | `11-errors-<case>.json` | `11-errors/<case>/response.json` |
+| `11-errors-<case>.request.json` | `11-errors/<case>/request.json` (the body that was refused) |
 
 They are copied here, not read in place, because the server records them again whenever its
 answers change: a change shows up here only when it is copied on purpose.

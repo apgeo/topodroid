@@ -2,6 +2,7 @@ package com.topodroid.TDX;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
@@ -12,7 +13,9 @@ import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -367,7 +370,7 @@ public class SilexGisContractTest
   {
     String[] cases = { "cave-ambiguous", "cave-not-found", "cave-type-unknown", "content-mismatch", "expired",
       "files-invalid", "files-missing", "file-unknown", "not-found", "output-unknown", "public-link-not-found",
-      "run-in-progress", "size-mismatch", "source-unsupported", "survey-not-found", "visibility-invalid", "not-receiving" };
+      "public-link-sign-in-required", "run-in-progress", "size-mismatch", "source-unsupported", "survey-not-found", "visibility-invalid", "not-receiving" };
     SilexGisClient client = new SilexGisClient( server.base(), KEY );
     for ( int k = 0; k < cases.length; ++k ) {
       JSONObject problem = new JSONObject( recorded( "11-errors-" + cases[k] ) );
@@ -409,5 +412,215 @@ public class SilexGisContractTest
     assertEquals( "Avenul Fictiv", caves.get( 1 )[2] );
     assertTrue( SilexGisClient.parseCaves( new JSONObject( "{}" ) ).isEmpty() );
     assertTrue( SilexGisClient.parseCaves( null ).isEmpty() );
+  }
+  // ---------------------------------------------------------------------
+  // the links of the account, the per-upload choice, making and withdrawing a link, the older versions
+
+  /** @return a store over a map, as the app shared preferences */
+  private static SilexGisStore memoryStore( final Map< String, String > prefs )
+  {
+    return new SilexGisStore( new SilexGisStore.Prefs() {
+      @Override public String get( String key ) { return prefs.get( key ); }
+      @Override public void put( String key, String value ) { if ( value == null ) prefs.remove( key ); else prefs.put( key, value ); }
+    } );
+  }
+
+  @Test
+  public void theRecordedCapabilitiesTellTheLinksOfTheAccount() throws IOException
+  {
+    JSONObject caps = new JSONObject( recorded( "01-capabilities" ) );
+    assertTrue( SilexGisUploader.publicLinksEnabled( caps ) );
+    assertEquals( "public", SilexGisUploader.defaultLinkAudience( caps ) );
+
+    caps.getJSONObject( "publicLinks" ).put( "defaultAudience", "organization" );
+    assertEquals( "organization", SilexGisUploader.defaultLinkAudience( caps ) );
+    caps.getJSONObject( "publicLinks" ).put( "defaultAudience", "everybody" );
+    assertNull( "an audience the client does not know is not taken", SilexGisUploader.defaultLinkAudience( caps ) );
+    caps.getJSONObject( "publicLinks" ).put( "enabled", false );
+    assertFalse( SilexGisUploader.publicLinksEnabled( caps ) );
+
+    caps.remove( "publicLinks" ); // a server older than the member: links as the account says, audience not known
+    assertTrue( SilexGisUploader.publicLinksEnabled( caps ) );
+    assertNull( SilexGisUploader.defaultLinkAudience( caps ) );
+    assertNull( SilexGisUploader.publicLinks( null ) );
+  }
+
+  @Test
+  public void theFirstLinkChoiceIsTheAudienceOfTheAccount() throws IOException
+  {
+    JSONObject caps = new JSONObject( recorded( "01-capabilities" ) );
+    Map< String, String > prefs = new HashMap<>();
+    SilexGisStore store = memoryStore( prefs );
+    assertEquals( "nothing known: as the account says", SilexGisUpload.LINK_ACCOUNT, store.load( "pestera_inventata", new SilexGisUpload() ).linkChoice() );
+
+    store.saveLinks( caps );
+    SilexGisUpload u = store.load( "pestera_inventata", new SilexGisUpload() );
+    assertEquals( "the recorded account's audience", SilexGisUpload.LINK_PUBLIC, u.linkChoice() );
+    assertFalse( u.linksOff );
+
+    caps.getJSONObject( "publicLinks" ).put( "defaultAudience", "organization" );
+    store.saveLinks( caps );
+    assertEquals( SilexGisUpload.LINK_ORGANIZATION, store.load( "pestera_inventata", new SilexGisUpload() ).linkChoice() );
+
+    SilexGisUpload none = new SilexGisUpload();
+    none.setLinkChoice( SilexGisUpload.LINK_NONE ); // the settings ask for no link: kept
+    assertEquals( SilexGisUpload.LINK_NONE, store.load( "pestera_inventata", none ).linkChoice() );
+
+    u.setLinkChoice( SilexGisUpload.LINK_ACCOUNT ); // a choice made is remembered, and wins over the account's audience
+    store.save( "pestera_inventata", u );
+    assertTrue( store.hasLinkChoice() );
+    assertEquals( SilexGisUpload.LINK_ACCOUNT, store.load( "pestera_inventata", new SilexGisUpload() ).linkChoice() );
+  }
+
+  @Test
+  public void anAccountWithoutLinksIsNotOfferedNorSentTheChoice() throws IOException
+  {
+    JSONObject caps = new JSONObject( recorded( "01-capabilities" ) );
+    caps.getJSONObject( "publicLinks" ).put( "enabled", false );
+    Map< String, String > prefs = new HashMap<>();
+    SilexGisStore store = memoryStore( prefs );
+    store.saveLinks( caps );
+    SilexGisUpload u = store.load( "pestera_inventata", new SilexGisUpload() );
+    assertTrue( "the export dialog hides the choice", u.linksOff );
+    u.setLinkChoice( SilexGisUpload.LINK_PUBLIC );
+    assertFalse( u.openRequest( "t", "n", null, "v", null, null, false ).has( "publicLink" ) );
+    store.save( "pestera_inventata", u );
+    assertFalse( "a choice not offered is not remembered", store.hasLinkChoice() );
+
+    // the upload asks the server again: links switched off since the dialog opened are not sent the choice either
+    server.on( "GET",  UP + "/capabilities", 200, caps.toString() )
+          .on( "POST", UP, 201, recorded( "02-open" ) )
+          .on( "PUT",  UP + "/" + UPLOAD + "/files/" + ZIP, 200, recorded( "03-put-file" ) )
+          .on( "POST", UP + "/" + UPLOAD + "/complete", 202, recorded( "04-complete" ) )
+          .on( "GET",  UP + "/" + UPLOAD, 200, recorded( "06-status-succeeded" ) );
+    SilexGisUpload upload = new SilexGisUpload();
+    upload.setLinkChoice( SilexGisUpload.LINK_ORGANIZATION );
+    uploader.run( upload, "Pestera Inventata m1", "pestera_inventata", null, "6.5.34", files(), new Recorder() );
+    JSONObject sent = new JSONObject( server.of( "POST", UP ).get( 0 ).text() );
+    assertFalse( sent.has( "publicLink" ) );
+    assertTrue( upload.linksOff );
+  }
+
+  @Test
+  public void theRecordedCapabilitiesKeepTheLinkChoiceOfTheUpload() throws IOException
+  {
+    recordedConversation( "06-status-succeeded" );
+    SilexGisUpload upload = new SilexGisUpload();
+    upload.setLinkChoice( SilexGisUpload.LINK_ORGANIZATION );
+    uploader.run( upload, "Pestera Inventata m1", "pestera_inventata", null, "6.5.34", files(), new Recorder() );
+    JSONObject sent = new JSONObject( server.of( "POST", UP ).get( 0 ).text() );
+    assertEquals( "the choice wins over the account's audience", "organization", sent.getJSONObject( "publicLink" ).getString( "audience" ) );
+    assertFalse( upload.linksOff );
+  }
+
+  @Test
+  public void noLinkForAnUploadIsSentInTheRecordedShapeAndReadAsNotWanted() throws IOException
+  {
+    recordedConversation( "06-status-succeeded" );
+    SilexGisUpload upload = new SilexGisUpload();
+    upload.setLinkChoice( SilexGisUpload.LINK_NONE );
+    uploader.run( upload, "Pestera Inventata m1", "pestera_inventata", null, "6.5.34", files(), new Recorder() );
+    JSONObject sent = new JSONObject( server.of( "POST", UP ).get( 0 ).text() ).getJSONObject( "publicLink" );
+    JSONObject recorded = new JSONObject( recorded( "02-open.request" ) ).getJSONObject( "publicLink" );
+    for ( String name : JSONObject.getNames( sent ) ) assertTrue( "a member of the recorded request: " + name, recorded.has( name ) );
+    assertFalse( sent.getBoolean( "wanted" ) );
+    assertFalse( "no audience for no link", sent.has( "audience" ) );
+    assertFalse( sent.getBoolean( "allowProtected" ) );
+
+    // the status of such an upload, as the server tells it: no link, refusal not-wanted
+    JSONObject json = new JSONObject( recorded( "06-status-succeeded" ) );
+    json.put( "publicLink", JSONObject.NULL ).put( "publicLinkRefusal", "not-wanted" );
+    SilexGisStatus st = SilexGisStatus.parse( json );
+    assertNull( st.publicLinkUrl );
+    assertEquals( "not-wanted", st.publicLinkRefusal );
+    SilexGisLink link = SilexGisLink.of( st );
+    assertTrue( link.isNotWanted() );
+    assertFalse( link.isProtected() );
+  }
+
+  @Test
+  public void theRecordedLinkIsMadeAgainAndWithdrawnWithTheKey() throws IOException
+  {
+    server.on( "POST", UP + "/" + UPLOAD + "/public-link", 201, recorded( "13-make-public-link" ) )
+          .on( "DELETE", UP + "/" + UPLOAD + "/public-link", new FakeSilexGis.Answer( 204, null, new byte[0] ) );
+    SilexGisClient client = new SilexGisClient( server.base(), KEY );
+    SilexGisLink link = SilexGisLink.of( SilexGisStatus.parse( new JSONObject( recorded( "06-status-succeeded" ) ) ) );
+    assertEquals( "public", link.audience );
+    assertEquals( SilexGisLink.MADE, link.make( client, UPLOAD, null, false ) );
+    assertEquals( "the audience the server answered", "organization", link.audience );
+    assertTrue( link.isOrganization() );
+    assertEquals( "/p/survey/0190a000-0000-7000-8000-0000000000ff", link.url );
+    JSONObject sent = new JSONObject( server.of( "POST", UP + "/" + UPLOAD + "/public-link" ).get( 0 ).text() );
+    assertFalse( "no audience: the server keeps the one of the link it replaces", sent.has( "audience" ) );
+    assertFalse( sent.getBoolean( "allowProtected" ) );
+
+    assertEquals( SilexGisLink.WITHDRAWN, link.withdraw( client, UPLOAD ) );
+    assertFalse( link.hasLink() );
+    assertEquals( "revoked", link.refusal );
+    assertEquals( Arrays.asList( "POST " + UP + "/" + UPLOAD + "/public-link", "DELETE " + UP + "/" + UPLOAD + "/public-link" ), server.trail() );
+    for ( FakeSilexGis.Request r : server.of( "DELETE", UP + "/" + UPLOAD + "/public-link" ) ) {
+      assertEquals( "the routes are opened by the access key", "Bearer " + KEY, r.headers.get( "authorization" ) );
+    }
+  }
+
+  @Test
+  public void aLinkForTheSignedInIsNotARefusedKey() throws IOException
+  {
+    JSONObject problem = new JSONObject( recorded( "11-errors-public-link-sign-in-required" ) );
+    String page = "/api/v1/public/survey-uploads/tok";
+    server.on( "GET", page, problem.getInt( "status" ), problem.toString() );
+    SilexGisClient.Result r = new SilexGisClient( server.base(), KEY ).request( "GET", page, null );
+    assertNotEquals( "the key is good: the page asks to sign in on the web", SilexGisClient.KEY_REFUSED, r.kind );
+    assertEquals( SilexGisClient.PROBLEM, r.kind );
+    assertEquals( 401, r.status );
+    assertEquals( SilexGisClient.CODE_SIGN_IN_REQUIRED, r.code );
+    assertTrue( r.message().contains( "sign in" ) );
+  }
+
+  @Test
+  public void theRecordedStatusesTellTheOlderVersions() throws IOException
+  {
+    for ( String name : new String[] { "02-open", "04-complete", "05-status-queued", "06-status-succeeded", "06b-status-compiled",
+                                       "07-open-next-version", "08-status-failed", "10-rerun" } ) {
+      JSONObject json = new JSONObject( recorded( name ) );
+      assertTrue( name + " carries olderVersions", json.has( "olderVersions" ) );
+      JSONObject older = json.getJSONObject( "olderVersions" );
+      SilexGisStatus st = SilexGisStatus.parse( json );
+      assertEquals( name, older.getInt( "count" ), st.olderCount );
+      assertEquals( name, older.getLong( "sizeBytes" ), st.olderBytes );
+      assertEquals( name, older.getBoolean( "warn" ), st.olderWarn );
+      assertEquals( name, older.getInt( "keepVersions" ), st.keepVersions );
+    }
+    JSONObject json = new JSONObject( recorded( "06-status-succeeded" ) );
+    json.getJSONObject( "olderVersions" ).put( "count", 3 ).put( "sizeBytes", 734003200L ).put( "warn", true ).put( "keepVersions", 1 );
+    SilexGisStatus st = SilexGisStatus.parse( json );
+    assertTrue( st.olderWarn );
+    assertEquals( 3, st.olderCount );
+    assertEquals( "700.0 MB", SilexGisClient.sizeText( st.olderBytes, -1 ) );
+    assertEquals( 1, st.keepVersions );
+    json.getJSONObject( "olderVersions" ).put( "warnBytes", JSONObject.NULL ).put( "warn", false ); // a server that never warns
+    assertFalse( SilexGisStatus.parse( json ).olderWarn );
+    json.remove( "olderVersions" );
+    st = SilexGisStatus.parse( json );
+    assertFalse( st.olderWarn );
+    assertEquals( 0, st.olderCount );
+  }
+
+  @Test
+  public void theOwnStatusWithoutTheLinksIsRead() throws IOException
+  {
+    // the uploader who may read the cave but no longer place it: every link withheld, the run's state told
+    JSONObject json = new JSONObject( recorded( "06b-status-compiled" ) );
+    json.put( "publicLink", JSONObject.NULL ).put( "logTail", JSONObject.NULL );
+    JSONArray arts = json.getJSONArray( "artefacts" );
+    for ( int k = 0; k < arts.length(); ++k ) arts.getJSONObject( k ).put( "contentUrl", JSONObject.NULL );
+    SilexGisStatus st = SilexGisStatus.parse( json );
+    assertTrue( st.isSucceeded() );
+    assertTrue( "nothing to download", st.downloadable().isEmpty() );
+    assertTrue( st.withError().isEmpty() );
+    SilexGisLink link = SilexGisLink.of( st );
+    assertFalse( link.hasLink() );
+    assertFalse( link.isProtected() );
+    assertFalse( link.isNotWanted() );
   }
 }
