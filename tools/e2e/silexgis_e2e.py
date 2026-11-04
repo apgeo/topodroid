@@ -452,6 +452,13 @@ def main():
         r.configure(n)
         r.configure(s)
 
+        # an earlier run leaves both surveys in an app that was not cleared: start each app without them
+        for d in (n, s):
+            for name in (a_survey, b_survey):
+                if name in d.surveys():
+                    r.log(f"{short(d)}: deleting {name} left by an earlier run")
+                    r.delete_survey(d, name)
+
         # S2 import the two ZIPs, one per app
         r.import_zip(n, args.zip_normal)
         r.import_zip(s, args.zip_sbs)
