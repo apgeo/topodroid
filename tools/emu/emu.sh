@@ -3,7 +3,7 @@
 source "$(dirname "$0")/env.sh"
 AVD=${AVD:-speleo_api36_pixel7pro}
 APK=${APK:-$here/../../build/outputs/apk/debug/topodroid-silexgis-debug.apk}
-PKG=com.topodroid.TDX
+PKG=${PKG:-com.topodroid.TDX}  # PKG=com.topodroid.TDX.silexgis for the side-by-side copy
 case "$1" in
   start)
     if pgrep -f 'qemu-system' >/dev/null; then echo "an emulator is already running:"; pgrep -af qemu-system; exit 1; fi
