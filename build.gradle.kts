@@ -8,12 +8,42 @@ plugins {
 // Override with -PtopodroidDir=/path/to/clone (or a worktree of it).
 val td = file((findProperty("topodroidDir") as String?) ?: "/home/devuser1/projects/topodroid")
 
+// -PsideBySide=true builds a copy that installs next to the Play Store TopoDroid on one phone:
+// its own application id, its own file-provider authority (two installed apps may not share one)
+// and its own data folder Documents/TDX-SilexGIS, so it never opens the real Documents/TDX surveys.
+// The clone is not modified: the two files that hard-code those names are copied, patched, and
+// compiled in place of the originals. Each patch must match exactly once or the build stops.
+val sideBySide = (findProperty("sideBySide") as String?) == "true"
+val sbsDir = layout.buildDirectory.dir("sidebyside").get().asFile
+fun patchOnce(text: String, old: String, new: String, what: String): String {
+    val n = text.split(old).size - 1
+    check(n == 1) { "side-by-side patch '$what' matched $n times, expected 1" }
+    return text.replace(old, new)
+}
+if (sideBySide) {
+    val src = File(sbsDir, "src")
+    src.deleteRecursively()
+    File(td, "src").copyRecursively(src)
+    val tdFile = File(src, "com/topodroid/util/TDFile.java")
+    var t = tdFile.readText()
+    t = patchOnce(t, "getExternalStoragePublicDirectory( documents ), \"TDX\" );", "getExternalStoragePublicDirectory( documents ), \"TDX-SilexGIS\" );", "folder")
+    t = patchOnce(t, "getExternalStoragePublicDirectory( documents ), \"TDX/\" + type );", "getExternalStoragePublicDirectory( documents ), \"TDX-SilexGIS/\" + type );", "folder/type")
+    tdFile.writeText(t)
+    var m = File(td, "AndroidManifest.xml").readText()
+    m = patchOnce(m, "android:authorities=\"com.topodroid.TDX.fileprovider\"", "android:authorities=\"com.topodroid.TDX.silexgis.fileprovider\"", "authority")
+    m = patchOnce(m, "android:label=\"@string/app_name\"", "android:label=\"TopoDroid SilexGIS\"", "label")
+    File(sbsDir, "AndroidManifest.xml").writeText(m)
+    val paths = File(sbsDir, "res/xml/file_paths.xml")
+    paths.parentFile.mkdirs()
+    paths.writeText(patchOnce(File(td, "res/xml/file_paths.xml").readText(), "path=\"Documents/TDX/\"", "path=\"Documents/TDX-SilexGIS/\"", "file paths"))
+}
+
 android {
     namespace = "com.topodroid.TDX"
     compileSdk = 37
 
     defaultConfig {
-        applicationId = "com.topodroid.TDX"
+        applicationId = if (sideBySide) "com.topodroid.TDX.silexgis" else "com.topodroid.TDX"
         minSdk = 21
         targetSdk = 37
         // versionCode / versionName come from the clone's manifest
@@ -22,13 +52,16 @@ android {
 
     sourceSets {
         getByName("main") {
-            manifest.srcFile(File(td, "AndroidManifest.xml"))
-            java.setSrcDirs(listOf(File(td, "src")))
+            manifest.srcFile(if (sideBySide) File(sbsDir, "AndroidManifest.xml") else File(td, "AndroidManifest.xml"))
+            java.setSrcDirs(listOf(if (sideBySide) File(sbsDir, "src") else File(td, "src")))
             res.setSrcDirs(listOf(File(td, "res")))
             assets.setSrcDirs(listOf(File(td, "assets")))
         }
         // src/debug/res overrides res/xml/network_security_config.xml for debug builds only
         // (cleartext to the emulator's host alias 10.0.2.2 and to loopback).
+        // The side-by-side copy shares its zips from Documents/TDX-SilexGIS, so the file provider's
+        // path list (res/xml/file_paths.xml) is replaced for debug builds of that copy.
+        if (sideBySide) getByName("debug") { res.srcDir(File(sbsDir, "res")) }
         getByName("test") {
             java.setSrcDirs(listOf("src/test/java"))
         }
