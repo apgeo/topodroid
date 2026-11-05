@@ -623,6 +623,12 @@ public class ExportDialogShot extends MyDialog
               mSilexgisUpload.targetFromJson( target.targetToJson() );
               mBtnSilexgisTarget.setText( SilexGisExportTask.targetText( mContext.getResources(), mSilexgisUpload ) );
             }
+            @Override public void onForget() {
+              SilexGisExportTask.getStore( mContext ).forgetTarget( mSurvey );
+              mSilexgisRemembered = null;
+              if ( mSilexgisUpload.target == SilexGisUpload.TARGET_CAVE_SURVEY || mSilexgisUpload.target == SilexGisUpload.TARGET_CAVE ) mSilexgisUpload.setAuto();
+              mBtnSilexgisTarget.setText( SilexGisExportTask.targetText( mContext.getResources(), mSilexgisUpload ) );
+            }
           } )).show();
       }
     };
