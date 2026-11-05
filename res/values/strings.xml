@@ -1746,6 +1746,8 @@ On Android-11+ storage access must be granted to TopoDroid.\nYou can do this wit
   <string name="silexgis_target_survey">Survey %1$s of the cave %2$s</string>
   <string name="silexgis_target_new">New cave %1$s (%2$s)</string>
   <string name="silexgis_visibility_server">visibility the server decides</string>
+  <string name="silexgis_downloaded">Downloaded to %1$s</string>
+  <string name="silexgis_open_no_app">No app on this device can open %1$s</string>
   <string name="silexgis_cave_title">SilexGIS cave</string>
   <string name="silexgis_cave_search">Search a cave by name</string>
   <string name="silexgis_cave_searching">Searching...</string>
