@@ -376,9 +376,12 @@ class Run:
         self.launch(d)
         d.tap_xy(335, 336)
         d.tap("button_silexgis")
-        d.wait("silexgis_list", 30)
-        end = time.time() + 60
-        row = None
+        lst = d.wait("silexgis_list", 30)
+        # the server keeps every upload of earlier runs: narrow the list to the survey, and scroll when it is still long
+        d.fill("silexgis_filter", survey)
+        lst = d.find("silexgis_list") or lst
+        end = time.time() + 90
+        row, scrolls = None, 0
         while time.time() < end and row is None:
             d.dump()
             items = [n for n in d.nodes if n.in_list and n.text]
@@ -390,6 +393,10 @@ class Run:
                     row = n
                     break
             if row is None:
+                if items and scrolls < 12 and lst is not None:
+                    x, top, bottom = lst.x, lst.bounds[1], lst.bounds[3]
+                    d.sh(f"input swipe {x} {bottom - 60} {x} {top + 60} 500")
+                    scrolls += 1
                 time.sleep(2)
         if row is None:
             raise RuntimeError("the upload is not in the SilexGIS import list")
