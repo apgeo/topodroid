@@ -175,7 +175,7 @@ class Device:
     def scroll_to(self, key, tries=6, y1=2600, y2=900):
         for _ in range(tries):
             n = self.find(key)
-            if n is not None and n.y < 2950:
+            if n is not None and n.y < 3020:  # above the gesture bar (y 3078 on the 1440x3120 AVD)
                 return n
             self.swipe_up(y1, y2)
         raise LookupError(f"not found after scrolling: {key}")
