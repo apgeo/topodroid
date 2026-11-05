@@ -22,6 +22,32 @@ The two builds are installed on the same device: the normal app (`com.topodroid.
 | | the older-versions count on the server must grow by one, and the app's older-versions note must show exactly when the server says `warn` | |
 | links | | from the second upload's result dialog: *Withdraw link* (the server must have no link any more), then *Make a new link* (a link again, with the audience) |
 
+After S5 (`--scenarios all`, the default) or right after S2 (`--scenarios new`):
+
+| Step | App | What is checked |
+|---|---|---|
+| S6 a | normal | an upload to a new cave whose visibility is changed on purpose (to *private*): the visibility is sent (fake server: the opening body; real server: the cave's visibility) and the link to the server survey is stored |
+| S6 b | normal | the stored link is made dead (the app is stopped and its preferences edited through `run-as`: the stored survey id becomes one that does not exist). The next upload must show the dead-link dialog with three buttons; *Upload as new* opens the cave dialog, a new cave is made with the visibility left as it started, the upload succeeds and the stored link is replaced |
+| S7 | normal | that new cave was opened without a visibility (fake server: no `visibility` member; real server: the cave has the account's default, the club of the account, else private) |
+| S9 | normal | from that result dialog a PDF result is downloaded: the dialog says `Downloaded to Download/<name>`, the file is in `/sdcard/Download`, and a VIEW intent with type `application/pdf`, a `content:` URI and the read grant starts another app |
+| S6 c | normal | the link is made dead again; *Pick a cave* opens the cave search, the picked existing cave takes the upload, the stored link is replaced |
+| S8 | normal | the cave dialog offers *Forget the link to the server survey*; it clears the stored link without uploading, and the export dialog falls back to the automatic target |
+| S7, S9 | side-by-side | the export dialog's target says *visibility the server decides* when it is left as it started; a compiled upload to that new cave succeeds (fake: no `visibility` sent); its PDF download as above |
+
+The screenshots of a run are copied beside its results, to `e2e-results/shots-<time>/`.
+
+Against the local fake server (`../../../fake-server/fake_silexgis.py`, which with `--strict` refuses an
+unknown `caveSurvey.id` with `404 survey_upload.survey_not_found` and a club cave for its account, which is in
+no club, with `400 survey_upload.visibility_invalid`):
+
+```sh
+F=/srv/data/silexgis/scratch/topodroid-integration/fake-server
+python3 -I $F/fake_silexgis.py --port 18767 --strict --artefacts $F/artefacts-invented --work $F/work-x &
+python3 -I $G/tools/e2e/silexgis_e2e.py --scenarios new --server http://10.0.2.2:18767 \
+  --server-host http://127.0.0.1:18767 --fake-work $F/work-x --key-file $F/fake-key \
+  --existing-cave-search Pestera --existing-cave-re "Pestera Inventata" --zip-normal ... --zip-sbs ...
+```
+
 Not automated: the sketch auto-export offer (*Export sketches to Therion automatically* in the result
 dialog, then opening and closing each sketch so it is saved), because it needs the sketch window; it was
 checked by hand once (the next upload carried a `therionSketch` file per sketch). Downloading a compiled
@@ -53,7 +79,8 @@ python3 -I $G/tools/e2e/silexgis_e2e.py \
 $G/tools/emu/emu.sh stop
 ```
 
-Options: `--server` (default `https://silexgistest.speotopo.ro`), `--key-file` (default
+Options: `--server` (default `https://silexgistest.speotopo.ro`; as the app reaches it), `--server-host` (as
+this script reaches it, when it differs), `--fake-work`, `--scenarios all|old|new`, `--key-file` (default
 `~/.config/silexgis/silexgistest-admin-access-key`), `--existing-cave-search` / `--existing-cave-re`
 (an ASCII search text and the pattern the picked cave must match; default the demo cave "Demo Mic…"),
 `--tag` (suffix of the new cave), `--keep-sbs` (do not clear the side-by-side app), `--serial`.

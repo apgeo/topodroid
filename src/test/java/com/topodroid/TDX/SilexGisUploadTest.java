@@ -231,4 +231,42 @@ public class SilexGisUploadTest
     u.switchesFromJson( new JSONObject( "{\"visibility\":\"everybody\"}" ) );
     assertEquals( "an unknown visibility is not taken", "cavingGroup", u.visibility );
   }
+
+  @Test
+  public void aNewCaveVisibilityIsSentOnlyWhenTheUserChangedItFromWhereTheFormStarted()
+  {
+    // the form starts on the club, which the server refuses to an account in no caving group
+    assertFalse( "left as it started", SilexGisUpload.visibilityChosen( "cavingGroup", false, "cavingGroup" ) );
+    assertTrue( "changed", SilexGisUpload.visibilityChosen( "cavingGroup", false, "private" ) );
+    assertTrue( "changed back to the club on purpose is still a change from a non-club start",
+      SilexGisUpload.visibilityChosen( "public", false, "cavingGroup" ) );
+    assertTrue( "a choice made before is kept when the form is confirmed again",
+      SilexGisUpload.visibilityChosen( "authenticated", true, "authenticated" ) );
+    assertFalse( "nothing selected", SilexGisUpload.visibilityChosen( "cavingGroup", false, null ) );
+    assertTrue( "no start known", SilexGisUpload.visibilityChosen( null, false, "private" ) );
+  }
+
+  @Test
+  public void aNewCaveWithAnUntouchedVisibilityLeavesItToTheServer() throws IOException
+  {
+    SilexGisUpload u = new SilexGisUpload();
+    u.setNewCave( "Pestera Noua", "cavingGroup", false, false );
+    JSONObject cave = u.openRequest( "t", "n", null, "v", files(), null, true ).getJSONObject( "newCave" );
+    assertEquals( "Pestera Noua", cave.getString( "name" ) );
+    assertFalse( "the server applies its default: the club of the account, else private", cave.has( "visibility" ) );
+    assertFalse( cave.getBoolean( "locationProtected" ) );
+
+    SilexGisUpload v = new SilexGisUpload();
+    v.fromJson( new JSONObject( u.toJson().toString() ) );
+    assertEquals( "remembered as a new cave", SilexGisUpload.TARGET_NEW_CAVE, v.target );
+    assertFalse( "remembered as not chosen", v.newCaveVisibilityChosen );
+    assertFalse( v.openRequest( "t", "n", null, "v", files(), null, true ).getJSONObject( "newCave" ).has( "visibility" ) );
+
+    u.setNewCave( "Pestera Noua", "private", true, false );
+    assertEquals( "private", u.openRequest( "t", "n", null, "v", files(), null, true ).getJSONObject( "newCave" ).getString( "visibility" ) );
+    v.fromJson( new JSONObject( u.toJson().toString() ) );
+    assertTrue( "a choice is remembered", v.newCaveVisibilityChosen );
+    u.setAuto();
+    assertFalse( u.newCaveVisibilityChosen );
+  }
 }

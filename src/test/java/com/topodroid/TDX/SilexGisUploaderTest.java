@@ -488,4 +488,73 @@ public class SilexGisUploaderTest
     assertEquals( SilexGisClient.BAD_URL, r.kind );
     assertNull( r.json );
   }
+
+  // ------------------------------------------------------------------------------------------
+  // a link to the server that is dead
+
+  private static final String SURVEY_NOT_FOUND =
+      "{\"type\":\"about:blank\",\"title\":\"Not Found\",\"status\":404,\"code\":\"survey_upload.survey_not_found\"}";
+  private static final String CAVE_NOT_FOUND =
+      "{\"type\":\"about:blank\",\"title\":\"Not Found\",\"status\":404,\"code\":\"cave.not_found\"}";
+
+  @Test
+  public void aRememberedServerSurveyThatIsGoneIsADeadTargetAndNothingIsSent() throws IOException
+  {
+    server.on( "GET", UP + "/capabilities", 200, CAPS ).on( "POST", UP, 404, SURVEY_NOT_FOUND );
+    SilexGisUpload upload = new SilexGisUpload();
+    upload.setCaveSurvey( "0190a000-0000-7000-8000-00000000dead", "pestera inventata", "c1", "Pestera Inventata" );
+    SilexGisUploader.Outcome out = run( upload, files(), new Recorder() );
+    assertEquals( SilexGisUploader.REFUSED, out.kind );
+    assertFalse( out.hasUpload() );
+    assertEquals( "survey_upload.survey_not_found", out.result.code );
+    assertTrue( SilexGisUploader.deadTarget( out, upload ) );
+    assertEquals( Arrays.asList( "GET " + UP + "/capabilities", "POST " + UP ), server.trail() );
+  }
+
+  @Test
+  public void aPickedCaveThatIsGoneIsADeadTarget() throws IOException
+  {
+    server.on( "GET", UP + "/capabilities", 200, CAPS ).on( "POST", UP, 404, CAVE_NOT_FOUND );
+    SilexGisUpload upload = new SilexGisUpload();
+    upload.setCave( "c-gone", "Pestera Inventata" );
+    SilexGisUploader.Outcome out = run( upload, files(), new Recorder() );
+    assertTrue( SilexGisUploader.deadTarget( out, upload ) );
+  }
+
+  @Test
+  public void onlyTheNotFoundCodesOfARememberedTargetAreADeadTarget()
+  {
+    SilexGisUpload survey = new SilexGisUpload();
+    survey.setCaveSurvey( "s1", "t", "c1", "n" );
+    SilexGisUpload cave = new SilexGisUpload();
+    cave.setCave( "c1", "n" );
+    SilexGisUpload auto = new SilexGisUpload();
+    SilexGisUpload fresh = new SilexGisUpload();
+    fresh.setNewCave( "n", "private", false );
+
+    assertTrue( SilexGisUploader.deadTarget( refused( 404, "survey_upload.survey_not_found" ), survey ) );
+    assertTrue( SilexGisUploader.deadTarget( refused( 404, "cave.not_found" ), survey ) );
+    assertTrue( SilexGisUploader.deadTarget( refused( 404, "cave.not_found" ), cave ) );
+    assertFalse( "a cave has no survey id", SilexGisUploader.deadTarget( refused( 404, "survey_upload.survey_not_found" ), cave ) );
+    assertFalse( "nothing remembered", SilexGisUploader.deadTarget( refused( 404, "cave.not_found" ), auto ) );
+    assertFalse( "a new cave", SilexGisUploader.deadTarget( refused( 404, "cave.not_found" ), fresh ) );
+    assertFalse( "another refusal", SilexGisUploader.deadTarget( refused( 403, "acl.forbidden" ), survey ) );
+    assertFalse( "a 404 of an upload that the server has", SilexGisUploader.deadTarget( refused( 404, "survey_upload.not_found" ), survey ) );
+    assertFalse( "a code with another status", SilexGisUploader.deadTarget( refused( 400, "survey_upload.survey_not_found" ), survey ) );
+    SilexGisUploader.Outcome opened = refused( 404, "survey_upload.survey_not_found" );
+    opened.uploadId = ID;
+    assertFalse( "refused after the opening", SilexGisUploader.deadTarget( opened, survey ) );
+    SilexGisUploader.Outcome network = new SilexGisUploader.Outcome();
+    network.result = new SilexGisClient.Result( SilexGisClient.NETWORK, 0, null, null, null, null, SilexGisClient.URL_OK );
+    assertFalse( SilexGisUploader.deadTarget( network, survey ) );
+    assertFalse( SilexGisUploader.deadTarget( null, survey ) );
+  }
+
+  private static SilexGisUploader.Outcome refused( int status, String code )
+  {
+    SilexGisUploader.Outcome out = new SilexGisUploader.Outcome();
+    out.kind = SilexGisUploader.REFUSED;
+    out.result = new SilexGisClient.Result( SilexGisClient.PROBLEM, status, code, "t", null, null, SilexGisClient.URL_OK );
+    return out;
+  }
 }

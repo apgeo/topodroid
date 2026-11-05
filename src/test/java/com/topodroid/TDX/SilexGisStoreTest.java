@@ -128,4 +128,20 @@ public class SilexGisStoreTest
     assertEquals( SilexGisUpload.TARGET_AUTO, u.target );
     assertNull( store.loadTarget( "a" ) );
   }
+
+  @Test
+  public void forgettingTheTargetOfASurveyLeavesTheOthersAndTheSwitches()
+  {
+    store.saveAnswer( "pestera_inventata", "s1", "pestera inventata", "c1", "Pestera Inventata" );
+    store.saveAnswer( "alta_pestera", "s2", "alta pestera", "c2", "Alta Pestera" );
+    SilexGisUpload u = new SilexGisUpload();
+    u.withSvx = true;
+    store.save( "a_treia", u );
+    store.forgetTarget( "pestera_inventata" );
+    assertNull( store.loadTarget( "pestera_inventata" ) );
+    assertEquals( SilexGisUpload.TARGET_AUTO, store.load( "pestera_inventata", null ).target );
+    assertEquals( "s2", store.loadTarget( "alta_pestera" ).caveSurveyId );
+    assertTrue( "the switches stay", store.load( "pestera_inventata", null ).withSvx );
+    store.forgetTarget( null ); // nothing happens
+  }
 }

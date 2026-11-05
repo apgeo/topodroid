@@ -132,4 +132,19 @@ public class SilexGisFilesTest
     assertEquals( "", SilexGisFiles.extension( "manifest" ) );
     assertEquals( "", SilexGisFiles.extension( ".profile" ) );
   }
+
+  @Test
+  public void theMimeTypeOfADownloadComesFromItsExtension()
+  {
+    assertEquals( "application/pdf", SilexGisFiles.mimeType( "pestera_inventata-plan.PDF" ) );
+    assertEquals( "application/vnd.google-earth.kml+xml", SilexGisFiles.mimeType( "a.kml" ) );
+    assertEquals( "image/svg+xml", SilexGisFiles.mimeType( "a.svg" ) );
+    assertEquals( "text/plain", SilexGisFiles.mimeType( "therion.log" ) );
+    assertEquals( "application/zip", SilexGisFiles.mimeType( "a.zip" ) );
+    assertEquals( "a model has no viewer type", "application/octet-stream", SilexGisFiles.mimeType( "a.lox" ) );
+    assertEquals( "application/octet-stream", SilexGisFiles.mimeType( "a.3d" ) );
+    assertEquals( "application/octet-stream", SilexGisFiles.mimeType( "noextension" ) );
+    assertEquals( "application/octet-stream", SilexGisFiles.mimeType( "dot." ) );
+    assertEquals( "application/octet-stream", SilexGisFiles.mimeType( null ) );
+  }
 }
