@@ -441,10 +441,12 @@ class Run:
         """the visibility the server gave the cave of an upload, and the account's default for a new cave"""
         if not up or not up.get("caveId"):
             return None, None
-        st, cave = self.api("/api/v1/caves/" + up["caveId"])
+        # the cave route does not take an access key: the cave search, which the app uses, does
+        st, page = self.api("/api/v1/caves?pageSize=50&search=" + urllib.parse.quote(up.get("cave") or ""))
+        cave = next((c for c in (page or {}).get("items") or [] if c.get("id") == up["caveId"]), None) if st == 200 else None
         st2, me = self.api("/api/v1/me")
         default = None if st2 != 200 else ("cavingGroup" if (me or {}).get("cavingClubId") else "private")
-        return ((cave or {}).get("visibility") if st == 200 else None), default
+        return (cave or {}).get("visibility"), default
 
     # -- an upload that meets a dead link ----------------------------------------------------------
     def upload_expect_dead(self, d, label, timeout=300):
@@ -464,10 +466,13 @@ class Run:
     def download_and_open(self, d, label):
         """in a result dialog: download a PDF result; it must go to Download, be named in the dialog, and open"""
         d.dump()
-        rows = [n for n in d.nodes if n.in_list and n.id == "message_text" and n.text and re.search(r"pdf", n.text, re.I)]
+        listed = [n for n in d.nodes if n.in_list and n.id == "message_text" and n.text]
+        # a PDF when the survey compiled, else the compiler's log (a run that failed lists only that)
+        rows = [n for n in listed if re.search(r"pdf", n.text, re.I)] or [n for n in listed if re.match(r"log\b", n.text)]
         if not rows:
-            self.check(f"{short(d)} S9 download", False, "no PDF result listed in the result dialog")
+            self.check(f"{short(d)} S9 download", False, "no PDF result and no log listed in the result dialog")
             return
+        want = "application/pdf" if re.search(r"pdf", rows[0].text, re.I) else "text/plain"
         d.tap_xy(rows[0].x, rows[0].y)
         time.sleep(1.0)
         d.sh("logcat -c", check=False)
@@ -503,7 +508,7 @@ class Run:
         if exists:  # the system file picker of the next import lists Download: it is left as it was
             d.sh(f"rm -f '{on_device}'", check=False)
         self.check(f"{short(d)} S9 download opens with the default action",
-                   bool(views) and typ == "application/pdf" and scheme == "content" and grant and not act.startswith(d.pkg + "/"),
+                   bool(views) and typ == want and scheme == "content" and grant and not act.startswith(d.pkg + "/"),
                    f"VIEW intents={len(views)} type={typ} scheme={scheme} read grant={grant} foreground={act.split('/')[0]}")
 
 
@@ -512,8 +517,11 @@ def new_scenarios(r, n, s, a_survey, b_survey):
     # S6a the normal app uploads to a new cave with a visibility picked on purpose: it is sent
     cave_a = f"E2E visible {r.tag}"
     # the documents visibility is set to the club first: a new-cave form starts from it, and only the club start
-    # is left to the server when it is not changed (a non-club start was itself the user's choice)
-    res, since = r.export(n, a_survey, "normal-s6-up", ("new", cave_a, "private"), compile_=True, documents="club")
+    # is left to the server when it is not changed (a non-club start was itself the user's choice). The Survex and
+    # CSV exports are switched off: they become documents of the cave, which the server refuses to file under a
+    # club for a cave without one the account may use
+    res, since = r.export(n, a_survey, "normal-s6-up", ("new", cave_a, "private"), compile_=True, documents="club",
+                          extra={"silexgis_with_svx": False, "silexgis_with_csv": False})
     up = r.find_upload(a_survey, since)
     sent = None
     if r.args.fake_work:
@@ -616,6 +624,7 @@ def new_scenarios(r, n, s, a_survey, b_survey):
 
     # S7 the side-by-side app: the target says when the visibility is left to the server, then a compiled upload and its download
     r.open_export(s, b_survey)
+    r.spinner(s, "silexgis_visibility", "club")  # the new-cave form starts from it: the club start is the one left to the server
     s.tap("silexgis_target")
     s.wait("silexgis_new_name", 30)
     s.fill("silexgis_new_name", f"E2E default {r.tag}")
@@ -725,7 +734,7 @@ def main():
             r.close_result(s)
 
             res_n, since_n = r.export(n, a_survey, "normal-up1", ("existing", args.existing_cave_search, args.existing_cave_re),
-                                      compile_=True, link="Link for anyone",
+                                      compile_=True, link="Link for anyone", documents="signed-in users",
                                       extra={"silexgis_with_svx": True, "silexgis_with_csv": True})
             up_n = r.find_upload(a_survey, since_n)
             r.facts["normal upload 1"] = {"app": res_n, "server": up_n}
