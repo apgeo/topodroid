@@ -70,7 +70,7 @@ public class SilexGisUploadTest
     assertTrue( pipeline.getBoolean( "compile" ) );
     assertEquals( "[\"lox\",\"3d\",\"plan-pdf\",\"extended-pdf\"]", pipeline.getJSONArray( "outputs" ).toString() );
     assertFalse( "the pipeline never sets the current model", pipeline.has( "makeCurrentModel" ) );
-    assertEquals( "cavingGroup", body.getString( "documentsVisibility" ) );
+    assertFalse( "an untouched club for the documents is left to the server", body.has( "documentsVisibility" ) );
     assertFalse( "no link chosen: the preferences of the account decide on the server", body.has( "publicLink" ) );
   }
 
@@ -94,7 +94,7 @@ public class SilexGisUploadTest
     u.visibility = "cavingGroup"; // the server's default: the club of the account, else private
     body = u.openRequest( "t", "n", null, "v", files(), null, true );
     assertFalse( body.has( "newCave" ) );
-    assertEquals( "cavingGroup", body.getString( "documentsVisibility" ) );
+    assertFalse( "the documents get the cave's own audience", body.has( "documentsVisibility" ) );
   }
 
   @Test
@@ -268,5 +268,31 @@ public class SilexGisUploadTest
     assertTrue( "a choice is remembered", v.newCaveVisibilityChosen );
     u.setAuto();
     assertFalse( u.newCaveVisibilityChosen );
+  }
+
+  @Test
+  public void theDocumentsVisibilityIsSentUnlessItIsAnUntouchedClub() throws IOException
+  {
+    assertFalse( "untouched club", SilexGisUpload.documentsVisibilitySent( "cavingGroup", false ) );
+    assertTrue( "club picked in the export dialog", SilexGisUpload.documentsVisibilitySent( "cavingGroup", true ) );
+    assertTrue( "a non-club start set elsewhere is sent", SilexGisUpload.documentsVisibilitySent( "private", false ) );
+    assertTrue( SilexGisUpload.documentsVisibilitySent( "authenticated", true ) );
+    assertFalse( "unknown", SilexGisUpload.documentsVisibilitySent( "everybody", true ) );
+    assertFalse( SilexGisUpload.documentsVisibilitySent( null, true ) );
+
+    SilexGisUpload u = new SilexGisUpload();
+    u.setCave( "c1", "Pestera Inventata" ); // an existing cave: Survex or CSV exports become its documents
+    assertFalse( u.openRequest( "t", "n", null, "v", files(), null, true ).has( "documentsVisibility" ) );
+    u.visibilityChosen = true;
+    JSONObject body = u.openRequest( "t", "n", null, "v", files(), null, true );
+    assertEquals( "cavingGroup", body.getString( "documentsVisibility" ) );
+    SilexGisUpload v = new SilexGisUpload();
+    v.fromJson( new JSONObject( u.toJson().toString() ) );
+    assertTrue( "the choice reaches the upload task through the remembered switches", v.visibilityChosen );
+    v.switchesFromJson( new JSONObject( "{\"visibility\":\"cavingGroup\"}" ) );
+    assertFalse( "switches remembered without it are untouched", v.visibilityChosen );
+    u.visibilityChosen = false;
+    u.visibility = "authenticated";
+    assertEquals( "authenticated", u.openRequest( "t", "n", null, "v", files(), null, true ).getString( "documentsVisibility" ) );
   }
 }

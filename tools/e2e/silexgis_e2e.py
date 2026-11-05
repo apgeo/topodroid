@@ -519,7 +519,7 @@ def new_scenarios(r, n, s, a_survey, b_survey):
     # the documents visibility is set to the club first: a new-cave form starts from it, and only the club start
     # is left to the server when it is not changed (a non-club start was itself the user's choice). The Survex and
     # CSV exports are switched off: they become documents of the cave, which the server refuses to file under a
-    # club for a cave without one the account may use
+    # club for a cave without one the account may use, and a club picked on purpose is sent
     res, since = r.export(n, a_survey, "normal-s6-up", ("new", cave_a, "private"), compile_=True, documents="club",
                           extra={"silexgis_with_svx": False, "silexgis_with_csv": False})
     up = r.find_upload(a_survey, since)
@@ -734,7 +734,7 @@ def main():
             r.close_result(s)
 
             res_n, since_n = r.export(n, a_survey, "normal-up1", ("existing", args.existing_cave_search, args.existing_cave_re),
-                                      compile_=True, link="Link for anyone", documents="signed-in users",
+                                      compile_=True, link="Link for anyone",
                                       extra={"silexgis_with_svx": True, "silexgis_with_csv": True})
             up_n = r.find_upload(a_survey, since_n)
             r.facts["normal upload 1"] = {"app": res_n, "server": up_n}
