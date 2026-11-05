@@ -70,6 +70,8 @@ class SilexGisCaveDialog extends MyDialog
   private Spinner  mSPvisibility;
   private CheckBox mCBprotected;
   private Button   mBtnNew;
+  private String   mStartVisibility = null; // visibility the new-cave form started on
+  private boolean  mStartChosen = false;    // whether that one was the user's choice already
 
   private final ArrayList< String[] > mCaves = new ArrayList<>(); // { id, name } of the listed caves
   private ArrayAdapter< String > mAdapter;
@@ -138,11 +140,16 @@ class SilexGisCaveDialog extends MyDialog
     if ( mCurrent != null && mCurrent.target == SilexGisUpload.TARGET_NEW_CAVE ) {
       mETname.setText( mCurrent.newCaveName );
       visibility = mCurrent.newCaveVisibility;
+      mStartChosen = mCurrent.newCaveVisibilityChosen;
       mCBprotected.setChecked( mCurrent.newCaveProtected );
     } else {
       mETname.setText( mSurveyTitle );
     }
     setVisibilities( mVisibilities, visibility );
+    mStartVisibility = selectedVisibility();
+    // the form starts on the club unless the user set another visibility in the export dialog or in the settings:
+    // only the club preset is left to the server when it is not changed
+    if ( ! SilexGisUpload.VISIBILITY_CLUB.equals( mStartVisibility ) ) mStartChosen = true;
 
     mBtnNew = (Button) findViewById( R.id.button_ok );
     mBtnNew.setOnClickListener( this );
@@ -166,7 +173,8 @@ class SilexGisCaveDialog extends MyDialog
         mETname.setError( resString( R.string.error_name_required ) );
         return;
       }
-      target.setNewCave( name, selectedVisibility(), mCBprotected.isChecked() );
+      String visibility = selectedVisibility();
+      target.setNewCave( name, visibility, SilexGisUpload.visibilityChosen( mStartVisibility, mStartChosen, visibility ), mCBprotected.isChecked() );
     } else { // button_cancel
       mHandler.removeCallbacks( mSearch );
       dismiss();
@@ -270,7 +278,10 @@ class SilexGisCaveDialog extends MyDialog
   {
     if ( caps == null || ! caps.isOk() ) return;
     if ( SilexGisUploader.caveCreationAllowed( caps.json ) ) {
-      setVisibilities( SilexGisUploader.caveVisibilities( caps.json ), selectedVisibility() );
+      String selected = selectedVisibility();
+      boolean untouched = selected.equals( mStartVisibility );
+      setVisibilities( SilexGisUploader.caveVisibilities( caps.json ), selected );
+      if ( untouched && ! mStartChosen ) mStartVisibility = selectedVisibility(); // the form starts on what the server offers
     } else { // neither a new cave nor one named after the survey title
       findViewById( R.id.silexgis_auto ).setEnabled( false );
       mBtnNew.setEnabled( false );

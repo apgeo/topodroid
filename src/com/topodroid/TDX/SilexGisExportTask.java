@@ -135,7 +135,8 @@ class SilexGisExportTask extends AsyncTask< Void, SilexGisExportTask.Line, Silex
           ( upload.caveName == null )? "-" : upload.caveName );
       case SilexGisUpload.TARGET_NEW_CAVE:
         String[] vis = res.getStringArray( R.array.silexgisVisibility );
-        return String.format( res.getString( R.string.silexgis_target_new ), upload.newCaveName, vis[ visibilityIndex( upload.newCaveVisibility ) ] );
+        String shown = upload.newCaveVisibilityChosen ? vis[ visibilityIndex( upload.newCaveVisibility ) ] : res.getString( R.string.silexgis_visibility_server );
+        return String.format( res.getString( R.string.silexgis_target_new ), upload.newCaveName, shown );
     }
     return res.getString( R.string.silexgis_target_auto );
   }

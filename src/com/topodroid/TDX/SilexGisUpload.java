@@ -55,6 +55,7 @@ class SilexGisUpload
   String caveSurveyTitle = null;
   String newCaveName       = null; // TARGET_NEW_CAVE
   String newCaveVisibility = null;
+  boolean newCaveVisibilityChosen = false; // the user picked the visibility: else it is not sent, and the server applies its default
   boolean newCaveProtected = false; // whether the server is to protect the location of the new cave
 
   // switches: the last combination is remembered
@@ -216,6 +217,7 @@ class SilexGisUpload
       if ( caveSurveyTitle   != null ) ret.put( "caveSurveyTitle",   caveSurveyTitle );
       if ( newCaveName       != null ) ret.put( "newCaveName",       newCaveName );
       if ( newCaveVisibility != null ) ret.put( "newCaveVisibility", newCaveVisibility );
+      if ( newCaveVisibilityChosen ) ret.put( "newCaveVisibilityChosen", true );
       if ( newCaveProtected ) ret.put( "newCaveProtected", true );
     } catch ( JSONException e ) { /* cannot happen with these values */ }
     return ret;
@@ -235,6 +237,7 @@ class SilexGisUpload
     caveSurveyTitle   = optString( json, "caveSurveyTitle", null );
     newCaveName       = optString( json, "newCaveName", null );
     newCaveVisibility = optString( json, "newCaveVisibility", null );
+    newCaveVisibilityChosen = json.optBoolean( "newCaveVisibilityChosen", false );
     newCaveProtected  = json.optBoolean( "newCaveProtected", false );
     switch ( t ) {
       case TARGET_CAVE:        if ( caveId != null )       target = t; break;
@@ -276,6 +279,7 @@ class SilexGisUpload
     target = TARGET_AUTO;
     caveId = caveName = caveSurveyId = caveSurveyTitle = null;
     newCaveName = newCaveVisibility = null;
+    newCaveVisibilityChosen = false;
     newCaveProtected = false;
   }
 
@@ -307,18 +311,41 @@ class SilexGisUpload
     caveName        = cave_name;
   }
 
-  /** upload to a new cave
+  /** upload to a new cave, with a visibility the user picked
    * @param name        cave name
    * @param visibility  who may see the cave (a club-visible cave goes to the club of the account)
    * @param protect     whether the server is to protect the location of the cave
    */
-  void setNewCave( String name, String visibility, boolean protect )
+  void setNewCave( String name, String visibility, boolean protect ) { setNewCave( name, visibility, true, protect ); }
+
+  /** upload to a new cave
+   * @param name        cave name
+   * @param visibility  who may see the cave, as shown (a club-visible cave goes to the club of the account)
+   * @param chosen      whether the user picked the visibility: else it is not sent, and the server applies its default
+   * @param protect     whether the server is to protect the location of the cave
+   */
+  void setNewCave( String name, String visibility, boolean chosen, boolean protect )
   {
     setAuto();
     target            = TARGET_NEW_CAVE;
     newCaveName       = name;
     newCaveVisibility = visibility;
+    newCaveVisibilityChosen = chosen;
     newCaveProtected  = protect;
+  }
+
+  /** @return whether the visibility of a new cave is the user's choice, and is to be sent
+   * @param start          visibility the new-cave form started on
+   * @param start_chosen   whether that one was already a choice of the user (a new cave picked before)
+   * @param selected       visibility selected when the form is confirmed
+   * @note the form starts on the club, which the server refuses to an account in no caving group:
+   *       a visibility left as it started is not sent, so that the server applies its own default
+   *       (the club of the account, else private)
+   */
+  static boolean visibilityChosen( String start, boolean start_chosen, String selected )
+  {
+    if ( selected == null ) return false;
+    return start_chosen || ! selected.equals( start );
   }
 
   /** @return true if the server is to make a cave for the upload: without a target, or with a new cave
@@ -357,7 +384,7 @@ class SilexGisUpload
         case TARGET_NEW_CAVE:
           JSONObject cave = new JSONObject();
           cave.put( "name", newCaveName );
-          cave.put( "visibility", newCaveVisibility );
+          if ( newCaveVisibilityChosen && isVisibility( newCaveVisibility ) ) cave.put( "visibility", newCaveVisibility );
           cave.put( "locationProtected", newCaveProtected ); // a server that does not know it yet ignores it
           ret.put( "newCave", cave );
           break;
