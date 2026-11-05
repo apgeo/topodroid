@@ -70,6 +70,7 @@ class SilexGisUpload
   int     link       = LINK_ACCOUNT; // the link to the results: as the account says, none, or one for an audience
   String  outputs    = "lox,3d,plan-pdf,extended-pdf"; // comma separated
   String  visibility = "cavingGroup"; // documents of the upload, and the cave the server makes without a target
+  boolean visibilityChosen = false;   // the user picked the documents visibility in this export: an untouched club is not sent
   boolean linksOff   = false; // the server makes no links for this account: the link choice is not offered, nor sent (not remembered)
 
   /** default cstr: the defaults of the settings
@@ -179,6 +180,7 @@ class SilexGisUpload
       if ( ! linksOff ) ret.put( "link", LINK_CHOICES[ link ] ); // a choice not offered is not remembered
       ret.put( "outputs",    outputs );
       ret.put( "visibility", visibility );
+      if ( visibilityChosen ) ret.put( "visibilityChosen", true ); // carried from the export dialog to the upload task
     } catch ( JSONException e ) { /* cannot happen with these values */ }
     return ret;
   }
@@ -202,6 +204,7 @@ class SilexGisUpload
     outputs    = optString( json, "outputs", outputs );
     String vis = optString( json, "visibility", visibility );
     if ( isVisibility( vis ) ) visibility = vis;
+    visibilityChosen = json.optBoolean( "visibilityChosen", false );
   }
 
   /** @return the target as JSON
@@ -424,7 +427,7 @@ class SilexGisUpload
         pipeline.put( "outputs", outs );
       }
       ret.put( "pipeline", pipeline );
-      if ( isVisibility( visibility ) ) ret.put( "documentsVisibility", visibility );
+      if ( documentsVisibilitySent( visibility, visibilityChosen ) ) ret.put( "documentsVisibility", visibility );
       // the link to the results of this upload: none, or one for the chosen audience; nothing when the user
       // left it to the account, whose preferences then decide on the server, or when the account gets no
       // links (the choice is not offered then). A cave whose position is protected gets a link only when
@@ -438,6 +441,20 @@ class SilexGisUpload
       }
     } catch ( JSONException e ) { /* cannot happen with these values */ }
     return ret;
+  }
+
+  /** @return whether the documents visibility of an upload is sent
+   * @param visibility   documents visibility
+   * @param chosen       whether the user picked it in the export dialog
+   * @note the club is the starting value, and the server refuses it when the upload has documents (exports without
+   *       a survey format) and the cave has no caving group the account may file them under: an untouched club is not
+   *       sent, so that the documents get the cave's own audience. Another visibility was the user's choice, here or in
+   *       the settings, and is sent
+   */
+  static boolean documentsVisibilitySent( String visibility, boolean chosen )
+  {
+    if ( ! isVisibility( visibility ) ) return false;
+    return chosen || ! VISIBILITY_CLUB.equals( visibility );
   }
 
   /** @return the outputs to ask for: those of the switches that the server can produce
