@@ -11,7 +11,9 @@
  */
 package com.topodroid.TDX;
 
-class PhotoInfo extends MediaInfo
+import com.topodroid.util.TDLog;
+
+public class PhotoInfo extends MediaInfo
 {
   static final int FORMAT_JPEG = 0;
   static final int FORMAT_PNG  = 1;
@@ -34,15 +36,15 @@ class PhotoInfo extends MediaInfo
    * @param _id      id 
    * @param item_id  reference item ID: shot id or plot ID
    * @param t        title
-   * @param sn       reference name: shot name or plot name
+   * @param sn       reference name: shot name ( FROM-TO ) or plot name
    * @param dt       datetime
    * @param cmt      comment
    * @param camera   camera type
    * @param code     geomorphology code
-   * @param type     reference item type
+   * @param type     reference item type: 1 = shot, ...
    * @param format   image format (0: JOEG, 1: PNG)
    */
-  PhotoInfo( long _sid, long _id, long item_id, String t, String sn, String dt, String cmt, int camera, String code, int type, int format )
+  public PhotoInfo( long _sid, long _id, long item_id, String t, String sn, String dt, String cmt, int camera, String code, int type, int format )
   {
     super( MediaInfo.MEDIA_PHOTO, _sid, _id, item_id, dt, type );
     mTitle  = t; // FIXME TITLE
@@ -51,6 +53,31 @@ class PhotoInfo extends MediaInfo
     mCamera  = camera;
     mFormat  = format; // FIXME this could go in MediaInfo
     mGeoCode = (code == null)? "" : code;
+    // TDLog.v("Photo Info, item ID " + item_id + " title " + mTitle + " name " + sn + " ref type " + type + " item name " + mItemName );
+  }
+
+  public String getItemName() { return mItemName; }
+
+  public String getTitle() { return mTitle; }
+
+  /** @return the filename (full pathname) of this photo
+   */
+  public String getFilename()
+  {
+    if ( getRefType() == MediaInfo.TYPE_XSECTION ) {
+      if ( mFormat == PhotoInfo.FORMAT_JPEG ) {
+        return TDPath.getSurveyJpgFile( TDInstance.survey, mItemName );
+      } else {
+        return TDPath.getSurveyPngFile( TDInstance.survey, mItemName );
+      }
+    } else {
+      if ( mFormat == PhotoInfo.FORMAT_JPEG ) {
+        return TDPath.getSurveyJpgFile( TDInstance.survey, Long.toString(id) );
+      } else {
+        return TDPath.getSurveyPngFile( TDInstance.survey, Long.toString(id) );
+      }
+    }
+    // return null;
   }
 
   // String getPhotoName() 

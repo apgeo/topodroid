@@ -35,16 +35,20 @@ import java.util.ArrayList;
 
 public class GlNames extends GlShape
 {
+  private final static String TAG = "GL NAMES ";
+
+  private final static int ACTIVE_TEXTURE = GLES20.GL_TEXTURE0;
   private final static int NN = 6; // 2 triangles (3 vertex per triangle)
 
-  static final int STATION_NONE  = 0;
+  // static final int STATION_NONE  = 0;
   static final int STATION_POINT = 1;
   static final int STATION_NAME  = 2;
   static final int STATION_LEG   = 3;
   // static final int STATION_ALL   = 3; 
   static final int STATION_MAX   = 4; // skip station_all
 
-  private static int stationMode = STATION_NONE;     // show_stations;
+  static boolean showStations = false;
+  static int stationMode = STATION_POINT;     // show_stations;
 
   public static boolean mNamesVisible = false;
 
@@ -56,22 +60,32 @@ public class GlNames extends GlShape
    */
   static void resetStations()
   {
-    stationMode = STATION_NONE; 
+    showStations = false;
+    stationMode = STATION_POINT; 
   }
 
-  /** cycle among the stations display-mode
-   */
-  static void toggleStations() 
-  { 
-    stationMode = (stationMode + 1)%STATION_MAX; 
-    // TDLog.v("GL NAMES station mode " + stationMode + " station_points " + GlModel.mStationPoints ); 
-    if ( stationMode == STATION_LEG ) {
-      if ( ! ( TDLevel.overTester && TDSetting.m3Dsketch ) ) { stationMode = (stationMode + 1)%STATION_MAX; }
-      else { TDLog.v("GL NAMES Station LEG"); }
-    }
-    if ( GlModel.mStationPoints && ((stationMode % 2) == 1) ) stationMode = (stationMode + 1)%STATION_MAX; 
-    // if ( ! hasNames() ) stationMode = STATION_NONE;
-  } 
+  static boolean isStationNames() { return stationMode == STATION_NAME; }
+
+  // /** cycle among the stations display-mode
+  //  */
+  // static void toggleStations() 
+  // { 
+  //   stationMode = (stationMode + 1)%STATION_MAX; 
+  //   // TDLog.v( TAG + "station mode " + stationMode + " station_points " + GlModel.mStationPoints ); 
+  //   if ( stationMode == STATION_LEG ) {
+  //     if ( ! ( TDLevel.overTester && TDSetting.m3Dsketch ) ) { stationMode = (stationMode + 1)%STATION_MAX; }
+  //     else { TDLog.v( TAG + "Station LEG"); }
+  //   }
+  //   if ( GlModel.mStationPoints && ((stationMode % 2) == 1) ) stationMode = (stationMode + 1)%STATION_MAX; 
+  //   // if ( ! hasNames() ) stationMode = STATION_NONE;
+  // } 
+
+  static void setShowStations( boolean show_stations, boolean show_names )
+  {
+    showStations = show_stations;
+    stationMode  = show_names ? STATION_NAME : STATION_POINT; // and STATION_LEG ???
+  }
+    
 
   /** highlight station search
    * @param prefix  prefix of station name
@@ -91,23 +105,24 @@ public class GlNames extends GlShape
   }
       
 
-  /** @return the stations display-mode
-   */
-  static int getStationMode() { return stationMode; }
-
   private boolean hasNames() { return nameBuffer != null; }
+
+  /** @return the stations display-mode (1-3) if stations are shown, 0 otherwise
+   */
+  static int getStationMode() { return showStations ? stationMode : 0; }
+
+  /** @return true if the stations diaplay-mode shows nothing
+   * @note used by the renderer
+   */
+  static boolean hiddenStations() { return ! showStations; }
 
   /** @return true if the stations diaplay-mode shows names
    */
-  static boolean showStationNames()  { return stationMode == STATION_NAME /* || stationMode == STATION_ALL */ ; }
-
-  /** @return true if the stations diaplay-mode shows nothing
-   */
-  static boolean hiddenStations()    { return stationMode == STATION_NONE; }
+  private static boolean showStationNames()  { return showStations && stationMode == STATION_NAME; }
 
   /** @return true if the stations diaplay-mode shows dots
    */
-  static boolean showStationPoints() { return stationMode == STATION_POINT || stationMode == STATION_LEG /* || stationMode == STATION_ALL */ ; }
+  private static boolean showStationPoints() { return showStations && ( stationMode == STATION_POINT /* || stationMode == STATION_LEG */ ); }
 
   // ----------------------------------------
  
@@ -179,7 +194,7 @@ public class GlNames extends GlShape
     if ( size <= 1 ) return;
     mTextSizeP = size / 20.0f; 
     mTextSizeO = size / 40.0f;  // half size
-    // TDLog.v("GL NAMES text size " + mTextSizeP + " " + mTextSizeO );
+    // TDLog.v( TAG + "text size " + mTextSizeP + " " + mTextSizeO );
   }
 
   final static int COORDS_PER_VERTEX = 3;
@@ -264,11 +279,16 @@ public class GlNames extends GlShape
    */
   void addName( Vector3D pos, int survey, String name, String fullname, double xmed, double ymed, double zmed )
   {
-    // TDLog.v("GL NAMES 1-add " + fullname );
+    float cx = (float)( pos.x - xmed);
+    float cy = (float)( pos.z - ymed);
+    float cz = (float)(-pos.y - zmed);
+
     if ( mIncremental ) {
+      // TDLog.v( TAG + "incremental-add " + name + " " + cx + " " + cy + " " + cz );
       Vector3D p = new Vector3D( pos.x-xmed, pos.z-ymed, -pos.y-zmed );
       addName( p, survey, name, fullname );
     } else {
+      // TDLog.v( TAG + "direct-add " + name + " " + cx + " " + cy + " " + cz );
       // mNames.add( name );
       // mPos.add( new Vector3D( pos.x, pos.z, -pos.y) );
       mNames.add( new GlName( pos.x-xmed, pos.z-ymed, -pos.y-zmed, survey, name, fullname ) );
@@ -291,7 +311,7 @@ public class GlNames extends GlShape
    */
   private void addName( Vector3D p, int survey, String name, String fullname )
   {
-    // TDLog.v("GL NAMES 2-add " + fullname );
+    // TDLog.v( TAG + "2-add " + fullname );
     mNames.add( new GlName( p.x, p.y, p.z, survey, name, fullname ) );
     if ( mDataBuffer != null ) {
       float[] val = new float[ 3 * NN ];
@@ -364,7 +384,7 @@ public class GlNames extends GlShape
   void initData( )
   {
     nameCount = mNames.size();
-    // TDLog.v("GL NAMES init data " + nameCount );
+    // TDLog.v( TAG + "init data " + nameCount );
     if ( TDUtil.isEmpty(mNames) ) return;
     // FIXME INCREMENTAL : was initBuffer( Names )
     if ( mDataBuffer == null ) {
@@ -385,6 +405,7 @@ public class GlNames extends GlShape
   {
     if ( TDUtil.isEmpty(mNames) ) return;
     if ( mTexId < 0 ) return;
+    // TDLog.v( TAG + "Unbind text texture " + mTexId );
     GL.unbindTextTexture( mTexId );
     mTexId = -1;
   }
@@ -394,12 +415,11 @@ public class GlNames extends GlShape
    */
   void draw( float[] mvpMatrix )
   {
-    if ( stationMode == STATION_NONE || TDUtil.isEmpty(mNames) ) {
-      // TDLog.v("GL NAMES nothing to draw"); 
+    if ( ! showStations || TDUtil.isEmpty(mNames) ) {
+      // TDLog.v( TAG + "nothing to draw"); 
       return;
     }
     if ( showStationNames() ) {
-      
       //   Bitmap bitmap = BitmapFactory.decodeStream( is );
       //   byte[] buffer = new byte[ bitmap.getWidth() * bitmap.getHeight() );
       //   ... fill buffer with pixels values
@@ -415,16 +435,16 @@ public class GlNames extends GlShape
       //   GLES20.glTexParamateri( GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_WRAP_T, GLES20.GL_CLAMP_TO_EDGE );
       // return textureId[0];
       // ------- BIND TEXT BITMAP
-      if ( mBitmap != null ) {
-        if ( mTexId < 0 ) {
-          GLES20.glActiveTexture( GLES20.GL_TEXTURE0 );
-          mTexId = GL.bindTextTexture( mBitmap );
-          // TDLog.v("bound texture Id " + mTexId );
+      synchronized( this ) {
+        if ( mBitmap != null ) {
+          if ( mTexId < 0 ) {
+            GLES20.glActiveTexture( GLES20.GL_TEXTURE0 );
+            mTexId = GL.bindTextTexture( mBitmap );
+            // TDLog.v( TAG + "bound texture Id " + mTexId );
+          }
+        // } else {
+        //   TDLog.e( TAG + "null bitmap");
         }
-        // mBitmap.recycle(); // do not clean up, but keep the bitmap
-        // mBitmap = null;
-      } else {
-        // TDLog.e("GL NAMES null bitmap");
       }
       GL.useProgram( mProgram );
       bindData( mvpMatrix ); 
@@ -435,8 +455,7 @@ public class GlNames extends GlShape
         bindDataHL( mvpMatrix ); 
         GL.drawLineLoop( mHighlight*6, 6 );
       }
-    }
-    if ( showStationPoints() ) {
+    } else if ( showStationPoints() ) {
       GL.useProgram( mProgramPos );
       bindDataPos( mvpMatrix );
       GL.drawPoint( 0, nameCount );
@@ -451,6 +470,7 @@ public class GlNames extends GlShape
         for ( Integer k: mHighlightStations ) GL.drawPoint( k.intValue(), 1 );
       }
     }
+    // GLES20.glActiveTexture( 0 ); // ADDED-PHOTO
 
     // unbindData();
   }
@@ -488,7 +508,7 @@ public class GlNames extends GlShape
       GL.setAttributePointer( mATexCoord, nameBuffer, OFFSET_TEXEL,  COORDS_PER_TEXEL,  STRIDE_TEXEL );
     }
     if ( ! mNamesVisible && TDandroid.ABOVE_API_28 ) {
-      // TDLog.v("GL NAMES bind data ABOVE API 28");
+      // TDLog.v( TAG + "bind data ABOVE API 28");
       if ( visibilityBuffer != null ) {
         GL.setAttributePointer( mAVisible, visibilityBuffer, OFFSET_VISIBILITY, COORDS_PER_VISIBILITY, STRIDE_VISIBILITY_1 );
       }
@@ -503,6 +523,7 @@ public class GlNames extends GlShape
     if ( mTexId >= 0 ) {
       GLES20.glActiveTexture( GLES20.GL_TEXTURE0 );
       GLES20.glBindTexture( GLES20.GL_TEXTURE_2D, mTexId ); // texture-id from load-texture
+      // TDLog.v( TAG + "bind TEXT to texture_0 id " + mTexId );
     }
     GL.setUniformMatrix( mUMVPMatrix, mvpMatrix );
   }
@@ -516,7 +537,7 @@ public class GlNames extends GlShape
       GL.setAttributePointer( mADeltaHL,    nameBuffer, OFFSET_DELTA,  COORDS_PER_DELTA,  STRIDE_TEXEL );
     }
     if ( ! mNamesVisible && TDandroid.ABOVE_API_28 ) {
-      // TDLog.v("GL NAMES bind data HL ABOVE API 28");
+      // TDLog.v( TAG + "bind data HL ABOVE API 28");
       if ( visibilityBuffer != null ) {
         GL.setAttributePointer( mAVisible, visibilityBuffer, OFFSET_VISIBILITY, COORDS_PER_VISIBILITY, STRIDE_VISIBILITY_1 );
       }
@@ -646,7 +667,7 @@ public class GlNames extends GlShape
   // FIXME INCREMENTAL private void initBuffer( ArrayList< GlName > names )
   private void initBuffer( )
   {
-    // TDLog.v("GL NAMES init buffer " + nameCount );
+    // TDLog.v( TAG + "init buffer " + nameCount );
     // ---------- BASE POINT
     float[] data6 = new float[ nameCount * 3 * NN ]; // 3 float, XYZ, per vertex
     for ( int i=0; i<nameCount; ++ i) {
@@ -669,7 +690,7 @@ public class GlNames extends GlShape
 
   private void initVisibilityBuffer()
   {
-    // TDLog.v("GL NAMES init visibility buffer");
+    // TDLog.v( TAG + "init visibility buffer");
     // if ( visibilityBuffer == null ) {
       visibilityBuffer = DataBuffer.getFloatBuffer( 6 * nameCount );
       for ( int i=0; i< 6 * nameCount; ++ i) {
@@ -796,7 +817,7 @@ public class GlNames extends GlShape
     }
     mBitmap = bitmap0;
     if ( mBitmap == null ) {
-      TDLog.e("GL NAMES bitmap is null");
+      TDLog.e( TAG + "bitmap is null");
     }
     unbindTexture(); // FIXME TODO ?
   }
@@ -807,6 +828,23 @@ public class GlNames extends GlShape
   /** @return the number of names
    */
   public int size() { return nameCount; }
+
+  private void releaseBitmap()
+  {
+    if ( mBitmap != null ) {
+      mBitmap.recycle();
+      mBitmap = null;
+    }
+  }
+
+  synchronized void release()
+  {
+    if ( mTexId > 0 ) TopoGL.trashTexture( mTexId );
+    forgetTexture();
+    releaseBitmap();
+  }
+
+  void forgetTexture() { mTexId = -1; }
 
   // --------------------------------------------------------------------
   // OpenGL

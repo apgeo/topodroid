@@ -13,6 +13,7 @@ package com.topodroid.dem;
 
 import com.topodroid.util.TDLog;
 import com.topodroid.util.TDString;
+import com.topodroid.util.TDMath;
 // import com.topodroid.util.TDFile;
 import com.topodroid.c3in.ParserException;
 import com.topodroid.c3in.ParserTh;
@@ -305,5 +306,116 @@ public class DEMsurface
   //   }
   //   // TDLog.v("DEM Z " + zmin + " " + zmax );
   // }
+
+  /** @return the minimum distance of a 3D point from the surface
+   * @param e0  East coordinate
+   * @param n0  North coordinate
+   * @param z0  Z coordinate (upward)
+   */
+  public double distance( double e0, double n0, double z0 )
+  {
+    int i0 = (int)( (e0 - mEast1)/mDim1 );
+    int j0 = (int)( (n0 - mNorth1)/mDim2 );
+    double r2 = 0, r1 = 0;
+    double dz;
+    if ( i0 >= 0 && i0 < mNr1 ) {
+      if (  j0 >= 0 && j0 <= mNr2 ) {
+        int j1 = j0 * mNr1;
+        r1 = mZ[ j1 + i0 ] - z0; if ( r1 < 0 ) r1 = -r1;
+        r2 = r1 * r1; // x2 = 0, y2 = 0
+        for ( int j = 0; j < r1; ++j ) {
+          if ( j0 + j >= mNr2 ) break;
+          double y2 = (j * mDim2)*(j *mDim2);
+          j1 = ( j0 + j ) * mNr1;
+          for ( int i = 1; i < r1; ++ i ) {
+            if ( ( i0 + i ) >= mNr1 ) break;
+            double x = i * mDim1; 
+            double z = mZ[ j1 + i0 + i ] - z0;
+            double rr = z*z + x*x + y2;
+            if ( r2 > rr ) { r2 = rr; r1 = Math.sqrt( r2 ); }
+          }
+          for ( int i = 1; i < r1; ++i ) {
+            if ( ( i0 - i ) < 0 ) break;
+            double x = i * mDim1; 
+            double z = mZ[ j1 + i0 - i ] - z0;
+            double rr = z*z + x*x + y2;
+            if ( r2 > rr ) { r2 = rr; r1 = Math.sqrt( r2 ); }
+          }
+        }
+        for ( int j = 0; j < r1; ++j ) {
+          if ( j0 - j < 0 ) break;
+          double y2 = (j * mDim2)*(j *mDim2);
+          j1 = ( j0 - j ) * mNr1;
+          for ( int i = 1; i < r1; ++ i ) {
+            if ( ( i0 + i ) >= mNr1 ) break;
+            double x = i * mDim1; 
+            double z = mZ[ j1 + i0 + i ] - z0;
+            double rr = z*z + x*x + y2;
+            if ( r2 > rr ) { r2 = rr; r1 = Math.sqrt( r2 ); }
+          }
+          for ( int i = 1; i < r1; ++i ) {
+            if ( ( i0 - i ) < 0 ) break;
+            double x = i * mDim1; 
+            double z = mZ[ j1 + i0 - i ] - z0;
+            double rr = z*z + x*x + y2;
+            if ( r2 > rr ) { r2 = rr; r1 = Math.sqrt( r2 ); }
+          }
+        }
+      } else {
+        int j1 = ( j0 < 0 )? 0 : (mNr2-1)*mNr1;
+        int dj = ( j0 < 0 )? j0 : (j0 - mNr2 +1);
+        double y2 = dj * dj * mDim2 * mDim2;
+        r1 = mZ[ i0 ] - z0; if ( r1 < 0 ) r1 = -r1;
+        r2 = r1 * r1 + y2; // x2 = 0
+        for ( int i = 1; i < r1; ++ i ) {
+          if ( ( i0 + i ) >= mNr1 ) break;
+          double x = i * mDim1;
+          double z = mZ[ j1 + i0 + i ] - z0;
+          double rr = z*z + x*x + y2;
+          if ( r2 > rr ) { r2 = rr; r1 = Math.sqrt( r2 ); }
+        }
+        for ( int i = 1; i < r1; ++i ) {
+           if ( ( i0 - i ) < 0 ) break;
+          double x = i * mDim1;
+          double z = mZ[ j1 + i0 - i ] - z0;
+          double rr = z*z + x*x + y2;
+          if ( r2 > rr ) { r2 = rr; r1 = Math.sqrt( r2 ); }
+        }
+      }
+    } else { // i0 < 0 or i0 >= mNr1
+      int i1 = ( i0 < 0 )? 0 : (mNr1 - 1);
+      int di = ( i0 < 0 )? i0 : ( i0 - mNr1 + 1);
+      double x2 = di * di * mDim1 * mDim1;
+      if (  j0 >= 0 && j0 <= mNr2 ) {
+        int j1 = j0 * mNr1;
+        r1 = mZ[ j1 + i1 ] - z0; if ( r1 < 0 ) r1 = -r1;
+        r2 = r1 * r1 + x2; // y2 = 0
+        for ( int j = 0; j < r1; ++j ) {
+          if ( j0 + j >= mNr2 ) break;
+          double y = (j * mDim2);
+          j1 = ( j0 + j ) * mNr1;
+          double z = mZ[ j1 + i1 ] - z0;
+          double rr = z*z + x2 + y * y;
+          if ( r2 > rr ) { r2 = rr; r1 = Math.sqrt( r2 ); }
+        }
+        for ( int j = 0; j < r1; ++j ) {
+          if ( j0 - j < 0 ) break;
+          double y = (j * mDim2);
+          j1 = ( j0 - j ) * mNr1;
+          double z = mZ[ j1 + i1 ] - z0;
+          double rr = z*z + x2 + y * y;
+          if ( r2 > rr ) { r2 = rr; r1 = Math.sqrt( r2 ); }
+        }
+      } else {
+        int j1 = ( j0 < 0 )? 0 : (mNr2-1)*mNr1;
+        int dj = ( j0 < 0 )? j0 : (j0 - mNr2 +1);
+        double y2 = dj * dj * mDim2 * mDim2;
+        r1 = mZ[ i0 ] - z0; if ( r1 < 0 ) r1 = -r1;
+        // r2 = r1 * r1 + x2 + y2;
+      }
+    }
+    return r1; // Math.sqrt( r2 );
+  }
+        
 }
 
