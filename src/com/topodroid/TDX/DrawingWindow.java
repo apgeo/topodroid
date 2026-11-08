@@ -506,7 +506,6 @@ public class DrawingWindow extends ItemDrawer
   private float mStylusSizeDpi = 1000;  // stylus size in dpi
 
   private boolean mLandscape;
-  private boolean audioCheck;
   // private DataHelper mData;
   private Activity mActivity = null;
   private int mBTstatus; // status of bluetooth buttons (download and reset)
@@ -2827,9 +2826,6 @@ public class DrawingWindow extends ItemDrawer
     // TDLog.v("STYLUS size " + mStylusSizeDpi + " flag " + TDSetting.mStylusOnly );
 
     mFormatClosure = getResources().getString(R.string.format_closure );
-
-    audioCheck = TDandroid.checkMicrophone( mActivity );
-    // TDLog.v( "Microphone perm : " + audioCheck );
 
     mZoomBtnsCtrlOn = (TDSetting.mZoomCtrl > 1);  // do before setting content
     // mPointScale = PointScale.SCALE_M; // FIXME_SCALE
@@ -5401,12 +5397,19 @@ public class DrawingWindow extends ItemDrawer
                   }
                 }
               } else if ( BrushManager.isPointPhoto( mCurrentPoint ) ) {
-                new DrawingPhotoDialog( mActivity, this, mPid, xs, ys ).show();
+                final float photo_x = xs;
+                final float photo_y = ys;
+                runWithCameraPermission( new Runnable() {
+                  @Override public void run() {
+                    new DrawingPhotoDialog( mActivity, DrawingWindow.this, mPid, photo_x, photo_y ).show();
+                  }
+                } );
               } else if ( BrushManager.isPointAudio( mCurrentPoint ) ) {
-	        if ( audioCheck ) {
+	        if ( ! TDandroid.hasAudioPermission( this ) ) {
+                  // TDToast.makeWarn( R.string.no_feature_audio ); // drop string
+                  // TODO REQUEST_AUDIO_PERMISSION
+                } else {
                   addAudioPoint( mPid, xs, ys );
-	        } else {
-                  TDToast.makeWarn( R.string.no_feature_audio );
                 }
               } else {
                 int point_scale = mScaleBar.getActive() - 2; // mPointScale
@@ -5736,10 +5739,11 @@ public class DrawingWindow extends ItemDrawer
                 } else if ( BrushManager.isPointPhoto( mCurrentPoint ) ) {
                   // new DrawingPhotoDialog( mActivity, this, xs, ys ).show(); // HBXP
                 } else if ( BrushManager.isPointAudio( mCurrentPoint ) ) {
-                  if ( audioCheck ) {
-                    // addAudioPoint( xs, ys ); // HBXP
+                  if ( ! TDandroid.hasAudioPermission( this ) ) {
+                    // TDToast.makeWarn( R.string.no_feature_audio );
+                    // TODO REQUEST_AUDIO_PERMISSION
                   } else {
-                    TDToast.makeWarn( R.string.no_feature_audio );
+                    // addAudioPoint( xs, ys ); // HBXP
                   }
                 } else {
                   int point_scale = mScaleBar.getActive() - 2; // mPointScale
@@ -6291,14 +6295,102 @@ public class DrawingWindow extends ItemDrawer
    */
   private void doTakePointPhoto( String imagefile, boolean insert, long pid, int type )
   {
+    doTakePointPhoto( imagefile, insert, pid, type, null );
+  }
+
+  /** take a photo, asking for the CAMERA permission at the point of use
+   * @param imagefile   photo image file
+   * @param insert      whether to insert the photo-point item
+   * @param pid         reference item ID (x-section plot ID, or -1)
+   * @param type        reference item type
+   * @param on_no_photo action to run (on the UI thread) if the photo is not taken: permission denied,
+   *                    or the camera dialog closed without saving; can be null
+   *
+   * all photo entry points (photo point, leg x-section, station x-section) end here
+   */
+  private void doTakePointPhoto( final String imagefile, final boolean insert, final long pid, final int type, final Runnable on_no_photo )
+  {
+    runWithCameraPermission( new Runnable() {
+      @Override public void run() { doTakePointPhotoGranted( imagefile, insert, pid, type, on_no_photo ); }
+    }, on_no_photo );
+  }
+
+  // actions waiting for the CAMERA permission result
+  private Runnable mPendingCameraAction = null;
+  private Runnable mPendingCameraDenied = null;
+
+  /** run an action that needs the CAMERA permission, requesting the permission first if necessary
+   * @param action   action to run once the permission is granted
+   */
+  private void runWithCameraPermission( Runnable action )
+  {
+    runWithCameraPermission( action, null );
+  }
+
+  /** run an action that needs the CAMERA permission, requesting the permission first if necessary
+   * @param action     action to run once the permission is granted
+   * @param on_denied  action to run if the permission is not granted (can be null)
+   */
+  private void runWithCameraPermission( Runnable action, Runnable on_denied )
+  {
+    if ( TDandroid.hasCameraPermission( this ) ) {
+      action.run();
+    } else {
+      mPendingCameraAction = action;
+      mPendingCameraDenied = on_denied;
+      requestPermissions( new String[] { android.Manifest.permission.CAMERA }, TDRequest.REQUEST_CAMERA_PERMISSION );
+    }
+  }
+
+  /** handle the result of a runtime permission request
+   * @param reqCode  request code
+   * @param perms    requested permissions
+   * @param results  grant results
+   */
+  @Override
+  public void onRequestPermissionsResult( int reqCode, String[] perms, int[] results )
+  {
+    super.onRequestPermissionsResult( reqCode, perms, results );
+    if ( reqCode != TDRequest.REQUEST_CAMERA_PERMISSION ) return;
+
+    Runnable action = mPendingCameraAction;
+    Runnable denied = mPendingCameraDenied;
+    mPendingCameraAction = null;
+    mPendingCameraDenied = null;
+
+    if ( results.length > 0 && results[0] == android.content.pm.PackageManager.PERMISSION_GRANTED ) {
+      if ( action != null ) action.run();
+      return;
+    }
+    // not granted (an empty result means the request was interrupted: nothing to tell the user)
+    if ( denied != null ) denied.run();
+    if ( results.length > 0 ) {
+      if ( ! shouldShowRequestPermissionRationale( android.Manifest.permission.CAMERA ) ) {
+        // permanently denied: the system will no longer show the prompt
+        TDToast.makeWarn( R.string.camera_permission_setting );
+        TDandroid.openAppSettings( this );
+      } else {
+        TDToast.makeWarn( R.string.camera_no_permission );
+      }
+    }
+  }
+
+  private void doTakePointPhotoGranted( String imagefile, boolean insert, long pid, int type, final Runnable on_no_photo )
+  {
     // TDLog.v("do take point photo: <" + imagefile + "> insert " + insert + " pid " + pid + " type " + type );
-    // if ( TDandroid.AT_LEAST_API_21 && TDandroid.checkCamera( mApp ) ) { // canTakeasPhoto
-      boolean with_box = true; // ! insert;
-      mMediaManager.setCamera( PhotoInfo.CAMERA_TOPODROID );
-      if ( pid > 0 ) mMediaManager.setReferenceItem( pid, type );
-      MyBearingAndClino callback = new MyBearingAndClino( mApp, imagefile );
-      new QCamCompass( this, this, callback, (insert ? this : null), with_box, false, PhotoInfo.CAMERA_TOPODROID, mMediaManager ).show(); // false=with_delay
-      // }
+    boolean with_box = true; // ! insert;
+    mMediaManager.setCamera( PhotoInfo.CAMERA_TOPODROID );
+    if ( pid > 0 ) mMediaManager.setReferenceItem( pid, type );
+    MyBearingAndClino callback = new MyBearingAndClino( mApp, imagefile );
+    final QCamCompass qcam = new QCamCompass( this, this, callback, (insert ? this : null), with_box, false, PhotoInfo.CAMERA_TOPODROID, mMediaManager ); // false=with_delay
+      if ( on_no_photo != null ) {
+        qcam.setOnDismissListener( new android.content.DialogInterface.OnDismissListener() {
+          @Override public void onDismiss( android.content.DialogInterface dialog ) {
+            if ( ! qcam.isPhotoSaved() ) on_no_photo.run();
+          }
+        } );
+      }
+      qcam.show();
 
     // } else {
     //   try {
@@ -6356,13 +6448,14 @@ public class DrawingWindow extends ItemDrawer
    * @param pid    plot ID 
    * @param x      X coord
    * @param y      Y coord
+   * @note called only if the app has AUDIO permission
    */
   private void addAudioPoint( long pid, float x, float y )
   {
     // TDLog.v("add Audio Point " + x + " " + y );
     // assert( mLastLinePath == null );
     // mMediaComment = ""; // audio point do not have comment
-    if ( ! audioCheck ) {
+    if ( ! TDandroid.hasAudioPermission( this ) ) { // check again
       TDToast.makeWarn( R.string.no_feature_audio );
       return;
     }
@@ -7949,11 +8042,12 @@ public class DrawingWindow extends ItemDrawer
                   TDLog.e("Picture without photo");
                 }
               } else if ( point instanceof DrawingAudioPath ) { // BrushManager.isPointAudio( point.mPointType )
-                if ( audioCheck ) {
+                if ( ! TDandroid.hasAudioPermission( this ) ) {
+                  // TDToast.makeWarn( R.string.no_feature_audio );
+                  // TODO toast or REQUEST_AUDIO_PERMISSION ?
+                } else {
                   DrawingAudioPath audio = (DrawingAudioPath)point;
                   new AudioDialog( mActivity, this, audio.mId, null, mPid, MediaInfo.TYPE_PLOT ).show(); // null DBlock
-                } else {
-                  TDToast.makeWarn( R.string.no_feature_audio );
                 }
               } else if ( BrushManager.isPointSection( point.mPointType ) ) { // open x-section sketch
                 // if ( TDSetting.mFixmeXSection ) {
@@ -8226,12 +8320,14 @@ public class DrawingWindow extends ItemDrawer
   void makeLegXSectionPhoto( DrawingLinePath line, String id, long type, String from, String to, String nick, float azimuth, float clino, float tt )
   {
     // TDLog.v("make photo x-section " + id );
+    // an x-section that already exists (photo retake) is never rolled back
+    final boolean created = ( mApp_mData.getPlotId( TDInstance.sid, id ) < 0 );
     long pid = prepareLegXSection( id, type, from, to, nick, azimuth, clino );
     if ( pid >= 0 ) {
       if ( tt <= 1.0 ) {
         mApp_mData.updatePlotIntercept( pid, TDInstance.sid, tt );
       } else {
-        TDLog.e("multileg photo xsection not fully supported");
+        TDLog.e("TODO multileg photo xsection not fully supported");
       }
       TopoDroidApp.updateAnalytic( TDAnalytics.XSECTION_PHOTO );
       // imageFile := survey / photo / sectionId .jpg
@@ -8239,7 +8335,16 @@ public class DrawingWindow extends ItemDrawer
       // File imagefile = TDFile.getTopoDroidFile( image_filepath );
       // TODO TD_XSECTION_PHOTO
       mMediaManager.setComment( nick ); // save xsection comment in the photo
-      doTakePointPhoto( image_filepath, false, pid, MediaInfo.TYPE_XSECTION ); // without inserter
+      // the plot record must exist before the photo (its ID is the photo item ID):
+      // if no photo is taken a new x-section is rolled back, ie, the section line, its section point
+      // and the plot record are deleted
+      Runnable on_no_photo = null;
+      if ( created ) {
+        on_no_photo = new Runnable() {
+          @Override public void run() { deleteLine( line ); }
+        };
+      }
+      doTakePointPhoto( image_filepath, false, pid, MediaInfo.TYPE_XSECTION, on_no_photo ); // without inserter
     }
   }
 
@@ -8354,9 +8459,14 @@ public class DrawingWindow extends ItemDrawer
   }
 
   // TODO PHOTO-3D
-  void makeStationXSectionPhoto( DrawingStationName st, String st_name, long plot_type, float azimuth, float clino, boolean horiz, String nick )
+  void makeStationXSectionPhoto( final DrawingStationName st, String st_name, long plot_type, float azimuth, float clino, boolean horiz, String nick )
   {
-    PlotInfo plot = openStationXSection( st, st_name, plot_type, azimuth, clino, horiz, nick );
+    // an x-section that already exists (photo retake) is never rolled back
+    String xs_id = PlotType.getXSectionName( st_name, plot_type ); // same name as in openStationXSection()
+    if ( xs_id != null && ! TDInstance.xsections ) xs_id = xs_id + "-" + mName;
+    final boolean created = ( xs_id != null && mApp_mData.getPlotInfo( TDInstance.sid, xs_id ) == null );
+
+    final PlotInfo plot = openStationXSection( st, st_name, plot_type, azimuth, clino, horiz, nick );
     if ( plot != null ) {
       TopoDroidApp.updateAnalytic( TDAnalytics.XSECTION_PHOTO );
       // imageFile := survey / photo / sectionId .jpg
@@ -8364,7 +8474,18 @@ public class DrawingWindow extends ItemDrawer
       // File imagefile = TDFile.getTopoDroidFile( image_filepath );
       // TODO TD_XSECTION_PHOTO
       mMediaManager.setComment( plot.nick ); // save xsection comment in the photo
-      doTakePointPhoto( image_filepath, false, plot.id, MediaInfo.TYPE_XSECTION ); // without inserter
+      // the plot record must exist before the photo (its ID is the photo item ID):
+      // if no photo is taken a new x-section is rolled back, ie, the section point and the plot record are deleted
+      Runnable on_no_photo = null;
+      if ( created ) {
+        on_no_photo = new Runnable() {
+          @Override public void run() {
+            deleteStationXSection( st, plot.name );
+            modified();
+          }
+        };
+      }
+      doTakePointPhoto( image_filepath, false, plot.id, MediaInfo.TYPE_XSECTION, on_no_photo ); // without inserter
     }
   }
 
@@ -8676,8 +8797,8 @@ public class DrawingWindow extends ItemDrawer
     GeoReference station = null;
 
     if ( type == PlotType.PLOT_PLAN && ext.equals("shz") ) {
-      String origin = num.getOriginStation();
-      station = TDExporter.getGeolocalizedStation( mSid, mApp_mData, 1.0f, true, origin, true );
+      String origin = num.getOriginStation(); // with-convergence: use transformed CS if defined or WGS84 otherwise
+      station = TDExporter.getGeolocalizedStation( mSid, mApp_mData, 1.0f, true, origin, true ); // FIXME PROJ_CRS
     // } else if ( ext.equals("c3d") ) { // NO_C3D
     //   // c3d export uses plot and fixed instead of station
     //   plot  = PlotType.isAnySection(type) ? mPlot3 : PlotType.isProfile( type )? mPlot2 : mPlot1;

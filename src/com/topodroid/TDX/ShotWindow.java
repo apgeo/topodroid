@@ -1149,9 +1149,60 @@ public class ShotWindow extends MyActivity
 
   // ---------------------------------------------------------------
 
-  void askPhotoComment( DBlock blk )
+  /** open the shot photo dialog
+   * @param blk_id    shot block ID
+   * @param blk_name  shot name
+   */
+  void askPhotoComment( long blk_id, String blk_name )
   {
-    (new ShotPhotoDialog(mActivity, this, blk.mId, blk.Name() ) ).show();
+    runWithCameraPermission( new Runnable() {
+      @Override public void run() { (new ShotPhotoDialog(mActivity, ShotWindow.this, blk_id, blk_name ) ).show(); }
+    } );
+  }
+
+  // action waiting for the CAMERA permission result
+  private Runnable mPendingCameraAction = null;
+
+  /** run an action that needs the CAMERA permission, requesting the permission first if necessary
+   * @param action   action to run once the permission is granted
+   * @note used also by ShotNewDialog
+   */
+  void runWithCameraPermission( Runnable action )
+  {
+    if ( TDandroid.hasCameraPermission( this ) ) {
+      action.run();
+    } else {
+      // remember the action and resume it in onRequestPermissionsResult()
+      mPendingCameraAction = action;
+      requestPermissions( new String[] { android.Manifest.permission.CAMERA }, TDRequest.REQUEST_CAMERA_PERMISSION );
+    }
+  }
+
+  /** handle the result of a runtime permission request
+   * @param reqCode  request code
+   * @param perms    requested permissions
+   * @param results  grant results
+   */
+  @Override
+  public void onRequestPermissionsResult( int reqCode, String[] perms, int[] results )
+  {
+    super.onRequestPermissionsResult( reqCode, perms, results );
+    if ( reqCode != TDRequest.REQUEST_CAMERA_PERMISSION ) return;
+
+    Runnable action = mPendingCameraAction;
+    mPendingCameraAction = null;
+
+    if ( results.length > 0 && results[0] == android.content.pm.PackageManager.PERMISSION_GRANTED ) {
+      if ( action != null ) action.run();
+    } else if ( results.length > 0 ) { // an empty result means the request was interrupted
+      if ( ! shouldShowRequestPermissionRationale( android.Manifest.permission.CAMERA ) ) {
+        // permanently denied: the system will no longer show the prompt
+        TDToast.makeWarn( R.string.camera_permission_setting );
+        TDandroid.openAppSettings( this );
+      } else {
+        TDToast.makeWarn( R.string.camera_no_permission );
+      }
+    }
   }
 
   /**
@@ -1419,7 +1470,7 @@ public class ShotWindow extends MyActivity
     switch ( reqCode ) {
       // case TDRequest.CAPTURE_IMAGE_SHOTWINDOW:
       //   if ( resCode == Activity.RESULT_OK ) { // RESULT_OK = -1 (0xffffffff)
-      //     // (new ShotPhotoDialog(this, this, mShotId, blk_name ) ).show();
+      //     // askPhotoComment( mShotId, blk_name );
       //     // Bundle extras = intent.getExtras();
       //     // Bitmap bitmap = (Bitmap) extras.get("data");
       //     // mMediaManager.savePhotoFile( bitmap, 90 ); // compression = 90
@@ -3534,10 +3585,14 @@ public class ShotWindow extends MyActivity
    */
   void startAudio( AudioInfo audio, DBlock blk )
   {
-    long audio_id = (audio == null) ? mApp_mData.getAudioIdByItem( TDInstance.sid, blk.mId, MediaInfo.TYPE_SHOT )
-                                    : audio.getId();
-    // TDLog.v( TAG + "start audio id " + audio_id + " block " + blk.mId );
-    (new AudioDialog( mActivity, /* this */ null, audio_id, blk, blk.mId, MediaInfo.TYPE_SHOT )).show();
+    if ( ! TDandroid.hasAudioPermission( this ) ) {
+      // TODO REQUEST_AUDIO_PERMISSION
+    } else {
+      // getAudioIdByItem returns the audio-ID if the block has an audio or a new audio ID - no new audio record is created
+      long audio_id = (audio == null) ? mApp_mData.getAudioIdByItem( TDInstance.sid, blk.mId, MediaInfo.TYPE_SHOT ) : audio.getId();
+      // TDLog.v( TAG + "start audio id " + audio_id + " block " + blk.mId );
+      (new AudioDialog( mActivity, /* this */ null, audio_id, blk, blk.mId, MediaInfo.TYPE_SHOT )).show();
+    }
   }
 
   /** open dialog to recalibrate shots from the given ID onwards
